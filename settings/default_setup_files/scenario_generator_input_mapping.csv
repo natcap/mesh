@@ -1,0 +1,9 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+workspace_dir,folder,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+suitability_folder,folder,FALSE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+override,shapefile,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+landcover,raster,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,lulc.tif,
+priorities_csv_uri,table,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+transition,table,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+suitability,table,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,
+constraints,table,TRUE,TRUE,workspace_dir,Workspace directory,scenario_generator,set_to_default,,

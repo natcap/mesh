@@ -1,0 +1,21 @@
+{
+	"biophysical_table": "set_based_on_project_input",
+	"depth_to_root_rest_layer": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/depth_to_root_restricting_layer.tif",
+	"hydropower_valuation_table": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/water_purification_valuation.csv",
+	"water_scarcity_container": false,
+	"seasonality_constant": "5",
+	"results_suffix": "",
+	"watersheds": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/watersheds_robinson.shp",
+	"potential_evapotranspiration": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/reference_evapotranspiration.tif",
+	"sub_watersheds": "C:\\mesh\\Base_Data\\Freshwater\\subwatersheds.shp",
+	"window": true,
+	"demand_table": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/water_demand_table.csv",
+	"water_scarcity_list": true,
+	"plant_available_water_fraction": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/pawc.tif",
+	"workspace_list": true,
+	"workspace": "C:\\mesh\\projects\\volta_demo\\output\\model_setup_runs\\hydropower_water_yield",
+	"land_use": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/lulc_2012.tif",
+	"precipitation": "C:/Research/GeoEcon/projects/mesh/projects/volta/input/Baseline/precip.tif",
+	"valuation_container": false,
+	"valuation_list": true
+}

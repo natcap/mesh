@@ -1,0 +1,35 @@
+{
+	"constraints_layer_list": true,
+	"suffix": "",
+	"weight": "0.5",
+	"workspace2_list": true,
+	"override_inclusion": 0,
+	"factors_list": true,
+	"constraints_field": {
+		"index": 0,
+		"linked_uri": "../base_data/models/scenario_generator/constraints.shp",
+		"key": "protlevel"
+	},
+	"calculate_constraints": false,
+	"workspace_dir": "set_based_on_scenario",
+	"window": true,
+	"calculate_transition": true,
+	"calculate_priorities": false,
+	"workspace_list": true,
+	"suitability_folder": "../base_data/models/scenario_generator/suitability.csv",
+	"override": "../base_data/models/scenario_generator/override.shp",
+	"override_layer": false,
+	"calculate_proximity": false,
+	"calculate_factors": false,
+	"landcover": "set_based_on_project_input",
+	"factor_inclusion": 0,
+	"priorities_csv_uri": "../base_data/models/scenario_generator/prioritymatrix.csv",
+	"transition": "../base_data/models/scenario_generator/transition_table.csv",
+	"suitability": "../base_data/models/scenario_generator/scenario_suitability_factors.csv",
+	"override_field": {
+		"index": -1,
+		"linked_uri": "",
+		"key": ""
+	},
+	"constraints": "../base_data/models/scenario_generator/constraints.shp"
+}

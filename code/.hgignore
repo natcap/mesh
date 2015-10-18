@@ -1,0 +1,4 @@
+syntax: regexp
+.pyc
+syntax: glob
+backup/.hgignore
