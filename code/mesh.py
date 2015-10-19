@@ -620,7 +620,7 @@ class ScenariosWidget(ScrollWidget):
         self.add_scenarios_hbox = QHBoxLayout()
         self.elements_vbox.addLayout(self.add_scenarios_hbox)
         self.new_scenario_pb = QPushButton('New Scenario')
-        self.new_scenario_icon = QIcon(QPixmap('icons/example_watershed_small.png'))
+        self.new_scenario_icon = QIcon(QPixmap('icons/mesh_green.png'))
         self.new_scenario_pb.setIcon(self.new_scenario_icon)
         self.new_scenario_pb.clicked.connect(self.create_element_from_name_dialog)
         self.add_scenarios_hbox.addWidget(self.new_scenario_pb)
@@ -1036,8 +1036,7 @@ class ModelsWidget(ScrollWidget):
         self.title_l.setText('Setup Baseline model runs')
         self.title_l.setFont(config.heading_font)
         self.scroll_layout.addWidget(self.title_l)
-        self.setup_explanation_l = QLabel(
-            'Click Setup for each selected model to specify which data to use in the Baseline scenario.')
+        self.setup_explanation_l = QLabel('Click Setup for each selected model to specify which data to use in the Baseline scenario.')
         self.setup_explanation_l.setWordWrap(True)
         self.setup_explanation_l.setFont(config.italic_font)
         self.scroll_layout.addWidget(self.setup_explanation_l)
