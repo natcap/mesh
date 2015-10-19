@@ -1,22 +1,17 @@
+# coding=utf-8
+
 from collections import OrderedDict
-import time, sys, os, math, random, datetime, shutil, json
-import gdal
-import numpy as np
-from PyQt4 import QtGui
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-import yaml
+import os
+import datetime
 import json
-import pandas as pd
 import csv
-from itertools import groupby, ifilter
-from operator import itemgetter
+
+from osgeo import gdal
+from PyQt4.QtGui import *
 import xlrd
 
-from pygeoprocessing_vmesh import geoprocessing as pg
-
-
 import config
+
 
 # TODO read_txt_file_as_serialized_headers is HORRIBLE. ELIMINATE. I literally did this on the plane.
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):

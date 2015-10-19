@@ -18,6 +18,7 @@ from types import StringType
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
+
 import numpy
 import numpy.ma
 import scipy.interpolate

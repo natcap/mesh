@@ -1,5 +1,5 @@
 import json
-import ogr
+from osgeo import ogr
 import platform
 import csv
 import os

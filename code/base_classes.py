@@ -1,23 +1,18 @@
-__author__ = 'joh07536'
+# coding=utf-8
 
-import sys, os, time
-
+import sys
+import time
 from collections import OrderedDict
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from invest_natcap.iui import modelui
-from invest_natcap.iui import fileio
-import invest_natcap
 
+from invest_natcap.iui import modelui
 from invest_natcap.hydropower.hydropower_water_yield import execute as execute_hydropower_model
 from invest_natcap.nutrient.nutrient import execute as execute_nutrient_model
 from invest_natcap.carbon.carbon_combined import execute as execute_carbon_model
 from invest_natcap.pollination.pollination import execute as execute_pollination_model
 from invest_natcap.sdr.sdr import execute as execute_sdr_model
-
-#from mesh_models.nutrition import nutrition
-
 
 class ProcessingThread(QThread):
     """
