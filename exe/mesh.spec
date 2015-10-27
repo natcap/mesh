@@ -28,6 +28,7 @@ kwargs = {
         'markdown',
         'distutils',
         'distutils.dist',
+        'mesh_models.data_creation',
     ],
 }
 
