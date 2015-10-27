@@ -1,0 +1,7 @@
+distribute
+gdal
+matplotlib>=1.2.0
+markdown
+xlrd
+PyQt4
+git+https://https://github.com/pyinstaller/pyinstaller.git@v2.1
