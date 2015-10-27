@@ -10,6 +10,7 @@ kwargs = {
     'hookspath': [os.path.join(current_dir, 'hooks')],
     'excludes': None,
     'hiddenimports': [
+       'markdown'
     ],
 }
 
