@@ -25,8 +25,9 @@ kwargs = {
     'excludes': None,
     'pathex': path_extension,
     'hiddenimports': [
-       'markdown',
-       'distutils.dist',
+        'markdown',
+        'distutils',
+        'distutils.dist',
     ],
 }
 
