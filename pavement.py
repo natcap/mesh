@@ -10,12 +10,18 @@ paver.easy.options(
         packages_to_install=open('requirements.txt').read().split(),
         dest_dir='mesh_env',
         system_site_packages=True
+    ),
+    build_bin=paver.easy.Bunch(
+        no_zip=False
     )
 )
 
 @paver.easy.needs(['env'])
 @paver.easy.task
-def build_bin():
+@paver.easy.cmdopts([
+    ('no-zip', '', "Don't zip up the binaries after building them."),
+])
+def build_bin(options):
     """
     Build the MESH Pyinstaller binaries.
     """
@@ -30,10 +36,11 @@ def build_bin():
     _build_bin()
 
     # Zip up the binaries.
-    shutil.make_archive(**{
-        'base_name': 'mesh_binaries',
-        'format': 'zip',
-        'root_dir': 'dist'})
+    if not options.build_bin.no_zip:
+        shutil.make_archive(**{
+            'base_name': 'mesh_binaries',
+            'format': 'zip',
+            'root_dir': 'dist'})
 
 @paver.easy.task
 def env(options):
