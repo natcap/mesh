@@ -50,6 +50,6 @@ args = [exe, a.binaries, a.zipfiles, a.datas]
 
 dist = COLLECT(
         *args,
-        name="mesh_dist",
+        name="mesh",
         strip=None,
         upx=False)

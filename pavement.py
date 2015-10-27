@@ -33,8 +33,7 @@ def build_bin():
     shutil.make_archive(**{
         'base_name': 'mesh_binaries',
         'format': 'zip',
-        'root_dir': 'dist/mesh_dist',
-        'base_dir': 'mesh_binaries'})
+        'root_dir': 'dist'})
 
 @paver.easy.task
 def env(options):
