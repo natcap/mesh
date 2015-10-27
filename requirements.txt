@@ -4,3 +4,4 @@ matplotlib>=1.2.0
 markdown
 xlrd
 git+https://github.com/pyinstaller/pyinstaller.git@v2.1
+git+https://github.com/phargogh/paver@natcap-version
