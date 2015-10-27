@@ -1,3 +1,6 @@
+from PyInstaller.hooks.hookutils import collect_submodules
+hiddenimports = collect_submodules('distutils')
+
 # From https://github.com/kennethreitz-archive/pyinstaller/blob/master/hooks/hook-distutils.py
 def hook(mod):
     import distutils
