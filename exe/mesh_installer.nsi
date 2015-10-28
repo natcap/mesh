@@ -26,7 +26,6 @@ SetCompressor zlib
 
 ; MUI Settings
 !define MUI_ABORTWARNING
-!define MUI_ICON "..\code\icons\mesh_logo_64.ico"
 
 ; Add an advanced options control for the welcome page.
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
