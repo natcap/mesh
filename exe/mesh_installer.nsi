@@ -125,7 +125,7 @@ Section "MESH" Section_MESH_Tool
   SectionIn RO ;require this section
 
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
-  !define MESH_ICON "$INSTDIR\mesh\bin\icons\mesh_logo_64.ico"
+  !define MESH_ICON "$INSTDIR\bin\icons\mesh_logo_64.ico"
 
   ; Write the uninstaller to disk
   SetOutPath "$INSTDIR"
