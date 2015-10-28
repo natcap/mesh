@@ -72,7 +72,7 @@ def build_bin(options):
     hg_version = natcap.versioner.parse_version()
     disk_version = hg_version.replace('+', '-')
 
-    hg_path = sh('hg paths', capture=True).rstrip()
+    hg_path = paver.easy.sh('hg paths', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
     if forkuser == 'natcap':
         forkname = ''
@@ -86,7 +86,7 @@ def build_bin(options):
         '/DFORKNAME=%s' % forkname,
         'mesh_installer.nsi',
     ]
-    sh('makensis ' + ' '.join(nsis_params), cwd='exe')
+    paver.easy.sh('makensis ' + ' '.join(nsis_params), cwd='exe')
 
 @paver.easy.task
 def env(options):
