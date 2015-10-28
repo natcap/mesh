@@ -35,6 +35,16 @@ def build_bin(options):
         paver.easy.sh('pyinstaller exe/mesh.spec')
     _build_bin()
 
+    # Move directories around to match the expected settings/binaries
+    # structure.
+    os.makedirs('dist/mesh')
+    shutil.move('dist/mesh_bin', 'dist/mesh/bin')
+    shutil.copytree('settings', 'dist/mesh/settings')
+
+    open('dist/mesh.bat', 'w').write(
+        'CD bin\n'
+        '.\\mesh.exe\n')
+
     # Zip up the binaries.
     if not options.build_bin.no_zip:
         shutil.make_archive(**{
