@@ -28,12 +28,8 @@ SetCompressor zlib
 !define MUI_ABORTWARNING
 
 ; Add an advanced options control for the welcome page.
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE.txt"
-
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipComponents
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
