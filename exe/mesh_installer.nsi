@@ -16,6 +16,12 @@
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
 SetCompressor zlib
+!define MUI_WELCOMEFINISHPAGE_BITMAP "images\mesh_banner_vertical.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "images\mesh_banner_vertical.bmp"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "images\mesh_banner_horizontal.bmp"
+!define MUI_UNHEADERIMAGE_BITMAP "images\mesh_banner_horizontal.bmp"
+!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\orange-uninstall.ico"
 
 ; MUI 1.67 compatible ------
 !include "MUI2.nsh"
