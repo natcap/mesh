@@ -137,7 +137,7 @@ Section "MESH" Section_MESH_Tool
   ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
 
   CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\MESH ${VERSION}.lnk" "${INSTDIR}\mesh.bat" "" "${MESH_ICON}"
+  CreateShortCut "${SMPATH}\MESH ${VERSION}.lnk" "$INSTDIR\mesh.bat" "" "${MESH_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
