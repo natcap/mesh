@@ -47,10 +47,13 @@ def build_bin(options):
         for filename in files:
             if os.path.splitext(filename)[1] not in ['.py', '.pyc', '.pyx',
                                                      '.pyd', '.pyo']:
-                shutil.copyfile(
-                    os.path.join(root, filename),
-                    os.path.join('dist', 'mesh', 'bin',
-                                 os.path.relpath(root, 'code'), filename))
+                target_filename = os.path.join('dist', 'mesh', 'bin',
+                    os.path.relpath(root, 'code'), filename)
+
+                if not os.path.exists(os.path.dirname(target_filename)):
+                    os.makedirs(os.path.dirname(target_filename))
+
+                shutil.copyfile(os.path.join(root, filename), target_filename)
 
 
     open('dist/mesh/mesh.bat', 'w').write(
