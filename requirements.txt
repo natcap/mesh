@@ -5,3 +5,4 @@ markdown
 xlrd
 git+https://github.com/pyinstaller/pyinstaller.git@3.0
 git+https://github.com/phargogh/paver@natcap-version
+hg+https://bitbucket.org/jdouglass/versioner@0.2.4#egg=natcap.versioner

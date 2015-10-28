@@ -4,6 +4,8 @@ import os
 import paver.easy
 import paver.virtual
 
+import natcap.versioner
+
 paver.easy.options(
     virtualenv=paver.easy.Bunch(
         script_name='mesh_env_bootstrap.py',
@@ -66,6 +68,25 @@ def build_bin(options):
             'base_name': 'mesh_binaries',
             'format': 'zip',
             'root_dir': 'dist'})
+
+    hg_version = natcap.versioner.parse_version()
+    disk_version = hg_version.replace('+', '-')
+
+    hg_path = sh('hg paths', capture=True).rstrip()
+    forkuser, forkreponame = hg_path.split('/')[-2:]
+    if forkuser == 'natcap':
+        forkname = ''
+    else:
+        forkname = forkuser
+
+    # build the NSIS installer.
+    nsis_params = [
+        '/DVERSION=%s' % hg_version,
+        '/DVERSION_DISK=%s' % disk_version,
+        '/DFORKNAME=%s' % forkname,
+        'mesh_installer.nsi',
+    ]
+    sh('makensis ' + ' '.join(nsis_params), cwd='exe')
 
 @paver.easy.task
 def env(options):
