@@ -1,4 +1,5 @@
 import sys
+import shutil
 import os
 from PyInstaller.compat import is_win
 
@@ -72,3 +73,10 @@ dist = COLLECT(
         name="mesh",
         strip=None,
         upx=False)
+
+# Copy the images folder.  For some reason, when I include these as data files
+# in the Analysis object, the compiled PyInstaller binary won't be able to
+# locate the .Python executable.
+shutil.copytree(
+        os.path.join(current_dir, '..', 'code', 'icons'),
+        os.path.join(current_dir, '..', 'dist', 'mesh', 'icons'))
