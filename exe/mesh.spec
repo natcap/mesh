@@ -70,7 +70,7 @@ args = [exe, a.binaries, a.zipfiles, a.datas]
 
 dist = COLLECT(
         *args,
-        name="mesh",
+        name="mesh_bin",
         strip=None,
         upx=False)
 
@@ -79,4 +79,4 @@ dist = COLLECT(
 # locate the .Python executable.
 shutil.copytree(
         os.path.join(current_dir, '..', 'code', 'icons'),
-        os.path.join(current_dir, '..', 'dist', 'mesh', 'icons'))
+        os.path.join(current_dir, '..', 'dist', 'mesh_bin', 'icons'))
