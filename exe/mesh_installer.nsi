@@ -31,7 +31,7 @@ SetCompressor zlib
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.rtf"
+!insertmacro MUI_PAGE_LICENSE "..\LICENSE.txt"
 
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipComponents
 !insertmacro MUI_PAGE_COMPONENTS
@@ -161,8 +161,8 @@ Section "MESH" Section_MESH_Tool
 
   ; Actually install the information we want to disk.
   SetOutPath "$INSTDIR"
-  File LICENSE.txt
-  File /r ..\..\dist\mesh\*
+  File ..\LICENSE.txt
+  File /r ..\dist\mesh\*
 
   ; Write the install log to a text file on disk.
   StrCpy $0 "$INSTDIR\install_log.txt"
