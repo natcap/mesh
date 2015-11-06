@@ -762,7 +762,7 @@ class Scenario(MeshAbstractObject, QWidget):
         # if self.name != 'Baseline':
         #     self.populate_scenario_source_pb = QPushButton()
         #     self.add_icon = QIcon()
-        #     self.add_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        #     self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         #     self.populate_scenario_source_pb.setIcon(self.add_icon)
         #     self.populate_scenario_source_pb.setMaximumWidth(32)
         #     self.main_layout.addWidget(self.populate_scenario_source_pb)
@@ -770,7 +770,7 @@ class Scenario(MeshAbstractObject, QWidget):
 
         self.populate_scenario_source_pb = QPushButton()
         self.add_icon = QIcon()
-        self.add_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.populate_scenario_source_pb.setIcon(self.add_icon)
         self.populate_scenario_source_pb.setMaximumWidth(32)
         self.main_layout.addWidget(self.populate_scenario_source_pb)
@@ -1026,7 +1026,7 @@ class ModelsWidget(ScrollWidget):
         self.project_aoi_hbox.addWidget(self.area_of_interest_l)
         self.choose_set_aoi_method_pb = QPushButton()
         self.choose_set_aoi_method_icon = QIcon()
-        self.choose_set_aoi_method_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        self.choose_set_aoi_method_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.choose_set_aoi_method_pb.setIcon(self.choose_set_aoi_method_icon)
         self.project_aoi_hbox.addWidget(self.choose_set_aoi_method_pb)
         self.choose_set_aoi_method_pb.clicked.connect(self.root_app.choose_set_aoi_method)
@@ -1052,7 +1052,7 @@ class ModelsWidget(ScrollWidget):
 
         self.create_data_pb = QPushButton('MESH baseline data generator')
         self.create_data_icon = QIcon()
-        self.create_data_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        self.create_data_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.create_data_pb.setIcon(self.create_data_icon)
         self.create_data_hbox.addWidget(self.create_data_pb)
 
@@ -1426,7 +1426,7 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
 
         self.run_mesh_model_pb = QPushButton('Run')
         self.run_mesh_model_icon = QIcon()
-        self.run_mesh_model_icon.addPixmap(QPixmap('icons/globe.ico'), QIcon.Normal, QIcon.Off)
+        self.run_mesh_model_icon.addPixmap(QPixmap('icons/system-run-3.png'), QIcon.Normal, QIcon.Off)
         self.run_mesh_model_pb.setIcon(self.run_mesh_model_icon)
         self.run_mesh_model_pb.setMaximumWidth(180)
         self.run_button_hbox.addWidget(self.run_mesh_model_pb)
@@ -1441,6 +1441,10 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.run_button_hbox.addWidget(self.add_existing_run_pb)
         self.add_existing_run_pb.clicked.connect(self.create_element_from_folder_select_dialog)
 
+        self.runs_table_header = QLabel('Existing Runs')
+        self.runs_table_header.setFont(config.minor_heading_font)
+        self.main_layout.addWidget(self.runs_table_header)
+
         self.runs_table_hbox = QHBoxLayout()
         self.runs_table_hbox.setMargin(0)
         self.runs_table_hbox.setAlignment(Qt.AlignCenter)
@@ -1450,11 +1454,9 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
 
         self.runs_scrollbox = ScrollWidget(self, self)
         self.runs_scrollbox.setMinimumSize(550, 450)
+
         self.elements_vbox = QVBoxLayout()
         self.runs_scrollbox.scroll_layout.addLayout(self.elements_vbox)
-        self.runs_table_header = QLabel('Existing Runs')
-        self.runs_table_header.setFont(config.minor_heading_font)
-        self.runs_scrollbox.scroll_layout.addWidget(self.runs_table_header)
 
         self.runs_scrollbox.scroll_layout.addItem(
             QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
@@ -2365,7 +2367,7 @@ class Map(MeshAbstractObject, QWidget):
         self.main_hbox.addWidget(self.edit_pb)
 
         self.use_pb = QPushButton()
-        self.use_icon = QIcon(QPixmap('icons/flag.ico'))
+        self.use_icon = QIcon(QPixmap('icons/bookmark.png'))
         self.use_pb.setIcon(self.use_icon)
         self.use_pb.setIconSize(self.icon_size)
         self.use_pb.clicked.connect(self.use)
@@ -2814,7 +2816,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_state['climate_scenario']['long_name'] = 'Climate scenario generator'
     default_state['climate_scenario']['model_type'] = 'MESH_built_in'
     default_state['climate_scenario']['model_args'] = ''
-    default_state['climate_scenario']['enabled'] = True
+    default_state['climate_scenario']['enabled'] = False
 
     default_state['invest_lcm'] = default_element_args.copy()
     default_state['invest_lcm']['name'] = 'invest_lcm'

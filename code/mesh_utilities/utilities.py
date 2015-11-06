@@ -225,11 +225,16 @@ def file_to_python_object(file_uri, declare_type=None, verbose=False, return_all
 
     Function forked from original found in geoecon_utils library, used with permission open BSD from Justin Johnson.
     """
-    (file_path, file_extension) = os.path.splitext(file_uri)
-    (folder, file_name) = os.path.split(file_path)
+    file_extension = None
+    if os.path.exists(file_uri):
+        (file_path, file_extension) = os.path.splitext(file_uri)
+        (folder, file_name) = os.path.split(file_path)
+    else:
+        print('File does not exist: ' + file_uri)
+        return
+        #raise NameError('File does not exist: ' + file_uri)
 
     if file_extension == '.json':
-        ""
         json_data=open(file_uri).read()
         data = json.loads(json_data)
         return data
@@ -419,87 +424,88 @@ def determine_data_type_and_dimensions_for_read(file_uri):
     ul_index = None
     contains_3d_delimiter = False
 
-    with open(file_uri, 'r') as f: # Default behavior in open() assumes the first delimiter is \n and the sescond is ','. I extend this with extra_delimiters.
-        for row in f:
-            if '<^>' in row:
-                contains_3d_delimiter = True
-    with open(file_uri, 'r') as f:
-        col_lengths = []
-        for row in f:
-            split_row = row.replace('\n','').split(',')
-            if split_row[0] not in index_synonyms:
-                col_lengths.append(len(split_row))
-            else:
-                if split_row[0] == '':
-                    blank_ul = True
+    if os.path.exists(file_uri):
+        with open(file_uri, 'r') as f: # Default behavior in open() assumes the first delimiter is \n and the sescond is ','. I extend this with extra_delimiters.
+            for row in f:
+                if '<^>' in row:
+                    contains_3d_delimiter = True
+        with open(file_uri, 'r') as f:
+            col_lengths = []
+            for row in f:
+                split_row = row.replace('\n','').split(',')
+                if split_row[0] not in index_synonyms:
+                    col_lengths.append(len(split_row))
                 else:
-                    ul_index = split_row[0]
+                    if split_row[0] == '':
+                        blank_ul = True
+                    else:
+                        ul_index = split_row[0]
 
-        num_rows = len(col_lengths)
-        #num_rows = 0
-        num_cols = 0
-        if num_rows > 0:
-            num_cols = max(col_lengths)
-        else:
-            num_cols = 1
-
-        if declare_type:
-            data_type = declare_type
-        else:
-            if num_cols == 1:
-                if num_rows == 1:
-                    data_type = 'singleton'
-                elif num_rows == 0:
-                    if blank_ul:
-                        data_type = 'horizontal_list'
-                    elif ul_index:
-                        data_type = 'indexed_column_headers_with_no_data'
-                    else:
-                        data_type = 'column_headers_with_no_data'
-                else:
-                    data_type = '1d_list'
-            elif num_cols == 2:
-                if blank_ul:
-                    print('A 2 column file cannot have a blank UL cell.')
-                if declare_type in ['dict']:
-                    data_type = '1d_dict'
-                    num_cols -= 1
-                else:
-                    data_type = '1d_odict'
-                    num_cols -= 1
+            num_rows = len(col_lengths)
+            #num_rows = 0
+            num_cols = 0
+            if num_rows > 0:
+                num_cols = max(col_lengths)
             else:
-                if contains_3d_delimiter:
-                    if blank_ul:
-                        data_type = '3d_odict_odict_list'
-                        num_cols -= 1
-                    elif ul_index in index_synonyms:
-                        data_type = '3d_odict_odict_list' # TODO Differentiate between indexed_3d_odict_odict_list and 3d_odict_odict_list
-                    else:
-                        if declare_type in ['odict_list']:
-                            data_type = '3d_odict_list_list'
-                            data = OrderedDict()
-                            num_cols -= 1
-                        elif declare_type in ['list_odict']:
-                            data_type = '3d_list_odict_list'
-                            num_rows -= 1 # This is only corrected here because all other cases are caught by checking the length of col_lengths.
+                num_cols = 1
+
+            if declare_type:
+                data_type = declare_type
+            else:
+                if num_cols == 1:
+                    if num_rows == 1:
+                        data_type = 'singleton'
+                    elif num_rows == 0:
+                        if blank_ul:
+                            data_type = 'horizontal_list'
+                        elif ul_index:
+                            data_type = 'indexed_column_headers_with_no_data'
                         else:
-                            data_type = '3d_list'
+                            data_type = 'column_headers_with_no_data'
+                    else:
+                        data_type = '1d_list'
+                elif num_cols == 2:
+                    if blank_ul:
+                        print('A 2 column file cannot have a blank UL cell.')
+                    if declare_type in ['dict']:
+                        data_type = '1d_dict'
+                        num_cols -= 1
+                    else:
+                        data_type = '1d_odict'
+                        num_cols -= 1
                 else:
-                    if blank_ul:
-                        data_type = '2d_odict'
-                        num_cols -= 1
-                    elif ul_index:
-                        data_type = '2d_indexed_odict'
-                    else:
-                        if declare_type in ['odict_list']:
-                            data_type = '2d_odict_list'
+                    if contains_3d_delimiter:
+                        if blank_ul:
+                            data_type = '3d_odict_odict_list'
                             num_cols -= 1
-                        elif declare_type in ['list_odict']:
-                            data_type = '2d_list_odict'
-                            num_rows -= 1 # This is only corrected here because all other cases are caught by checking the length of col_lengths.
+                        elif ul_index in index_synonyms:
+                            data_type = '3d_odict_odict_list' # TODO Differentiate between indexed_3d_odict_odict_list and 3d_odict_odict_list
                         else:
-                            data_type = '2d_list'
-    return data_type, num_rows, num_cols
+                            if declare_type in ['odict_list']:
+                                data_type = '3d_odict_list_list'
+                                data = OrderedDict()
+                                num_cols -= 1
+                            elif declare_type in ['list_odict']:
+                                data_type = '3d_list_odict_list'
+                                num_rows -= 1 # This is only corrected here because all other cases are caught by checking the length of col_lengths.
+                            else:
+                                data_type = '3d_list'
+                    else:
+                        if blank_ul:
+                            data_type = '2d_odict'
+                            num_cols -= 1
+                        elif ul_index:
+                            data_type = '2d_indexed_odict'
+                        else:
+                            if declare_type in ['odict_list']:
+                                data_type = '2d_odict_list'
+                                num_cols -= 1
+                            elif declare_type in ['list_odict']:
+                                data_type = '2d_list_odict'
+                                num_rows -= 1 # This is only corrected here because all other cases are caught by checking the length of col_lengths.
+                            else:
+                                data_type = '2d_list'
+        return data_type, num_rows, num_cols
 
 def convert_to_bool(input):
     return str(input).lower() in ("yes", "true", "t", "1")

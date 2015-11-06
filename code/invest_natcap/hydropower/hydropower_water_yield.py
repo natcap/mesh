@@ -10,7 +10,8 @@ import numpy
 from osgeo import gdal
 from osgeo import ogr
 
-import pygeoprocessing.geoprocessing
+#import pygeoprocessing.geoprocessing
+from pygeoprocessing_vmesh import geoprocessing
 
 LOGGER = logging.getLogger('invest_natcap.hydropower.hydropower_water_yield')
 
