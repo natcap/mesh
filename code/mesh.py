@@ -1954,21 +1954,31 @@ class Report(MeshAbstractObject, QFrame):
         self.report_actions_hbox.addWidget(self.view_or_edit_report_pb)
         self.view_or_edit_report_pb.clicked.connect(self.view_or_edit_report)
 
-        self.save_report_as_text_document_pb = QPushButton('Save report as doc')
-        self.save_report_as_text_document_icon = QIcon()
-        self.save_report_as_text_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
-        self.save_report_as_text_document_pb.setIcon(self.save_report_as_text_document_icon)
-        self.save_report_as_text_document_pb.setMaximumWidth(260)
-        self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
-        self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
 
-        self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
-        self.save_report_as_pdf_icon = QIcon()
-        self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
-        self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
-        self.save_report_as_pdf_pb.setMaximumWidth(260)
-        self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
-        self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
+        self.save_report_as_html_pb = QPushButton('Save report')
+        self.save_report_as_html_icon = QIcon()
+        self.save_report_as_html_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
+        self.save_report_as_html_pb.setIcon(self.save_report_as_html_icon)
+        self.save_report_as_html_pb.setMaximumWidth(260)
+        self.report_actions_hbox.addWidget(self.save_report_as_html_pb)
+        self.save_report_as_html_pb.clicked.connect(self.save_report_as_html)
+
+
+        # self.save_report_as_text_document_pb = QPushButton('Save report as doc')
+        # self.save_report_as_text_document_icon = QIcon()
+        # self.save_report_as_text_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
+        # self.save_report_as_text_document_pb.setIcon(self.save_report_as_text_document_icon)
+        # self.save_report_as_text_document_pb.setMaximumWidth(260)
+        # self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
+        # self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
+        #
+        # self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
+        # self.save_report_as_pdf_icon = QIcon()
+        # self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
+        # self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
+        # self.save_report_as_pdf_pb.setMaximumWidth(260)
+        # self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
+        # self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
 
         self.clear_pb = QPushButton()
         self.clear_pb.clicked.connect(self.remove_self)
@@ -1979,7 +1989,7 @@ class Report(MeshAbstractObject, QFrame):
 
     def update_ui(self):
         if len(self.html):
-            number_of_preview_lines = 3
+            number_of_preview_lines = 2
             self.html_l.setText('\n'.join(self.html[0:number_of_preview_lines]))
             self.html_l.setVisible(True)
 
@@ -2039,13 +2049,13 @@ class Report(MeshAbstractObject, QFrame):
         elif tag == 'models_string':
             dynamic_content = self.build_models_string()
         elif tag == 'model_results_table':
-            dynamic_content = self.build_results_table()
-        elif tag == 'model_primary_indicator_map':
-            dynamic_content = 'model_primary_indicator_map'
-        elif tag == 'scenario_results_comparison_table':
-            dynamic_content = 'REPLACE THIS WITH THE TABLE'
-        elif tag == 'scenario_difference_map':
-            dynamic_content = 'REPLACE THIS WITH THE TABLE'
+             dynamic_content = self.build_results_table()
+        # elif tag == 'model_primary_indicator_map':
+        #     dynamic_content = 'model_primary_indicator_map'
+        # elif tag == 'scenario_results_comparison_table':
+        #     dynamic_content = 'REPLACE THIS WITH THE TABLE'
+        # elif tag == 'scenario_difference_map':
+        #     dynamic_content = 'REPLACE THIS WITH THE TABLE'
         return dynamic_content
 
     def build_models_list(self):
@@ -2085,30 +2095,53 @@ class Report(MeshAbstractObject, QFrame):
         return scenarios_string
 
     def build_results_table(self):
-        table = '<table>'
+        st = ''
         models_list = self.build_models_list()
         scenarios_list = self.build_scenarios_list()
         num_rows = len(scenarios_list) + 1
         num_cols = len(models_list)
         row = 0
         col = 0
-        for row in range(num_rows):
-            if row == 0:
-                table += '<tr><td></td>'  # Blank UL cell
-            else:
-                table += '<tr>'
-            for col in range(num_cols):
-                if row == 0:
-                    table += '<td>' + models_list[col - 1].long_name + '</td>'
-                else:
-                    if col == 0:
-                        table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
-                    else:
-                        value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
-                        table += '<td>' + value_to_record + '</td>'
-            table += '</tr>'
-        table += '</table>'
-        return table
+
+        for scenario in scenarios_list:
+            st += '<h2>Scenario: ' + scenario.long_name + '</h2>'
+            scenario_folder = os.path.join(self.root_app.project_folder, 'output/runs/', self.run_name, scenario.name)
+            for model in models_list:
+                st += '<h3>Model: ' + model.long_name + '</h3>'
+                model_output_folder = os.path.join(scenario_folder, model.name, 'output')
+                if model.name == 'carbon_combined':
+                    ds = gdal.Open(os.path.join(model_output_folder, 'tot_C_cur.tif'))
+                    value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                    st += '<p>Tons of carbon storage: ' + value + '</p>'
+                    for filename in os.listdir(model_output_folder):
+                        print filename, os.path.splitext(filename)[1]
+                        if os.path.splitext(filename)[1] == '.png':
+                            st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
+
+                if model.name == 'hydropower_water_yield':
+                    ds = gdal.Open(os.path.join(model_output_folder, 'per_pixel/wyield.tif'))
+                    value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                    st += '<p>Total water yield: ' + value
+        return st
+
+
+        # for row in range(num_rows):
+        #     if row == 0:
+        #         table += '<tr><td></td>'  # Blank UL cell
+        #     else:
+        #         table += '<tr>'
+        #     for col in range(num_cols):
+        #         if row == 0:
+        #             table += '<td>' + models_list[col - 1].long_name + '</td>'
+        #         else:
+        #             if col == 0:
+        #                 table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
+        #             else:
+        #                 value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
+        #                 table += '<td>' + value_to_record + '</td>'
+        #     table += '</tr>'
+        # table += '</table>'
+        # return table
 
     def build_results_table_REAL(self):
         table = '<table>'
@@ -2193,11 +2226,19 @@ class Report(MeshAbstractObject, QFrame):
         self.editor.setHtml('\n'.join(self.html))
         self.editor.show()
 
-    def save_report_as_text_document(self):
-        print 'save txt'
+    def save_report_as_html(self):
+        to_write = str(self.html)
+        dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.html')
+        open(dst, 'w').write(to_write)
 
-    def save_report_as_pdf(self):
-        print 'save pdf'
+
+    # def save_report_as_text_document(self):
+    #     print 'save txt'
+    #
+    # def save_report_as_pdf(self):
+    #     dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.pdf')
+    #     utilities.convert_html_to_pdf(self.html, dst)
+
 
 
 class MapWidget(MeshAbstractObject, QDockWidget):
