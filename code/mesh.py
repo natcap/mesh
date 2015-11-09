@@ -2104,14 +2104,45 @@ class Report(MeshAbstractObject, QFrame):
                     if col == 0:
                         table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
                     else:
-                        value_to_record = self.get_value_from_scenario_model_pair(scenario, model, value_to_get)
+                        value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
                         table += '<td>' + value_to_record + '</td>'
             table += '</tr>'
         table += '</table>'
         return table
 
-    def get_value_from_scenario_model_pair(self, scenario, model, value_to_get):
-        55
+    def build_results_table_REAL(self):
+        table = '<table>'
+        models_list = self.build_models_list()
+        scenarios_list = self.build_scenarios_list()
+        num_rows = len(scenarios_list) + 1
+        num_cols = len(models_list)
+        row = 0
+        col = 0
+        for row in range(num_rows):
+            if row == 0:
+                table += '<tr><td></td>'  # Blank UL cell
+            else:
+                table += '<tr>'
+            for col in range(num_cols):
+                if row == 0:
+                    table += '<td>' + models_list[col - 1].long_name + '</td>'
+                else:
+                    if col == 0:
+                        table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
+                    else:
+                        value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
+                        table += '<td>' + value_to_record + '</td>'
+            table += '</tr>'
+        table += '</table>'
+        return table
+
+    def get_value_from_scenario_model_pair(self, scenario, model, value_to_get=None):
+        if model.name == 'carbon_combined':
+            return 'carbon_value'
+        elif model.name == 'hydropower_water_yield':
+            return 'hydropower'
+        else:
+            return 'output value here'
 
     def set_state_from_args(self):
         55
@@ -3034,8 +3065,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
                                       selected_continent + '_' + selected_level + '_' + str(selected_id) + '.shp')
 
-        print 'output_shp_uri', output_shp_uri
-
         data_creation.save_shp_feature_by_attribute(hybas_uri, selected_id, output_shp_uri)
 
         self.root_app.set_project_aoi(output_shp_uri)
@@ -3109,7 +3138,7 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
                             hbox = QHBoxLayout()
                             self.scroll_widget.scroll_layout.addLayout(hbox)
                             hbox.addWidget(QLabel(filename))
-                            hbox.addWidget(QPushButton('Select as report ready object'))
+                            hbox.addWidget(QPushButton('Select as report ready object - NOT YET IMPLEMENTED'))
         self.show()
 
 
@@ -3580,6 +3609,8 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
+        self.setMinimumWidth(650)
+
         self.setWindowTitle('Configure Base Data')
         self.title_l = QLabel('Configure Base Data')
         self.title_l.setFont(config.heading_font)
@@ -3593,10 +3624,21 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.subtitle_l)
         self.main_layout.addWidget(QLabel())
 
-        self.download_data_l = QLabel('Due to licensing reasons, MESH does not currently come with the base data pre-installed. However, all of the data is available for free online from its respective providers. See the users guide for installing the data for each model.')
+        self.download_data_l = QLabel('Due to licensing reasons, MESH does not currently come with the base data '
+                                      'pre-installed. However, all of the data is available for free online from '
+                                      'its respective providers. See the users guide or the forums at www.naturalcapitalproject.org '
+                                      'for details on installing the data for each model.\n'
+                                      )
         self.download_data_l.setWordWrap(True)
         self.main_layout.addWidget(self.download_data_l)
 
+        self.set_base_data_folder_decription_l = QLabel('By default, your base data is stored in c:/mesh/base_data. If you would like to set a different '
+                                                        'folder to be your base_data directoy, click \'Select Folder.\' For some '
+                                                        'of the data_creation tools, you need to have the correct datasets '
+                                                        'placed in the base_data folder, e.g. c:/mesh/base_data/Hydrosheds.'
+                                                        '\n')
+        self.set_base_data_folder_decription_l.setWordWrap(True)
+        self.main_layout.addWidget(self.set_base_data_folder_decription_l)
 
         self.set_folder_to_default_pb = QPushButton('Set folder to default')
         self.set_folder_to_default_pb.clicked.connect(self.set_folder_to_default)

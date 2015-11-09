@@ -1911,8 +1911,6 @@ def resize_and_resample_dataset_uri(
     create_directories([os.path.dirname(output_uri)])
     gdal_driver = gdal.GetDriverByName('GTiff')
 
-    print 'output_uri', output_uri
-
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType,
         options=gtiff_creation_options)
