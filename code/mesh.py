@@ -1047,8 +1047,14 @@ class ModelsWidget(ScrollWidget):
 
         self.create_data_hbox = QHBoxLayout()
         self.scroll_layout.addLayout(self.create_data_hbox)
-        self.create_data_l = QLabel('Create data for selected models:')
+        self.create_data_l = QLabel('Create data for selected models:*')
         self.create_data_hbox.addWidget(self.create_data_l)
+
+        self.asterisk_nyi_l = QLabel('Here and elsewhere, * deotes a feature that is partially implemented. Along with '
+                                     'greyed-out buttons, these features will be fully implemented in the forthcoming MESH 1.0 release.')
+        self.asterisk_nyi_l.setWordWrap(True)
+        self.asterisk_nyi_l.setFont(config.italic_font)
+        self.scroll_layout.addWidget(self.asterisk_nyi_l)
 
         self.create_data_pb = QPushButton('MESH baseline data generator')
         self.create_data_icon = QIcon()
@@ -1585,6 +1591,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         self.data_explorer_icon.addPixmap(QPixmap('icons/emblem-package.png'), QIcon.Normal, QIcon.Off)
         self.data_explorer_pb.setIcon(self.data_explorer_icon)
         self.main_layout.addWidget(self.data_explorer_pb)
+        self.data_explorer_pb.setEnabled(False)
         self.data_explorer_pb.clicked.connect(self.data_explorer_signal_wrapper)
 
         self.add_run_to_map_viewer_pb = QPushButton('Map')
@@ -1989,7 +1996,7 @@ class Report(MeshAbstractObject, QFrame):
 
     def update_ui(self):
         if len(self.html):
-            number_of_preview_lines = 2
+            number_of_preview_lines = 3
             self.html_l.setText('\n'.join(self.html[0:number_of_preview_lines]))
             self.html_l.setVisible(True)
 
@@ -2110,18 +2117,27 @@ class Report(MeshAbstractObject, QFrame):
                 st += '<h3>Model: ' + model.long_name + '</h3>'
                 model_output_folder = os.path.join(scenario_folder, model.name, 'output')
                 if model.name == 'carbon_combined':
-                    ds = gdal.Open(os.path.join(model_output_folder, 'tot_C_cur.tif'))
-                    value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
-                    st += '<p>Tons of carbon storage: ' + value + '</p>'
-                    for filename in os.listdir(model_output_folder):
-                        print filename, os.path.splitext(filename)[1]
-                        if os.path.splitext(filename)[1] == '.png':
-                            st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
+                    output_uri = os.path.join(model_output_folder, 'tot_C_cur.tif')
+                    if os.path.exists(output_uri):
+                        ds = gdal.Open(output_uri)
+                        value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                        st += '<p>Tons of carbon storage: ' + value + '</p>'
+                        for filename in os.listdir(model_output_folder):
+                            if os.path.splitext(filename)[1] == '.png':
+
+                                st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
 
                 if model.name == 'hydropower_water_yield':
-                    ds = gdal.Open(os.path.join(model_output_folder, 'per_pixel/wyield.tif'))
-                    value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
-                    st += '<p>Total water yield: ' + value
+                    output_uri = os.path.join(model_output_folder, 'per_pixel/wyield.tif')
+                    if os.path.exists(output_uri):
+                        ds = gdal.Open(output_uri)
+                        value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                        st += '<p>Total water yield: ' + value
+                        for filename in os.listdir(model_output_folder):
+                            if os.path.splitext(filename)[1] == '.png':
+                                st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
+
+
         return st
 
 
@@ -2671,8 +2687,12 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Create a report from this run')
-        self.description = QLabel('Choose which type of report to make from this run')
+        self.description = QLabel('Choose which type of report to make from this run.\n')
         self.main_layout.addWidget(self.description)
+
+        self.how_to_add_images = QLabel('To add formatted, cropped or zoomed images, use the map viewer to produce the desired map, then save the map in the model\'s output folder\n')
+        self.how_to_add_images.setWordWrap(True)
+        self.main_layout.addWidget(self.how_to_add_images)
 
         self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
                              'Full Technical Report']
