@@ -1683,9 +1683,11 @@ def temporary_filename(suffix=''):
         fname: a unique temporary filename
 
     """
-
-    file_handle, path = tempfile.mkstemp(suffix=suffix)
-    os.close(file_handle)
+    try:
+        file_handle, path = tempfile.mkstemp(suffix=suffix)
+        os.close(file_handle)
+    except:
+        path = str(time.time()) + str(np.random.randint(0, 1000000)) + '.tmp'
 
     def remove_file(path):
         """Function to remove a file and handle exceptions to register
