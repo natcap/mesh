@@ -2253,7 +2253,8 @@ class Report(MeshAbstractObject, QFrame):
     #
     # def save_report_as_pdf(self):
     #     dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.pdf')
-    #     utilities.convert_html_to_pdf(self.html, dst)
+    #     utilities.convert_html_+
+    # to_pdf(self.html, dst)
 
 
 
@@ -2830,7 +2831,7 @@ class ChooseSetAOIMethodDialog(MeshAbstractObject, QDialog):
 
     default_state['set_as_hydrosheds_watershed'] = default_element_args.copy()
     default_state['set_as_hydrosheds_watershed']['name'] = 'set_as_hydrosheds_watershed'
-    default_state['set_as_hydrosheds_watershed']['long_name'] = 'Set as HydroSHEDS Watershed'
+    default_state['set_as_hydrosheds_watershed']['long_name'] = 'Set as HydroSHEDS Watershed*'
     default_state['set_as_hydrosheds_watershed']['enabled'] = True
 
     # default_state['set_as_administrative_boundary'] = default_element_args.copy()
