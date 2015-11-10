@@ -5,6 +5,7 @@ import imp
 from collections import deque
 import traceback
 import logging
+import importlib
 import time
 import subprocess
 import platform
@@ -471,27 +472,22 @@ class Executor(threading.Thread):
         # locate the model to be loaded.
         try:
             if os.path.isfile(module):
-                model = imp.load_source('model', module)
-               # Model name is name of module file, minus the extension
-                model_name = os.path.splitext(os.path.basename(module))[0]
-                LOGGER.debug('Loading %s from %s', model_name, model)
+                model = importlib.import_module(
+                    imp.load_source('model', module))
             else:
-                LOGGER.debug('PATH: %s', sys.path)
-                module_list = module.split('.')
-                model = locate_module(module_list)
-                model_name = module_list[-1]  # model name is last entry in list
-                LOGGER.debug('Loading %s from PATH', model_name)
-        except ImportError as e:
+                model = importlib.import_module(module)
+                LOGGER.debug('Loading %s in frozen environment', model)
+        except ImportError as exception:
             LOGGER.error('ImportError found when locating %s', module)
             self.printTraceback()
-            self.setThreadFailed(True, e)
+            self.setThreadFailed(True, exception)
             return
 
         # Create the log filename from the current time and save that in the
         # root of the user's workspace.  The file is actually written to
         # whenever self.write() is called.
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
-        filename = '%s-log-%s.txt' % (model_name, timestamp)
+        filename = '%s-log-%s.txt' % (module, timestamp)
         log_file_uri = os.path.abspath(
             os.path.join(workspace, filename))
         self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8', buffering=0)
@@ -514,7 +510,7 @@ class Executor(threading.Thread):
             LOGGER.info('Python architecture: %s', platform.architecture())
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
-            invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
+            invest_natcap.log_model(module, model_version)  # log model usage to ncp-dev
 
             LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
             temporary_path = os.path.join(args['workspace_dir'], 'tmp')
@@ -537,7 +533,7 @@ class Executor(threading.Thread):
             tempfile.tempdir = temporary_path
 
             model_start_time = time.time()
-            LOGGER.info('Starting %s', model_name)
+            LOGGER.info('Starting %s', module)
             if '_process_pool' in args:
                 raise Exception("There's already a process_pool, aborting!")
             args['_process_pool'] = None
@@ -559,7 +555,7 @@ class Executor(threading.Thread):
             LOGGER.error('---------------------------------------------------')
             LOGGER.error('---------------------- ERROR ----------------------')
             LOGGER.error('---------------------------------------------------')
-            LOGGER.error('Error: exception found while running %s', model_name)
+            LOGGER.error('Error: exception found while running %s', module)
             LOGGER.debug('')
             self.print_system_info(LOGGER.debug)
 
