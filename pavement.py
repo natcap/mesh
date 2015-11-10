@@ -70,7 +70,7 @@ def build_bin(options):
             'root_dir': 'dist'})
 
     hg_version = natcap.versioner.parse_version()
-    disk_version = hg_version.replace('+', '-')
+    disk_version = hg_version.replace('+', '-').replace('.', '')
 
     hg_path = paver.easy.sh('hg paths', capture=True).rstrip()
     forkuser, forkreponame = hg_path.split('/')[-2:]
