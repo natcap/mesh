@@ -11,6 +11,7 @@ import sys
 import os
 import logging
 from collections import OrderedDict
+import warnings
 
 from markdown import markdown
 from osgeo import gdal
@@ -131,7 +132,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.resize(1550, 850)
 
         self.setWindowTitle(
-            'MESH-SDG Model: Mapping Ecosystem Services to Human well-being and the Sustainable Development Goals')
+            'MESH Model: Mapping Ecosystem Services to Human well-being')
         self.mainWindowIcon = QIcon()
         self.mainWindowIcon.addPixmap(QPixmap('icons/mesh_green.png'), QIcon.Normal, QIcon.Off)
         self.setWindowIcon(self.mainWindowIcon)
@@ -1050,7 +1051,7 @@ class ModelsWidget(ScrollWidget):
         self.create_data_l = QLabel('Create data for selected models:*')
         self.create_data_hbox.addWidget(self.create_data_l)
 
-        self.asterisk_nyi_l = QLabel('Here and elsewhere, * deotes a feature that is partially implemented. Along with '
+        self.asterisk_nyi_l = QLabel('Here and elsewhere, * denotes a feature that is partially implemented. Along with '
                                      'greyed-out buttons, these features will be fully implemented in the forthcoming MESH 1.0 release.')
         self.asterisk_nyi_l.setWordWrap(True)
         self.asterisk_nyi_l.setFont(config.italic_font)
@@ -1508,7 +1509,7 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
             self.elements_vbox.addWidget(element)
 
     def create_element(self, name, args=None):
-        if not args:
+        if not args or not name:
             args = self.create_default_element_args(name)
         element = ModelRun(name, args, self.root_app, self)
         self.elements[name] = element
@@ -1525,7 +1526,8 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         selected_uri = str(QFileDialog.getExistingDirectory(self, 'Select existing run', self.root_app.project_folder))
         if selected_uri:
             name = os.path.splitext(os.path.split(selected_uri)[1])[0]
-            self.create_element(name)
+            name_just_folder = os.path.split(name)[1]
+            self.create_element(name_just_folder)
             self.update_runs_table()
 
     def unload_elements(self):
@@ -1630,7 +1632,10 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         self.scenarios_in_run = []
         for scenario_name in self.scenarios_in_run_names:
-            self.scenarios_in_run.append(self.root_app.scenarios_dock.scenarios_widget.elements[scenario_name])
+            try:
+                self.scenarios_in_run.append(self.root_app.scenarios_dock.scenarios_widget.elements[scenario_name])
+            except:
+                warnings.warn(scenario_name + ' added to scenarios_widget.elements, but something broke.')
 
         if isinstance(self.args['models_in_run'], str):
             self.models_in_run_names = [self.args['models_in_run']]  # NOTE the wrapping in a list
@@ -1821,6 +1826,8 @@ class ReportsWidget(MeshAbstractObject, QWidget):
             LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
             LOGGER.warn('Attempted to add element that already exists.')
+        elif name not in args:
+            warnings.warn("Warning, run name not in loaded CSV.")
         else:
             model_run = self.root_app.model_runs_widget.elements[args['run_name']]
             element = Report(name, args, self.root_app, model_run)
@@ -2246,16 +2253,6 @@ class Report(MeshAbstractObject, QFrame):
         to_write = str(self.html)
         dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.html')
         open(dst, 'w').write(to_write)
-
-
-    # def save_report_as_text_document(self):
-    #     print 'save txt'
-    #
-    # def save_report_as_pdf(self):
-    #     dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.pdf')
-    #     utilities.convert_html_+
-    # to_pdf(self.html, dst)
-
 
 
 class MapWidget(MeshAbstractObject, QDockWidget):
@@ -3124,6 +3121,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
         hybas_uri = self.get_selected_hybas_uri()
+        #TODO BUG 1 in the executable, this throws an error swaying it expects a folder not a shp.
         output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
                                       selected_continent + '_' + selected_level + '_' + str(selected_id) + '.shp')
 
@@ -3613,31 +3611,31 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                                                           parent=self)
                         self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
 
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.optional_l = QLabel('Optional Inputs')
-            self.optional_l.setFont(config.minor_heading_font)
-            self.scroll_widget.scroll_layout.addWidget(self.optional_l)
-
-            self.optional_model_headers = OrderedDict()
-            self.optional_specify_buttons = OrderedDict()
-            for model in checked_models:
-                self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-                self.optional_model_headers[model.name] = QLabel(model.long_name)
-                self.optional_model_headers[model.name].setFont(config.bold_font)
-                self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
-
-                self.input_mapping_uri = os.path.join('../settings/default_setup_files',
-                                                      model.name + '_input_mapping.csv')
-                input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-
-                for key, value in input_mapping.items():
-                    if not utilities.convert_to_bool(value['required']):
-                        self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
-                                                                                          specify_function=self.create_data_from_args,
-                                                                                          root_app=self.root_app,
-                                                                                          parent=self)
-                        self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.optional_l = QLabel('Optional Inputs')
+            # self.optional_l.setFont(config.minor_heading_font)
+            # self.scroll_widget.scroll_layout.addWidget(self.optional_l)
+            #
+            # self.optional_model_headers = OrderedDict()
+            # self.optional_specify_buttons = OrderedDict()
+            # for model in checked_models:
+            #     self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            #     self.optional_model_headers[model.name] = QLabel(model.long_name)
+            #     self.optional_model_headers[model.name].setFont(config.bold_font)
+            #     self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
+            #
+            #     self.input_mapping_uri = os.path.join('../settings/default_setup_files',
+            #                                           model.name + '_input_mapping.csv')
+            #     input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+            #
+            #     for key, value in input_mapping.items():
+            #         if not utilities.convert_to_bool(value['required']):
+            #             self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
+            #                                                                               specify_function=self.create_data_from_args,
+            #                                                                               root_app=self.root_app,
+            #                                                                               parent=self)
+            #             self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')

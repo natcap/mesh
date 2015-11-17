@@ -20,6 +20,7 @@ from osgeo import osr
 from osgeo import ogr
 
 import numpy
+import numpy as np
 import numpy.ma
 import scipy.interpolate
 import scipy.sparse
