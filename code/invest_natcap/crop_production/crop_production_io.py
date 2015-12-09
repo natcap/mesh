@@ -9,7 +9,7 @@ import csv
 import pprint as pp
 import collections
 
-import pygeoprocessing.geoprocessing as pygeo
+import pygeoprocessing_vmesh.geoprocessing as pygeo
 from raster import Raster
 
 LOGGER = logging.getLogger('invest_natcap.crop_production.io')

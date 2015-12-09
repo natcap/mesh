@@ -31,8 +31,8 @@ import shapely.ops
 from shapely import speedups
 import shapely.prepared
 
-import pygeoprocessing.geoprocessing_core
-from pygeoprocessing import fileio
+import pygeoprocessing_vmesh.geoprocessing_core
+from pygeoprocessing_vmesh import fileio
 
 
 def _gdal_to_numpy_type(band):
@@ -341,7 +341,7 @@ def new_raster_from_base_uri(
 
     """
 
-    pygeoprocessing.geoprocessing_core.new_raster_from_base_uri(
+    pygeoprocessing_vmesh.geoprocessing_core.new_raster_from_base_uri(
         base_uri,output_uri, gdal_format, nodata, datatype,
         fill_value=fill_value, n_rows=n_rows, n_cols=n_rows,
         dataset_options=dataset_options)
@@ -384,7 +384,7 @@ def new_raster_from_base(
 
     """
 
-    return pygeoprocessing.geoprocessing_core.new_raster_from_base(
+    return pygeoprocessing_vmesh.geoprocessing_core.new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value,
         n_rows, n_cols, dataset_options)
 
@@ -1080,7 +1080,7 @@ def calculate_slope(
     slope_nodata = -9999.0
     new_raster_from_base_uri(
         dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
-    pygeoprocessing.geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
+    pygeoprocessing_vmesh.geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
     calculate_raster_stats_uri(slope_uri)
 
     os.remove(dem_small_uri)
@@ -1672,6 +1672,47 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     return memory_array
 
 
+def remove_file_at_exit(temporary_uri):
+    """Function to remove a file and handle exceptions to register
+        in atexit"""
+    try:
+        os.remove(temporary_uri)
+        LOGGER.info('Successfully removed file in temporary_filename_in_working_directory via atexit.')
+    except OSError:
+        LOGGER.info('Failed to remove file in temporary_filename_in_working_directory via atexit. Ensure this was desired')
+        pass
+
+    atexit.register(remove_file, path)
+
+
+def thread_safe_temporary_file(file_ext=''):
+    """
+    When temporary_filename() is called in one thread but is required to finish before an action in another
+    thread, it can throw Errno 2. I think this happens because it uses the python tempfile module and the
+    atexit module. Perhaps it removes the file when the thread exits? This function creates a temproary file without
+    tempfile.
+    """
+    def remove_file(path):
+        """Function to remove a file and handle exceptions to register
+            in atexit"""
+        try:
+            os.remove(path)
+            LOGGER.info('Successfully removed file in temporary_filename_in_working_directory via atexit.')
+        except OSError:
+            LOGGER.info('Failed to remove file in temporary_filename_in_working_directory via atexit. Ensure this was desired')
+            pass
+
+
+    temporary_uri = 'tempfile_' + str(time.time()).replace('.','') + '_' + str(numpy.random.randint(0, 1000000))
+    if file_ext:
+        temporary_uri = os.path.join(to_return, file_ext)
+    else:
+        temporary_uri = os.path.join(to_return, '.tmp')
+
+    atexit.register(remove_file, temporary_uri)
+
+    return temporary_uri
+
 def temporary_filename(suffix=''):
     """
     Returns a temporary filename using mkstemp. The file is deleted
@@ -1684,11 +1725,18 @@ def temporary_filename(suffix=''):
         fname: a unique temporary filename
 
     """
-    try:
-        file_handle, path = tempfile.mkstemp(suffix=suffix)
-        os.close(file_handle)
-    except:
-        path = str(time.time()) + str(np.random.randint(0, 1000000)) + '.tmp'
+    # try:
+    #     file_handle, path = tempfile.mkstemp(suffix=suffix)
+    #     os.close(file_handle)
+    # except:
+    #     path = str(time.time()) + str(np.random.randint(0, 1000000)) + '.tmp'
+    temporary_uri = 'tempfile_' + str(time.time()).replace('.','') + '_' + str(numpy.random.randint(0, 1000000))
+    if suffix:
+        temporary_uri = os.path.join(to_return, suffix)
+    else:
+        temporary_uri = os.path.join(to_return, '.tmp')
+
+
 
     def remove_file(path):
         """Function to remove a file and handle exceptions to register
@@ -1700,8 +1748,8 @@ def temporary_filename(suffix=''):
             #we deleted it in a method
             pass
 
-    atexit.register(remove_file, path)
-    return path
+    atexit.register(remove_file, temporary_uri)
+    return temporary_uri
 
 
 def temporary_folder():
@@ -1714,7 +1762,7 @@ def temporary_folder():
 
     """
 
-    path = tempfile.mkdtemp()
+    path = 'tempfolder_' + str(time.time()).replace('.','') + '_' + str(numpy.random.randint(0, 1000000))
 
     def remove_folder(path):
         """Function to remove a folder and handle exceptions encountered.  This
@@ -2301,12 +2349,17 @@ def vectorize_datasets(
 
         # Modified the following code because when InVEST calls temporary_filename() from different threads, it gives
         # an Errno2 error. I fixed it with a very poorly-conceived string manipulation in the except clause.
-        try:
-            dataset_out_uri_list = [
-                temporary_filename(suffix='.tif') for _ in dataset_uri_list]
-        except:
-            dataset_out_uri_list = [
+        # try:
+        #     dataset_out_uri_list = [
+        #         temporary_filename(suffix='.tif') for _ in dataset_uri_list]
+        # except:
+        #     dataset_out_uri_list = [
+        #         os.path.join(os.path.split(dataset_uri_list[0])[0], 'temp_' + str(time.time()).replace('.','') + '.tif') for _ in dataset_uri_list]
+
+        # The following code replaces the pygeoprocessing implementation of tempfile.
+        dataset_out_uri_list = [
                 os.path.join(os.path.split(dataset_uri_list[0])[0], 'temp_' + str(time.time()).replace('.','') + '.tif') for _ in dataset_uri_list]
+
         #Align and resample the datasets, then load datasets into a list
         align_dataset_list(
             dataset_uri_list, dataset_out_uri_list, resample_method_list,
@@ -2659,7 +2712,6 @@ def create_directories(directory_list):
         nothing
 
     """
-
     for dir_name in directory_list:
         try:
             os.makedirs(dir_name)
@@ -2998,7 +3050,7 @@ def distance_transform_edt(
             'TILED=YES', 'BLOCKXSIZE=%d' % blocksize,
             'BLOCKYSIZE=%d' % blocksize])
 
-    pygeoprocessing.geoprocessing_core.distance_transform_edt(
+    pygeoprocessing_vmesh.geoprocessing_core.distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
         os.remove(mask_as_byte_uri)

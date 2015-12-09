@@ -2,7 +2,7 @@ import logging
 import os
 import math
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 from osgeo import gdal
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -15,8 +15,8 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
     '''
 
     '''
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri_list[0])
-    lulc_nodata = int(pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri_list[0]))
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dataset_uri_list[0])
+    lulc_nodata = int(pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(dataset_uri_list[0]))
     nodata = 0
 
     #reclass rasters to compact bit space
@@ -24,7 +24,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
     unique_raster_values_count = {}
 
     for dataset_uri in dataset_uri_list:
-        unique_raster_values_count[dataset_uri] = pygeoprocessing.geoprocessing.unique_raster_values_count(dataset_uri)
+        unique_raster_values_count[dataset_uri] = pygeoprocessing_vmesh.geoprocessing.unique_raster_values_count(dataset_uri)
         lulc_codes.update(unique_raster_values_count[dataset_uri].keys())
 
     lulc_codes = list(lulc_codes)
@@ -51,12 +51,12 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
 
     counts={}
     for i in range(len(dataset_uri_list)-1):
-        orig_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        dest_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        multi_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        orig_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+        dest_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+        multi_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
         #reclass orig values
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i],
+        pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i],
                                             reclass_orig_dict,
                                             orig_uri,
                                             data_type,
@@ -64,7 +64,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                                             exception_flag="values_required")
 
         #reclass dest values
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i+1],
+        pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(dataset_uri_list[i+1],
                                             reclass_dest_dict,
                                             dest_uri,
                                             data_type,
@@ -72,7 +72,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                                             exception_flag="values_required")
 
         #multiplex orig with dest
-        pygeoprocessing.geoprocessing.vectorize_datasets([orig_uri, dest_uri],
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets([orig_uri, dest_uri],
                                         add_op,
                                         multi_uri,
                                         data_type,
@@ -81,7 +81,7 @@ def get_transition_set_count_from_uri(dataset_uri_list, ignore_nodata=True):
                                         "union")
 
         #get unique counts
-        counts[i]=pygeoprocessing.geoprocessing.unique_raster_values_count(multi_uri, False)
+        counts[i]=pygeoprocessing_vmesh.geoprocessing.unique_raster_values_count(multi_uri, False)
 
     restore_classes = {}
     for key in reclass_orig_dict:
@@ -130,7 +130,7 @@ def execute(args):
 
     report_uri = os.path.join(args["workspace_dir"], "preprocessor_report.htm")
 
-    nodata = set([pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    nodata = set([pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
         uri) for uri in args["lulc"]])
 
     LOGGER.debug("Validating LULCs.")
@@ -204,9 +204,9 @@ def execute(args):
     #This will cause problems if the carbon table is missing more than one label.
     if args["labels"] != "":
         LOGGER.info("Reading category names from table.")
-        labels_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(args["labels"], args["lulc_id"])
+        labels_dict = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(args["labels"], args["lulc_id"])
 
-    values = pygeoprocessing.geoprocessing.get_lookup_from_csv(values_matrix_uri, values_matrix_id)
+    values = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(values_matrix_uri, values_matrix_id)
     for original in original_values:
         transition_matrix.write("\n%i" % original)
         if original in labels_dict:

@@ -11,7 +11,7 @@ import numpy as np
 from osgeo import gdal, ogr, osr
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 LOGGER = logging.getLogger('invest_natcap.habitat_risk_assessment.hra')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -393,8 +393,8 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     for pair in h_s_c:
 
         h, s = pair
-        h_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])
-        s_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(stress_dict[s])
+        h_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(habitats[h]['DS'])
+        s_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(stress_dict[s])
 
         files = [habitats[h]['DS'], stress_dict[s]]
 
@@ -409,7 +409,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
 
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             files,
             add_h_s_pixels,
             out_uri,
@@ -512,10 +512,10 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         datasource = None
 
         # Burn polygon land values onto newly constructed raster
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
             out_uri, shape, burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
-        nodata_to_zero_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        nodata_to_zero_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
         def nodata_to_zero(chunk):
             """vectorize_dataset operation to turn nodata values
@@ -527,9 +527,9 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
             """
             return np.where(chunk == nodata, 0., chunk)
 
-        cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(out_uri)
+        cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(out_uri)
         # Convert nodata values to 0 to prep for distance transform
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [out_uri],
             nodata_to_zero,
             nodata_to_zero_uri,
@@ -539,8 +539,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
             "intersection",
             vectorize_op=False)
 
-        dist_trans_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        pygeoprocessing.geoprocessing.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
+        dist_trans_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+        pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(nodata_to_zero_uri, dist_trans_uri)
 
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         # Do buffering protocol specified
@@ -587,8 +587,8 @@ def make_zero_buff_decay_array(dist_trans_uri, out_uri, nodata):
         swap = np.where(chunk == 0., 1, chunk)
         return np.where(swap > 1., nodata, swap)
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         zero_buff_op,
         out_uri,
@@ -615,7 +615,7 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
     Returns: Nothing
     '''
     buff = float(buff)
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def lin_decay_op(chunk):
         """vecorize_dataset operation to create a buffer around
@@ -631,7 +631,7 @@ def make_lin_decay_array(dist_trans_uri, out_uri, buff, nodata):
         lin_decay_chunk = -chunk_met / buff + 1.0
         return np.where(lin_decay_chunk < 0.0, nodata, lin_decay_chunk)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         lin_decay_op,
         out_uri,
@@ -665,7 +665,7 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
 
     # Need a value representing the decay rate for the exponential decay
     rate = -math.log(cutoff) / buff
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def exp_decay_op(chunk):
         """vecorize_dataset operation to create a buffer around
@@ -679,7 +679,7 @@ def make_exp_decay_array(dist_trans_uri, out_uri, buff, nodata):
         exp_decay_chunk = np.exp(-rate * chunk_met)
         return np.where(exp_decay_chunk < cutoff, nodata, exp_decay_chunk)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         exp_decay_op,
         out_uri,
@@ -708,7 +708,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
     '''
 
     buff = float(buff)
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dist_trans_uri)
 
     def no_decay_op(chunk):
         """vecorize_dataset operation to create a constant buffer
@@ -722,7 +722,7 @@ def make_no_decay_array(dist_trans_uri, out_uri, buff, nodata):
         # that distance to nodata.
         return np.where(chunk_met <= buff, 1., nodata)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [dist_trans_uri],
         no_decay_op,
         out_uri,
@@ -765,14 +765,14 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
         out_uri = os.path.join(dir, name + '.tif')
 
-        pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+        pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             shape,
             grid_size,
             gdal.GDT_Float32,
             -1.,
             out_uri)
 
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
             out_uri,
             shape,
             burn_values=[1],
@@ -926,10 +926,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib[
                              'rating'], 'ALL_TOUCHED=TRUE'])
@@ -937,7 +937,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer, to make sure we're not
             # adding in values where there should be none
             base_uri = h_s_c[pair]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_hsc_spat_crit(base_pix, spat_pix):
 
@@ -951,7 +951,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_hsc_spat_crit,
                 out_uri,
@@ -1003,10 +1003,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
@@ -1014,7 +1014,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer to make sure we're not
             # adding in values where there should be none
             base_uri = habitats[h]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_h_spat_crit(base_pix, spat_pix):
 
@@ -1028,7 +1028,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_h_spat_crit,
                 out_uri,
@@ -1078,10 +1078,10 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             out_uri_pre_overlap = os.path.join(
                 dir, filename + '_pre_overlap.tif')
 
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
 
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path,
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],
                              'ALL_TOUCHED=TRUE'])
@@ -1089,7 +1089,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # Want to do a vectorize with the base layer, to make sure we're not
             # adding in values where there should be none
             base_uri = h_s_e[pair]['DS']
-            base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_uri)
+            base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_uri)
 
             def overlap_hse_spat_crit(base_pix, spat_pix):
 
@@ -1103,7 +1103,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif')
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [base_uri, out_uri_pre_overlap],
                 overlap_hse_spat_crit,
                 out_uri,

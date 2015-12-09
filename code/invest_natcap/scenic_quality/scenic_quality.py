@@ -11,7 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from pygeoprocessing import geoprocessing
+from pygeoprocessing_vmesh import geoprocessing
 from invest_natcap.scenic_quality import scenic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 

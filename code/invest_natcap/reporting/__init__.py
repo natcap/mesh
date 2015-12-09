@@ -8,7 +8,7 @@ import re
 from types import StringType
 
 import invest_natcap
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 import table_generator
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
@@ -337,14 +337,14 @@ def build_table(param_args):
     # accordingly
     if data_type == 'shapefile':
         key = param_args['key']
-        data_dict = pygeoprocessing.geoprocessing.extract_datasource_table_by_key(
+        data_dict = pygeoprocessing_vmesh.geoprocessing.extract_datasource_table_by_key(
             input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
-        data_dict = pygeoprocessing.geoprocessing.get_lookup_from_csv(input_data, key)
+        data_dict = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)

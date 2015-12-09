@@ -4,7 +4,7 @@
 import os
 import logging
 
-import pygeoprocessing.routing
+import pygeoprocessing_vmesh.routing
 
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -38,7 +38,7 @@ def execute(args):
     stream_out_uri = os.path.join(
         output_directory, 'stream%s.tif' % file_suffix)
 
-    pygeoprocessing.routing.delineate_watershed(
+    pygeoprocessing_vmesh.routing.delineate_watershed(
         dem_uri, outlet_shapefile_uri, snap_distance,
         flow_threshold, watershed_out_uri,
         snapped_outlet_points_uri, stream_out_uri)

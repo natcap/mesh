@@ -6,7 +6,7 @@ import logging
 import gdal
 import osr
 import numpy
-import pygeoprocessing
+import pygeoprocessing_vmesh
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -24,13 +24,13 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
+    pygeoprocessing_vmesh.geoprocessing.create_directories([args['workspace_dir']])
 
-    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    out_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
     #reclassify the landcover map
-    lulc_to_globio_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
+    lulc_to_globio_table = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_table(
         args['lulc_to_globio_table_uri'], 'lucode')
 
     lulc_to_globio = dict(
@@ -40,7 +40,7 @@ def execute(args):
     intermediate_globio_lulc_uri = os.path.join(
         args['workspace_dir'], 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
         args['lulc_uri'], lulc_to_globio, intermediate_globio_lulc_uri,
         gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
 
@@ -65,7 +65,7 @@ def execute(args):
         return numpy.where(nodata_mask, natural_areas_nodata, result)
 
     LOGGER.info("create mask of natural areas")
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri], natural_area_mask_op,
         natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -78,7 +78,7 @@ def execute(args):
     make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
     smoothed_natural_areas_uri = os.path.join(
         args['workspace_dir'], 'smoothed_natural_areas%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.convolve_2d_uri(
+    pygeoprocessing_vmesh.geoprocessing.convolve_2d_uri(
         natural_areas_uri, gaussian_kernel_uri, smoothed_natural_areas_uri)
 
     ffqi_uri = os.path.join(
@@ -92,7 +92,7 @@ def execute(args):
             natural_areas_nodata)
 
     LOGGER.info('calculate ffqi')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
         ffqi_uri, gdal.GDT_Int32, natural_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -108,13 +108,13 @@ def execute(args):
     primary_threshold = .66
     secondary_threshold = .33
 
-    sum_yieldgap_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    sum_yieldgap_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
         args['sum_yieldgap_uri'])
 
     potential_vegetation_nodata = (
-        pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
             args['potential_vegetation_uri']))
-    pasture_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    pasture_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
         args['pasture_uri'])
 
     def create_globio_lulc(
@@ -162,7 +162,7 @@ def execute(args):
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
     LOGGER.info('create the globio lulc')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri, sum_yieldgap_uri,
          potential_vegetation_uri, pasture_uri, ffqi_uri], create_globio_lulc,
         globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
@@ -221,22 +221,22 @@ def execute(args):
                 infrastructure_filenames.append(
                     os.path.join(root_directory, filename))
                 infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                    pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
                         infrastructure_filenames[-1]))
             if filename.lower().endswith(".shp"):
                 LOGGER.debug("shape added %s", filename)
                 infrastructure_tmp_raster = (
                    os.path.join(args['workspace_dir'], os.path.basename(filename.lower() + ".tif")))
-                pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+                pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
                     args['lulc_uri'], infrastructure_tmp_raster,
                     'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
-                pygeoprocessing.geoprocessing.rasterize_layer_uri(
+                pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                     infrastructure_tmp_raster,
                     os.path.join(root_directory, filename), burn_values=[1],
                     option_list=["ALL_TOUCHED=TRUE"])
                 infrastructure_filenames.append(infrastructure_tmp_raster)
                 infrastructure_nodata_list.append(
-                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                    pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
                         infrastructure_filenames[-1]))
 
     if len(infrastructure_filenames) == 0:
@@ -247,7 +247,7 @@ def execute(args):
     infrastructure_nodata = -1
     infrastructure_uri = os.path.join(
         args['workspace_dir'], 'combined_infrastructure%s.tif' % file_suffix)
-    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    out_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
     def collapse_infrastructure_op(*infrastructure_array_list):
@@ -273,7 +273,7 @@ def execute(args):
             nodata_mask, infrastructure_nodata, infrastructure_result)
 
     LOGGER.info('collapse infrastructure into one raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         infrastructure_filenames, collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -300,7 +300,7 @@ def execute(args):
 
     LOGGER.info('calculate msa_f')
     msa_f_uri = os.path.join(args['workspace_dir'], 'msa_f%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [ffqi_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
@@ -342,10 +342,10 @@ def execute(args):
     LOGGER.info('calculate msa_i')
     distance_to_infrastructure_uri = os.path.join(
         args['workspace_dir'], 'distance_to_infrastructure%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.distance_transform_edt(
+    pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(
         infrastructure_uri, distance_to_infrastructure_uri)
     msa_i_uri = os.path.join(args['workspace_dir'], 'msa_i%s.tif' % file_suffix)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [globio_lulc_uri, distance_to_infrastructure_uri], msa_i_op, msa_i_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,
@@ -369,7 +369,7 @@ def execute(args):
     msa_lu_uri = os.path.join(
         args['workspace_dir'], 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
         globio_lulc_uri, lu_msa_lookup, msa_lu_uri,
         gdal.GDT_Float32, globio_nodata, exception_flag='values_required')
 
@@ -379,7 +379,7 @@ def execute(args):
     def msa_op(msa_f, msa_lu, msa_i):
         return numpy.where(
             msa_f != globio_nodata, msa_f* msa_lu * msa_i, globio_nodata)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [msa_f_uri, msa_lu_uri, msa_i_uri], msa_op, msa_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,

@@ -14,7 +14,7 @@ import numpy as np
 # from affine import Affine
 from shapely.geometry import Polygon
 import shapely
-import pygeoprocessing as pygeo
+import pygeoprocessing_vmesh as pygeo
 
 from affine import Affine
 from vector import Vector

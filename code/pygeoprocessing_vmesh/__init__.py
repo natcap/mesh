@@ -5,7 +5,7 @@ import unittest
 import logging
 import types
 
-import pygeoprocessing.geoprocessing as geoprocessing
+import pygeoprocessing_vmesh.geoprocessing as geoprocessing
 from geoprocessing import *
 
 __all__ = []

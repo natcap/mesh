@@ -9,7 +9,7 @@ import operator
 import numpy
 from osgeo import gdal, ogr, osr
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -31,7 +31,7 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     LOGGER.debug("Storing extent in: %s", datasource_uri)
 
     # getting projection and bounding box information
-    bounding_box = pygeoprocessing.geoprocessing.get_bounding_box(dataset_uri)
+    bounding_box = pygeoprocessing_vmesh.geoprocessing.get_bounding_box(dataset_uri)
     upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
 
     # loading shapefile drive and opening output for writing
@@ -102,7 +102,7 @@ def sum_uri(dataset_uri, datasource_uri):
     Returns:
         float: The total of the raster values within the shapefile
     """
-    total = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+    total = pygeoprocessing_vmesh.geoprocessing.aggregate_raster_values_uri(
         dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
 
@@ -293,7 +293,7 @@ def execute(args):
     trans_comment_uri = args["transition_matrix_uri"]
 
     # remove transition comment
-    trans_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    trans_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     trans_file = open(trans_uri, 'w')
     trans_comment_table = open(trans_comment_uri).readlines()
     row_count = len(trans_comment_table[0].strip().strip(",").split(","))
@@ -389,20 +389,20 @@ def execute(args):
     blue_carbon_csv_uri = os.path.join(workspace_dir, blue_carbon_csv_name)
 
     # process inputs
-    dis_bio = pygeoprocessing.geoprocessing.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
+    dis_bio = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
 
     # adding accumulation value to disturbance table
     for k in dis_bio:
         dis_bio[k][trans_acc] = 0.0
 
-    dis_soil = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    dis_soil = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         dis_soil_csv_uri, dis_field_key)
     # adding accumulation values to disturbance table
     for k in dis_soil:
         dis_soil[k][trans_acc] = 0.0
 
-    trans = pygeoprocessing.geoprocessing.get_lookup_from_csv(trans_uri, trans_field_key)
-    carbon = pygeoprocessing.geoprocessing.get_lookup_from_csv(carbon_uri, carbon_field_key)
+    trans = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(trans_uri, trans_field_key)
+    carbon = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(carbon_uri, carbon_field_key)
 
     class InfiniteDict:
         def __init__(self, k, v):
@@ -426,7 +426,7 @@ def execute(args):
     for k in carbon:
         acc_bio[k] = InfiniteDict(trans_acc, carbon[k][carbon_acc_bio_field])
 
-    half_life = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    half_life = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         half_life_csv_uri, half_life_field_key)
 
     # validate disturbance and accumulation tables
@@ -436,7 +436,7 @@ def execute(args):
             change_types.add(trans[k1][str(k2)])
 
     # validating data
-    nodata_lulc = set([pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    nodata_lulc = set([pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
         lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(nodata_lulc) == 1:
         LOGGER.debug("All rasters have the same nodata value.")
@@ -446,7 +446,7 @@ def execute(args):
         LOGGER.error(msg)
         raise ValueError, msg
 
-    cell_size = set([pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    cell_size = set([pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         lulc_uri_dict[k]) for k in lulc_uri_dict])
     if len(cell_size) == 1:
         LOGGER.debug("All rasters have the same cell size.")
@@ -465,7 +465,7 @@ def execute(args):
         raise ValueError, msg
 
     # construct dictionaries for single parameter lookups
-    conversion = (pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    conversion = (pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         lulc_uri_dict[lulc_years[0]]) ** 2) / 10000.0  # convert to Ha
 
     LOGGER.debug("Cell size is %s hectacres.", conversion)
@@ -594,7 +594,7 @@ def execute(args):
 
     def vectorize_carbon_datasets(
             dataset_uri_list, dataset_pixel_op, dataset_out_uri):
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             dataset_uri_list,
             dataset_pixel_op,
             dataset_out_uri,
@@ -639,7 +639,7 @@ def execute(args):
     # creating zero-fill raster for initial disturbed carbon
     zero_raster_uri = os.path.join(workspace_dir, os.path.join(
         intermediate_dir, "zeros.tif"))
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
         this_uri,
         zero_raster_uri,
         gdal_format,
@@ -655,7 +655,7 @@ def execute(args):
         this_veg_stock_bio_uri = os.path.join(
             workspace_dir, veg_stock_bio_name % (this_year, veg_type))
 
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
             this_uri,
             veg_field_dict[veg_type][carbon_field_bio],
             this_veg_stock_bio_uri,
@@ -663,7 +663,7 @@ def execute(args):
             nodata_default_float,
             exception_flag="values_required")
 
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
             this_uri,
             veg_field_dict[veg_type][carbon_field_soil],
             this_veg_stock_soil_uri,
@@ -765,7 +765,7 @@ def execute(args):
                     this_year, next_year, veg_type))
 
             # litter
-            pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+            pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
                 this_uri,
                 veg_field_dict[veg_type][carbon_field_litter],
                 this_veg_litter_uri,
@@ -1007,7 +1007,7 @@ def execute(args):
                         year - lulc_years[0]))}
         else:
             # Fetch carbon schedule from provided price table
-            carbon_schedule = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+            carbon_schedule = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
                 args["carbon_schedule"], carbon_schedule_field_key)
 
         period_op_dict = {}

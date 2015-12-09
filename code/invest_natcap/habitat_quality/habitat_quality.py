@@ -9,7 +9,7 @@ from osgeo import gdal
 from osgeo import osr
 import numpy as np
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -78,7 +78,7 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    pygeoprocessing.geoprocessing.create_directories([inter_dir, out_dir])
+    pygeoprocessing_vmesh.geoprocessing.create_directories([inter_dir, out_dir])
 
     # if the input directory is not present in the workspace then throw an
     # exception because the threat rasters can't be located.
@@ -172,13 +172,13 @@ def execute(args):
         LOGGER.debug('Handling Access Shape')
         access_dataset_uri = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
             cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata,
             gdal.GDT_Float32, fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
 
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
             access_dataset_uri, args['access_uri'],
             option_list=['ATTRIBUTE=ACCESS'])
 
@@ -235,7 +235,7 @@ def execute(args):
 
             # get the cell size from LULC to use for intermediate / output
             # rasters
-            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+            cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
                 args['landuse_cur_uri'])
 
             # convert max distance (given in KM) to meters
@@ -252,14 +252,14 @@ def execute(args):
             # blur the threat raster based on the effect of the threat over
             # distance
             decay_type = threat_data['DECAY']
-            kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+            kernel_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
             if decay_type == 'linear':
                 make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
             elif decay_type == 'exponential':
                 make_exponential_decay_kernel_uri(dr_pixel, kernel_uri)
             else:
                 raise TypeError("Unknown type of decay in biophysical table, should be either 'linear' or 'exponential' input was %s" % (decay_type))
-            pygeoprocessing.geoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
+            pygeoprocessing_vmesh.geoprocessing.convolve_2d_uri(threat_dataset_uri, kernel_uri, filtered_threat_uri)
             os.remove(kernel_uri)
             # create sensitivity raster based on threat
             sens_uri = os.path.join(
@@ -331,7 +331,7 @@ def execute(args):
 
         LOGGER.debug('Starting vectorize on total_degradation')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
             gdal.GDT_Float32, out_nodata, cell_size, "intersection",
             vectorize_op=False)
@@ -371,7 +371,7 @@ def execute(args):
 
         LOGGER.debug('Starting vectorize on quality_op')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [deg_sum_uri, habitat_uri], quality_op, quality_uri,
             gdal.GDT_Float32, out_nodata, cell_size, "intersection",
             vectorize_op = False)
@@ -385,8 +385,8 @@ def execute(args):
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
-        base_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_base_uri) ** 2
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_base_uri)
+        base_area = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(lulc_base_uri) ** 2
+        base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(lulc_base_uri)
         rarity_nodata = -64329.0
 
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
@@ -397,8 +397,8 @@ def execute(args):
                 lulc_x = landuse_uri_dict[lulc_cover]
 
                 # get the area of a cur/fut pixel
-                lulc_area = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_x) ** 2
-                lulc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_x)
+                lulc_area = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(lulc_x) ** 2
+                lulc_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(lulc_x)
 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata)
@@ -428,7 +428,7 @@ def execute(args):
                 # set the current/future land cover to be masked to the base
                 # land cover
 
-                pygeoprocessing.geoprocessing.vectorize_datasets(
+                pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
                     gdal.GDT_Int32, base_nodata, cell_size, "intersection",
                     vectorize_op = False)
@@ -459,7 +459,7 @@ def execute(args):
 
                 LOGGER.debug('Starting vectorize on map_ratio')
 
-                pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+                pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
                         new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
                         rarity_nodata)
 
@@ -676,7 +676,7 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
 

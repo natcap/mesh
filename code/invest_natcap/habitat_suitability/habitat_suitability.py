@@ -11,7 +11,7 @@ import gdal
 import numpy
 import scipy
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -89,9 +89,9 @@ def execute(args):
     dataset_out_uri_list = [aligned_raster_stack[x] for x in biophysical_keys]
 
     out_pixel_size = min(
-        [pygeoprocessing.geoprocessing.get_cell_size_from_uri(x) for x in dataset_uri_list])
+        [pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(x) for x in dataset_uri_list])
 
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    pygeoprocessing_vmesh.geoprocessing.align_dataset_list(
         dataset_uri_list, dataset_out_uri_list,
         ['nearest'] * len(dataset_out_uri_list),
         out_pixel_size, 'intersection', 0)
@@ -132,7 +132,7 @@ def execute(args):
     #classify the biophysical maps into habitat quality maps
     reclass_nodata = -1.0
     for biophysical_uri_key, interpolator in biophysical_to_interp.iteritems():
-        biophysical_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        biophysical_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
             aligned_raster_stack[biophysical_uri_key])
         LOGGER.debug(aligned_raster_stack[biophysical_uri_key])
         def reclass_op(values):
@@ -141,7 +141,7 @@ def execute(args):
             return numpy.where(
                 nodata_mask, reclass_nodata,
                 interpolator(values))
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [aligned_raster_stack[biophysical_uri_key]], reclass_op,
             biophysical_to_habitat_quality[biophysical_uri_key],
             gdal.GDT_Float32, reclass_nodata, out_pixel_size, "intersection",
@@ -161,7 +161,7 @@ def execute(args):
         return numpy.where(
             running_mask, reclass_nodata, running_product**(1./len(values)))
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         biophysical_to_habitat_quality.values(), geo_mean,
         oyster_suitability_uri, gdal.GDT_Float32, reclass_nodata,
         out_pixel_size, "intersection",
@@ -178,7 +178,7 @@ def execute(args):
         return numpy.where(
             value == reclass_nodata, reclass_nodata, threshold_value)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [oyster_suitability_uri], threshold,
         oyster_suitability_mask_uri, gdal.GDT_Float32, reclass_nodata,
         out_pixel_size, "intersection",

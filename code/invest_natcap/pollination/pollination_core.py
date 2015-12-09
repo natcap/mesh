@@ -8,7 +8,7 @@ import gdal
 import osr
 import numpy
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 LOGGER = logging.getLogger('invest_natcap.pollination.core')
 
@@ -79,15 +79,15 @@ def execute_model(args):
         output_uri_list.extend(
             [args['farm_value_sum'], args['service_value_sum']])
 
-    ag_map_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+    ag_map_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(
         args['ag_map'])
     def mask_op(ag_value):
         """return 0.0 where not original nodata, and 0.0 otherwise"""
         return numpy.where(ag_value == ag_map_nodata, nodata, 0.0)
-    pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size_out = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         args['ag_map'])
     for out_uri in output_uri_list:
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [args['ag_map']], mask_op, out_uri, gdal.GDT_Float32, nodata,
             pixel_size_out, 'intersection', vectorize_op=False)
 
@@ -231,7 +231,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     nodata = -1.0
 
 
-    floral_raster_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    floral_raster_temp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
     LOGGER.debug('Mapping floral attributes to landcover, writing to %s',
         floral_raster_temp_uri)
@@ -246,7 +246,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     pixel_size = abs(lulc_ds.GetGeoTransform()[1])
     lulc_ds = None
     expected_distance = guild['alpha'] / pixel_size
-    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    kernel_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('expected distance: %s ', expected_distance)
 
@@ -254,7 +254,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # apply an exponential convolution filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    pygeoprocessing.geoprocessing.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
+    pygeoprocessing_vmesh.geoprocessing.convolve_2d_uri(floral_raster_temp_uri, kernel_uri, uris['floral'])
     os.remove(kernel_uri)
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
@@ -269,7 +269,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         # species weights should be equal (1.0).
         species_weight = 1.0
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [uris['nesting'], uris['floral']],
         lambda x, y: numpy.where(x != nodata, numpy.multiply(numpy.multiply(x,
             y), species_weight), nodata),
@@ -294,7 +294,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     LOGGER.debug('Starting to calculate farm abundance')
 
-    farm_abundance_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    farm_abundance_temp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     LOGGER.debug('Farm abundance temp file saved to %s',
         farm_abundance_temp_uri)
 
@@ -304,11 +304,11 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     expected_distance = alpha / pixel_size
 
-    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    kernel_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
 
     LOGGER.debug('Calculating foraging/farm abundance index')
-    pygeoprocessing.geoprocessing.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
+    pygeoprocessing_vmesh.geoprocessing.convolve_2d_uri(species_abundance_uri, kernel_uri, farm_abundance_temp_uri)
     os.remove(kernel_uri)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
@@ -318,7 +318,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
     LOGGER.debug('Setting all agricultural pixels to 0')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[farm_abundance_temp_uri, ag_map],
         dataset_pixel_op=lambda x, y: numpy.where(y == 1.0, x, nodata),
         dataset_out_uri=uri,
@@ -350,7 +350,7 @@ def reclass_ag_raster(landuse_uri, out_uri, ag_classes, nodata):
         reclass_rules = {}
         default_value = 1.0
 
-    lulc_values = pygeoprocessing.geoprocessing.unique_raster_values_uri(
+    lulc_values = pygeoprocessing_vmesh.geoprocessing.unique_raster_values_uri(
         landuse_uri)
 
     for lucode in lulc_values:
@@ -358,7 +358,7 @@ def reclass_ag_raster(landuse_uri, out_uri, ag_classes, nodata):
             reclass_rules[lucode] = default_value
 
     LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
         landuse_uri, reclass_rules, out_uri, gdal.GDT_Float32, nodata,
         exception_flag='values_required')
 
@@ -381,14 +381,14 @@ def add_two_rasters(raster_1, raster_2, out_uri):
     if out_uri in [raster_1, raster_2]:
         old_out_uri = out_uri
         temp_dir = True
-        out_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        out_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
         LOGGER.debug('Sum will be saved to temp file %s', out_uri)
 
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_1)
-    min_pixel_size = min(map(pygeoprocessing.geoprocessing.get_cell_size_from_uri, [raster_1,
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(raster_1)
+    min_pixel_size = min(map(pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri, [raster_1,
         raster_2]))
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[raster_1, raster_2],
         dataset_pixel_op=lambda x, y: numpy.where(y != nodata, numpy.add(x, y),
             nodata),
@@ -439,10 +439,10 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
     # Open the species foraging matrix and then divide
     # the yield matrix by the foraging matrix for this pollinator.
     LOGGER.debug('Calculating pollinator value to farms')
-    min_pixel_size = min(map(pygeoprocessing.geoprocessing.get_cell_size_from_uri,
+    min_pixel_size = min(map(pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri,
         [rasters['farm_value'], rasters['farm_abundance']]))
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[rasters['farm_value'], rasters['farm_abundance']],
         dataset_pixel_op=lambda x, y: numpy.where(x != nodata, numpy.divide(x,
             y), nodata),
@@ -454,20 +454,20 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
         vectorize_op=False)
 
     expected_distance = alpha / min_pixel_size
-    kernel_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    kernel_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     make_exponential_decay_kernel_uri(expected_distance, kernel_uri)
     LOGGER.debug('Exponetial decay on ratio raster')
-    pygeoprocessing.geoprocessing.convolve_2d_uri(
+    pygeoprocessing_vmesh.geoprocessing.convolve_2d_uri(
         out_uris['species_value'], kernel_uri, out_uris['species_value_blurred'])
     os.remove(kernel_uri)
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
-    temp_service_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    temp_service_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
     LOGGER.debug('Saving service value raster to %s', temp_service_uri)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [rasters['species_abundance'], out_uris['species_value_blurred']],
         lambda x, y: numpy.where(x != nodata, numpy.multiply(part_wild,
             numpy.multiply(x, y)), nodata),
@@ -480,7 +480,7 @@ def calculate_service(rasters, nodata, alpha, part_wild, out_uris):
 
     # Set all agricultural pixels to 0.  This is according to issue 761.
     LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[rasters['ag_map'], temp_service_uri],
         dataset_pixel_op=lambda x, y: numpy.where(x == 0, 0.0, y),
         dataset_out_uri=out_uris['service_value'],
@@ -511,7 +511,7 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     kappa_c = float(half_sat)
     nu_c = float(wild_poll)
     nu_c_invert = 1.0 - nu_c
-    in_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(in_raster)
+    in_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(in_raster)
 
     # This function is a vectorize-compatible implementation of the yield
     # function from the documentation.
@@ -525,13 +525,13 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
             frm_avg + kappa_c)))
 
     # Apply the yield calculation to the foraging_average raster
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[in_raster],
         dataset_pixel_op=calc_yield,
         dataset_out_uri=out_uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=out_nodata,
-        pixel_size_out=pygeoprocessing.geoprocessing.get_cell_size_from_uri(in_raster),
+        pixel_size_out=pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(in_raster),
         bounding_box_mode='intersection',
         vectorize_op=False)
 
@@ -550,18 +550,18 @@ def divide_raster(raster, divisor, uri):
     if raster == uri:
         old_out_uri = uri
         temp_dir = True
-        uri = pygeoprocessing.geoprocessing.temporary_filename()
+        uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
         LOGGER.debug('Quotient raster will be saved to temp file %s', uri)
 
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(raster)
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         dataset_uri_list=[raster],
         dataset_pixel_op=lambda x: numpy.where(x == nodata, nodata,
             x / divisor),
         dataset_out_uri=uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
-        pixel_size_out=pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster),
+        pixel_size_out=pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(raster),
         bounding_box_mode='intersection',
         vectorize_op=False)
 
@@ -588,7 +588,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         returns nothing."""
 
     # Get the input raster's nodata value
-    base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_raster)
+    base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_raster)
 
     # Get the output raster's nodata value
 
@@ -602,7 +602,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
             value_list[r] * lu_table_dict[lulc][r] for r in resource_fields]
         reclass_rules[lulc] = list_op(resource_values)
 
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reclassify_dataset_uri(
         base_raster, reclass_rules, out_uri, gdal.GDT_Float32, -1)
 
 

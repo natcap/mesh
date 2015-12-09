@@ -21,7 +21,7 @@ import invest_natcap
 import invest_natcap.iui
 from invest_natcap.iui import fileio as iui_fileio
 from invest_natcap import fileio as fileio
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
 ENCODING = sys.getfilesystemencoding()

@@ -1,5 +1,5 @@
 import csv
-from pygeoprocessing.dbfpy import dbf
+from pygeoprocessing_vmesh.dbfpy import dbf
 import os
 import re
 import platform

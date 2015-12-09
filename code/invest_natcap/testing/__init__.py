@@ -107,7 +107,7 @@ from osgeo import ogr
 
 from invest_natcap.iui import executor
 from invest_natcap.iui import fileio
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 import data_storage
 
 LOGGER = logging.getLogger('invest_natcap.testing')
@@ -214,7 +214,7 @@ def regression(input_archive, workspace_archive):
 
         @functools.wraps(item)
         def test_and_assert_workspace(self, *args, **kwargs):
-            workspace = pygeoprocessing.geoprocessing.temporary_folder()
+            workspace = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
             self.args = data_storage.extract_parameters_archive(workspace, input_archive)
 
             # Actually run the test.  Assumes that self.args is used as the
@@ -223,7 +223,7 @@ def regression(input_archive, workspace_archive):
 
             # Extract the archived workspace to a new temporary folder and
             # compare the two workspaces.
-            archived_workspace = pygeoprocessing.geoprocessing.temporary_folder()
+            archived_workspace = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
             data_storage.extract_archive(archived_workspace, workspace_archive)
             self.assertWorkspace(workspace, archived_workspace)
         return test_and_assert_workspace
@@ -282,7 +282,7 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     model = executor.locate_module(model_list)
 
     # guarantee that we're running this in a new workspace
-    arguments['workspace_dir'] = pygeoprocessing.geoprocessing.temporary_folder()
+    arguments['workspace_dir'] = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
     workspace = arguments['workspace_dir']
 
     # collect the parameters into a single folder
@@ -610,10 +610,10 @@ class GISTest(unittest.TestCase):
 
             """
 
-        archive_1_folder = pygeoprocessing.geoprocessing.temporary_folder()
+        archive_1_folder = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
         data_storage.extract_archive(archive_1_folder, archive_1_uri)
 
-        archive_2_folder = pygeoprocessing.geoprocessing.temporary_folder()
+        archive_2_folder = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
         data_storage.extract_archive(archive_2_folder, archive_2_uri)
 
         self.assertWorkspace(archive_1_folder, archive_2_folder)

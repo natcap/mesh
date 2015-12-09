@@ -19,7 +19,7 @@ from osgeo import gdal
 
 import cProfile, pstats
 
-import pygeoprocessing
+import pygeoprocessing_vmesh
 import nearshore_wave_and_erosion_core as core
 
 from NearshoreWaveFunctions_3p0 import*
@@ -74,7 +74,7 @@ def compute_transects(args):
     # Store shore and transect information
     shore_nodata = -20000.0
     args['transects_uri'] = os.path.join(args['output_dir'], 'transects.tif')
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
         args['transects_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     transect_raster = gdal.Open(args['transects_uri'], gdal.GA_Update)
     transect_band = transect_raster.GetRasterBand(1)
@@ -85,7 +85,7 @@ def compute_transects(args):
     # Store transect profiles to reconstruct shore profile
     args['shore_profile_uri'] = os.path.join( \
         os.path.split(args['landmass_raster_uri'])[0], 'shore_profile.tif')
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(args['landmass_raster_uri'], \
         args['shore_profile_uri'], 'GTIFF', shore_nodata, gdal.GDT_Float64)
     shore_raster = gdal.Open(args['shore_profile_uri'], gdal.GA_Update)
     shore_band = shore_raster.GetRasterBand(1)
@@ -93,8 +93,8 @@ def compute_transects(args):
         sp.sparse.lil_matrix((shore_band.XSize, shore_band.YSize))
 
     # Landmass
-    landmass = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
-        args['landmass_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
+    landmass = pygeoprocessing_vmesh.geoprocessing.load_memory_mapped_array( \
+        args['landmass_raster_uri'], pygeoprocessing_vmesh.geoprocessing.temporary_filename())
 
     landmass_raster = gdal.Open(args['landmass_raster_uri'])
 
@@ -116,8 +116,8 @@ def compute_transects(args):
     aoi_band = aoi_raster.GetRasterBand(1)
 
     # Bathymetry
-    bathymetry = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
-        args['bathymetry_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
+    bathymetry = pygeoprocessing_vmesh.geoprocessing.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], pygeoprocessing_vmesh.geoprocessing.temporary_filename())
 
    # Get the fine and coarse raster cell sizes, ensure consistent signs
     i_side_fine = int( \
@@ -611,7 +611,7 @@ def compute_transects(args):
     transect_raster.FlushCache()
     gdal.Dataset.__swig_destroy__(transect_raster)
     transect_raster = None
-    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(args['transects_uri'])
+    pygeoprocessing_vmesh.geoprocessing.calculate_raster_stats_uri(args['transects_uri'])
 
 
     # We're done, we close the file
@@ -1507,8 +1507,8 @@ def reconstruct_2D_shore_map(args):
 
     # Build mask to remove transect portions that are too far
     # from the area we're interested in
-    transect_mask = pygeoprocessing.geoprocessing.load_memory_mapped_array( \
-        args['bathymetry_raster_uri'], pygeoprocessing.geoprocessing.temporary_filename())
+    transect_mask = pygeoprocessing_vmesh.geoprocessing.load_memory_mapped_array( \
+        args['bathymetry_raster_uri'], pygeoprocessing_vmesh.geoprocessing.temporary_filename())
 
     min_bathy = -10   # Minimum interpolation depth
     max_bathy = 1  # Maximum interpolation depth
@@ -1695,9 +1695,9 @@ def reconstruct_2D_shore_map(args):
     print('Saving data to', wave_interpolation_uri)
 
     bathymetry_nodata = \
-        pygeoprocessing.geoprocessing.get_nodata_from_uri(args['bathymetry_raster_uri'])
+        pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(args['bathymetry_raster_uri'])
 
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(args['bathymetry_raster_uri'], \
         wave_interpolation_uri, 'GTIFF', bathymetry_nodata, gdal.GDT_Float64)
 
     wave_raster = gdal.Open(wave_interpolation_uri, gdal.GA_Update)
@@ -1720,7 +1720,7 @@ def reconstruct_2D_shore_map(args):
     gdal.Dataset.__swig_destroy__(wave_raster)
     wave_raster = None
 
-    pygeoprocessing.geoprocessing.calculate_raster_stats_uri(wave_interpolation_uri)
+    pygeoprocessing_vmesh.geoprocessing.calculate_raster_stats_uri(wave_interpolation_uri)
 
 
 
@@ -1767,7 +1767,7 @@ def store_tidal_information(args, transect_data_file):
         raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
 
-        source_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tidal_file_uri)
+        source_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(tidal_file_uri)
 
         raster = gdal.Open(tidal_file_uri)
         band = raster.GetRasterBand(1)
@@ -1853,7 +1853,7 @@ def store_climatic_forcing(args, transect_data_file):
         # Extract the type for this shapefile
         file_uri = args['shapefiles'][category][shp_name][field]
 
-        source_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(file_uri)
+        source_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(file_uri)
 
         raster = gdal.Open(file_uri)
         band = raster.GetRasterBand(1)
@@ -1942,7 +1942,7 @@ def combine_soil_types(args, transect_data_file):
     # Extract the type for this shapefile
     type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
-    shapefile_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
+    shapefile_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
 
     raster = gdal.Open(type_shapefile_uri)
     band = raster.GetRasterBand(1)
@@ -2134,9 +2134,9 @@ def combine_natural_habitats(args, transect_data_file):
         type_shapefile_uri = args['shapefiles'][category][shp_name][type_key]
 
         # Store the habitat combinations in a set (remove nodata)
-        shapefile_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
+        shapefile_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(type_shapefile_uri)
         unique_values = \
-            set(pygeoprocessing.geoprocessing.unique_raster_values_uri(type_shapefile_uri))
+            set(pygeoprocessing_vmesh.geoprocessing.unique_raster_values_uri(type_shapefile_uri))
         if shapefile_nodata in unique_values:
             unique_values.remove(shapefile_nodata)
 

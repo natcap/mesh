@@ -9,9 +9,9 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
-import pygeoprocessing.geoprocessing
-import pygeoprocessing.routing
-import pygeoprocessing.routing.routing_core
+import pygeoprocessing_vmesh.geoprocessing
+import pygeoprocessing_vmesh.routing
+import pygeoprocessing_vmesh.routing.routing_core
 import invest_natcap.hydropower.hydropower_water_yield
 
 
@@ -171,14 +171,14 @@ def execute(args):
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
-    lucode_to_parameters = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    lucode_to_parameters = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
 
-    threshold_table = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    threshold_table = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
     valuation_lookup = None
     if args['valuation_enabled']:
-        valuation_lookup = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+        valuation_lookup = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
     _validate_inputs(nutrients_to_process, lucode_to_parameters,
         threshold_table, valuation_lookup)
@@ -278,14 +278,14 @@ def _execute_nutrient(args):
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
-    lucode_to_parameters = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    lucode_to_parameters = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
 
-    threshold_table = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+    threshold_table = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
     valuation_lookup = None
     if args['valuation_enabled']:
-        valuation_lookup = pygeoprocessing.geoprocessing.get_lookup_from_csv(
+        valuation_lookup = pygeoprocessing_vmesh.geoprocessing.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
 
     #This one is tricky, we want to make a dictionary that indexes by nutrient
@@ -299,23 +299,23 @@ def _execute_nutrient(args):
             threshold_lookup[nutrient_id][ws_id] = (
                 value['thresh_%s' % (nutrient_id)])
 
-    dem_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    dem_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         args['dem_uri'])
     #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
 
     #Align all the input rasters
-    dem_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    water_yield_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    lulc_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    dem_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    water_yield_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    lulc_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    pygeoprocessing_vmesh.geoprocessing.align_dataset_list(
         [args['dem_uri'], args['pixel_yield_uri'], args['lulc_uri']],
         [dem_uri, water_yield_uri, lulc_uri], ['nearest'] * 3,
         out_pixel_size, 'intersection', dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
-    nodata_landuse = pygeoprocessing.geoprocessing.get_nodata_from_uri(lulc_uri)
+    nodata_landuse = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(lulc_uri)
     nodata_load = -1.0
 
     #Calculate flow accumulation
@@ -325,8 +325,8 @@ def _execute_nutrient(args):
     flow_direction_uri = os.path.join(
         intermediate_dir, 'flow_direction%s.tif' % file_suffix)
 
-    pygeoprocessing.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
-    pygeoprocessing.routing.flow_accumulation(
+    pygeoprocessing_vmesh.routing.flow_direction_d_inf(dem_uri, flow_direction_uri)
+    pygeoprocessing_vmesh.routing.flow_accumulation(
         flow_direction_uri, dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
@@ -334,9 +334,9 @@ def _execute_nutrient(args):
 
     #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
-    pygeoprocessing.routing.stream_threshold(
+    pygeoprocessing_vmesh.routing.stream_threshold(
         flow_accumulation_uri, float(args['accum_threshold']), stream_uri)
-    nodata_stream = pygeoprocessing.geoprocessing.get_nodata_from_uri(stream_uri)
+    nodata_stream = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):
         """Function generator to map arbitrary nutrient type"""
@@ -364,13 +364,13 @@ def _execute_nutrient(args):
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
         LOGGER.debug(lulc_uri)
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
@@ -378,12 +378,12 @@ def _execute_nutrient(args):
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
         intermediate_dir, 'upstream_water_yield%s.tif' % file_suffix)
-    water_loss_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    zero_raster_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    pygeoprocessing.geoprocessing.make_constant_raster_from_base_uri(
+    water_loss_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    zero_raster_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    pygeoprocessing_vmesh.geoprocessing.make_constant_raster_from_base_uri(
         dem_uri, 0.0, zero_raster_uri)
 
-    pygeoprocessing.routing.route_flux(
+    pygeoprocessing_vmesh.routing.route_flux(
         flow_direction_uri, dem_uri, water_yield_uri, zero_raster_uri,
         water_loss_uri, upstream_water_yield_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
@@ -391,7 +391,7 @@ def _execute_nutrient(args):
     #Calculate the 'log' of the upstream_water_yield raster
     runoff_index_uri = os.path.join(
         intermediate_dir, 'runoff_index%s.tif' % file_suffix)
-    nodata_upstream = pygeoprocessing.geoprocessing.get_nodata_from_uri(upstream_water_yield_uri)
+    nodata_upstream = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         """Calculates the log value whiel handling nodata values correctly"""
         nodata_mask = value == nodata_upstream
@@ -400,13 +400,13 @@ def _execute_nutrient(args):
         return numpy.where(
             nodata_mask, nodata_upstream, result)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection",
         vectorize_op=False)
 
     field_summaries = {
-        'mn_run_ind': pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+        'mn_run_ind': pygeoprocessing_vmesh.geoprocessing.aggregate_raster_values_uri(
             runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
         }
     field_header_order = ['mn_run_ind']
@@ -430,7 +430,7 @@ def _execute_nutrient(args):
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
     mean_runoff_index_uri = os.path.join(
         intermediate_dir, 'mean_runoff_index%s.tif' % file_suffix)
-    mean_runoff_dataset = pygeoprocessing.geoprocessing.new_raster_from_base(
+    mean_runoff_dataset = pygeoprocessing_vmesh.geoprocessing.new_raster_from_base(
         upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
         gdal.GDT_Float32, -1.0)
     upstream_water_yield_dataset = None
@@ -453,7 +453,7 @@ def _execute_nutrient(args):
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
              stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
             nodata_load, out_pixel_size, "intersection")
@@ -462,8 +462,8 @@ def _execute_nutrient(args):
         # retains on the landscape
         retention_uri[nutrient] = os.path.join(
             output_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
-        tmp_flux_uri = pygeoprocessing.geoprocessing.temporary_filename()
-        pygeoprocessing.routing.route_flux(
+        tmp_flux_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+        pygeoprocessing_vmesh.routing.route_flux(
             flow_direction_uri, dem_uri, alv_uri[nutrient], eff_uri[nutrient],
             retention_uri[nutrient], tmp_flux_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'], stream_uri=stream_uri)
@@ -472,16 +472,16 @@ def _execute_nutrient(args):
             output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         pts_uri[nutrient] = os.path.join(intermediate_dir,
             '%s_percent_to_stream%s.tif' % (nutrient, file_suffix))
-        pygeoprocessing.routing.pixel_amount_exported(
+        pygeoprocessing_vmesh.routing.pixel_amount_exported(
             flow_direction_uri, dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'],
             percent_to_stream_uri=pts_uri[nutrient])
 
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
-        alv_tot = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+        alv_tot = pygeoprocessing_vmesh.geoprocessing.aggregate_raster_values_uri(
             alv_uri[nutrient], args['watersheds_uri'], 'ws_id').total
-        export_tot = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+        export_tot = pygeoprocessing_vmesh.geoprocessing.aggregate_raster_values_uri(
             export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
 
         #Retention is alv-export

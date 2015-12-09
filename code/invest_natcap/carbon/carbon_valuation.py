@@ -7,7 +7,7 @@ import logging
 from osgeo import gdal
 
 from invest_natcap.carbon import carbon_utils
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -78,15 +78,15 @@ def execute_30(**args):
 
         LOGGER.info('Beginning valuation of %s scenario.', scenario_type)
 
-        sequest_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(sequest_uri)
+        sequest_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(sequest_uri)
 
         def value_op(sequest):
             if sequest == sequest_nodata:
                 return nodata_out
             return sequest * valuation_constant
 
-        pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(sequest_uri)
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pixel_size_out = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(sequest_uri)
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [sequest_uri], value_op, outputs['%s_val' % scenario_type],
             gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
 
@@ -168,16 +168,16 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
 
     Data is masked out at locations where mask_uri is 0 or no data.
     '''
-    nodata_orig = pygeoprocessing.geoprocessing.get_nodata_from_uri(orig_uri)
-    nodata_mask = pygeoprocessing.geoprocessing.get_nodata_from_uri(mask_uri)
+    nodata_orig = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(orig_uri)
+    nodata_mask = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(mask_uri)
     def mask_op(orig_val, mask_val):
         '''Return orig_val unless mask_val indicates uncertainty.'''
         if mask_val == 0 or mask_val == nodata_mask:
             return nodata_orig
         return orig_val
 
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(orig_uri)
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(orig_uri)
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32,
         nodata_orig, pixel_size, 'intersection', dataset_to_align_index=0)
 

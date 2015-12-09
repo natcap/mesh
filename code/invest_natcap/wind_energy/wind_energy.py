@@ -18,7 +18,7 @@ import shapely.wkt
 import shapely.ops
 from shapely import speedups
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -152,7 +152,7 @@ def execute(args):
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    pygeoprocessing.geoprocessing.create_directories([workspace, inter_dir, out_dir])
+    pygeoprocessing_vmesh.geoprocessing.create_directories([workspace, inter_dir, out_dir])
 
     bathymetry_uri = args['bathymetry_uri']
     number_of_turbines = int(args['number_of_turbines'])
@@ -288,7 +288,7 @@ def execute(args):
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
 
             # Get the cell size to use in new raster outputs from the DEM
-            cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+            cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
                     final_bathymetry_uri)
 
             # If the distance inputs are present create a mask for the output
@@ -299,20 +299,20 @@ def execute(args):
 
             LOGGER.debug('Create Raster From AOI')
             # Make a raster from the AOI using the bathymetry rasters pixel size
-            pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+            pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri)
 
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                 aoi_raster_uri, aoi_uri, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
-            pygeoprocessing.geoprocessing.rasterize_layer_uri(
+            pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
                 aoi_raster_uri, land_poly_proj_uri, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
 
@@ -327,7 +327,7 @@ def execute(args):
 
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            pygeoprocessing.geoprocessing.distance_transform_edt(aoi_raster_uri, dist_trans_uri)
+            pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(aoi_raster_uri, dist_trans_uri)
             mask_by_distance(
                     dist_trans_uri, min_distance, max_distance,
                     out_nodata, dist_meters_uri, dist_mask_uri)
@@ -384,11 +384,11 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(final_bathymetry_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(final_bathymetry_uri)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected=projected, vectorize_op = False)
@@ -558,28 +558,28 @@ def execute(args):
     compute_density_harvested_uri(final_wind_points_uri)
 
     # Temp URIs for creating density and harvested rasters
-    density_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    harvested_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    density_temp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
+    harvested_temp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             final_wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
             density_temp_uri)
 
     LOGGER.info('Create Harvested Raster')
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             final_wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
             harvested_temp_uri)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_points_uri(
             final_wind_points_uri, density_field_name, density_temp_uri,
             interpolation = 'linear')
 
     LOGGER.info('Vectorize Harvested Points')
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_points_uri(
             final_wind_points_uri, harvest_field_name, harvested_temp_uri,
             interpolation = 'linear')
 
@@ -623,13 +623,13 @@ def execute(args):
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             density_mask_list, mask_out_depth_dist, density_masked_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
             assert_datasets_projected = projected, vectorize_op = False)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             harvest_mask_list, mask_out_depth_dist, harvested_masked_uri,
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
             assert_datasets_projected = projected, vectorize_op = False)
@@ -665,7 +665,7 @@ def execute(args):
     center_x = pt_geometry.GetX()
     center_y = pt_geometry.GetY()
     start_point = (center_x, center_y)
-    spat_ref = pygeoprocessing.geoprocessing.get_spatial_ref_uri(final_wind_points_uri)
+    spat_ref = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(final_wind_points_uri)
 
     farm_poly_uri = os.path.join(out_dir,
         'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
@@ -721,7 +721,7 @@ def execute(args):
     LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
 
     # Pixel size to be used in later calculations and raster creations
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
     # URI for final distance transform used in valuation calculations
     tmp_dist_final_uri = os.path.join(
                 inter_dir, 'val_distance_trans%s.tif' % suffix)
@@ -769,7 +769,7 @@ def execute(args):
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        pygeoprocessing.geoprocessing.dictionary_to_point_shapefile(
+        pygeoprocessing_vmesh.geoprocessing.dictionary_to_point_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri)
 
         # In case any of the above points lie outside the AOI, clip the
@@ -786,7 +786,7 @@ def execute(args):
             # Create a point shapefile from the land point dictionary.
             # This makes it easier for future distance calculations and
             # provides a nice intermediate output for users
-            pygeoprocessing.geoprocessing.dictionary_to_point_shapefile(
+            pygeoprocessing_vmesh.geoprocessing.dictionary_to_point_shapefile(
                     land_dict, 'land_points', land_ds_uri)
 
             # In case any of the above points lie outside the AOI, clip the
@@ -827,19 +827,19 @@ def execute(args):
         # The average land cable distance in km converted to meters
         avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
-        land_poly_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+        land_poly_rasterized_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
         # Create new raster and fill with 0s to set up for distance transform
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
             harvested_masked_uri, land_poly_rasterized_uri, 'GTiff',
             out_nodata, gdal.GDT_Float32, fill_value=0.0)
         # Burn polygon features into raster with values of 1s to set up for
         # distance transform
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
             land_poly_rasterized_uri, land_poly_proj_uri, burn_values=[1.0],
             option_list=["ALL_TOUCHED=TRUE"])
 
-        tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
-        pygeoprocessing.geoprocessing.distance_transform_edt(
+        tmp_dist_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
+        pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(
             land_poly_rasterized_uri, tmp_dist_uri, process_pool=None)
 
         def add_avg_dist_op(tmp_dist):
@@ -855,7 +855,7 @@ def execute(args):
                 tmp_dist != out_nodata,
                 tmp_dist * pixel_size + avg_grid_distance, out_nodata)
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [tmp_dist_uri], add_avg_dist_op, tmp_dist_final_uri,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
             vectorize_op=False)
@@ -1126,17 +1126,17 @@ def execute(args):
             out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_uri = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [harvested_masked_uri, tmp_dist_final_uri], calculate_npv_op,
                 npv_uri, gdal.GDT_Float32, out_nodata, pixel_size,
                 'intersection', vectorize_op=False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [harvested_masked_uri, tmp_dist_final_uri],
                 calculate_levelized_op, levelized_uri, gdal.GDT_Float32,
                 out_nodata, pixel_size, 'intersection', vectorize_op=False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [harvested_masked_uri], calculate_carbon_op, carbon_uri,
                 gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
                 vectorize_op=False)
@@ -1474,8 +1474,8 @@ def mask_by_distance(
 
         returns - nothing"""
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(dataset_uri)
-    dataset_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(dataset_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(dataset_uri)
+    dataset_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(dataset_uri)
 
     def dist_op(dist_pix):
         """Vectorize_dataset operation that multiplies distance
@@ -1491,12 +1491,12 @@ def mask_by_distance(
             ((dist_pix >= max_dist) | (dist_pix <= min_dist)), out_nodata,
             dist_pix)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [dataset_uri], dist_op, dist_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [dist_uri], mask_op, mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection',
             assert_datasets_projected = True, vectorize_op = False)
@@ -1660,30 +1660,30 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Entering clip_and_reproject_raster')
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(aoi_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the raster
-    raster_wkt = pygeoprocessing.geoprocessing.get_dataset_projection_wkt_uri(raster_uri)
+    raster_wkt = pygeoprocessing_vmesh.geoprocessing.get_dataset_projection_wkt_uri(raster_uri)
 
     # Temporary filename for an intermediate step
-    aoi_reprojected_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_uri = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+    pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(
             aoi_uri, raster_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
-    clipped_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    clipped_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
     LOGGER.debug('Clipping dataset')
-    pygeoprocessing.geoprocessing.clip_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.clip_dataset_uri(
             raster_uri, aoi_reprojected_uri, clipped_uri, False)
 
     # Get a point from the clipped data object to use later in helping
     # determine proper pixel size
-    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(clipped_uri)
+    raster_gt = pygeoprocessing_vmesh.geoprocessing.get_geotransform_uri(clipped_uri)
     point_one = (raster_gt[0], raster_gt[3])
 
     # Create a Spatial Reference from the rasters WKT
@@ -1694,12 +1694,12 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     # the reprojected raster
     coord_trans = osr.CoordinateTransformation(raster_sr, aoi_sr)
 
-    pixel_size = pygeoprocessing.geoprocessing.pixel_size_based_on_coordinate_transform_uri(
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.pixel_size_based_on_coordinate_transform_uri(
             clipped_uri, coord_trans, point_one)
 
     LOGGER.debug('Reprojecting dataset')
     # Reproject the raster to the projection of the AOI
-    pygeoprocessing.geoprocessing.reproject_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.reproject_dataset_uri(
             clipped_uri, pixel_size[0], aoi_wkt, 'bilinear', projected_uri)
 
     LOGGER.debug('Leaving clip_and_reproject_dataset')
@@ -1718,23 +1718,23 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Entering clip_and_reproject_shapefile')
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(aoi_uri)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the shapefile
-    shapefile_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(shapefile_uri)
+    shapefile_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(shapefile_uri)
     shapefile_wkt = shapefile_sr.ExportToWkt()
 
     # Temporary URI for an intermediate step
-    aoi_reprojected_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    aoi_reprojected_uri = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(
+    pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(
             aoi_uri, shapefile_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
-    clipped_uri = pygeoprocessing.geoprocessing.temporary_folder()
+    clipped_uri = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
 
     # Clip the shapefile to the AOI
     LOGGER.debug('Clipping datasource')
@@ -1742,7 +1742,7 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
 
     # Reproject the clipped shapefile to that of the AOI
     LOGGER.debug('Reprojecting datasource')
-    pygeoprocessing.geoprocessing.reproject_datasource_uri(clipped_uri, aoi_wkt, projected_uri)
+    pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(clipped_uri, aoi_wkt, projected_uri)
 
     LOGGER.debug('Leaving clip_and_reproject_maps')
 
@@ -1858,9 +1858,9 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
     uri_list = []
 
     # Get nodata value from biophsyical output raster
-    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
+    out_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
     # Get pixel size
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
 
     for feat in land_pts_layer:
         # Get the point features land to grid value and add it to the list
@@ -1870,7 +1870,7 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         # Create a new shapefile with only one feature to burn onto a raster
         # in order to get the distance transform based on that one feature
         output_driver = ogr.GetDriverByName('ESRI Shapefile')
-        tmp_uri = pygeoprocessing.geoprocessing.temporary_folder()
+        tmp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_folder()
         output_datasource = output_driver.CreateDataSource(tmp_uri)
 
         # Get the original_layer definition which holds needed attribute values
@@ -1910,20 +1910,20 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         output_layer = None
         output_datasource = None
 
-        land_pts_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+        land_pts_rasterized_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
-        pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+        pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
             harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
             out_nodata, gdal.GDT_Float32, fill_value=0.0)
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
-        pygeoprocessing.geoprocessing.rasterize_layer_uri(
+        pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
             land_pts_rasterized_uri, tmp_uri, burn_values=[1.0],
             option_list=["ALL_TOUCHED=TRUE"])
 
-        dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
-        pygeoprocessing.geoprocessing.distance_transform_edt(
+        dist_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
+        pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(
             land_pts_rasterized_uri, dist_uri, process_pool=None)
         # Add each features distance transform result to list
         uri_list.append(dist_uri)
@@ -1969,7 +1969,7 @@ def calculate_distances_land_grid(land_shape_uri, harvested_masked_uri, tmp_dist
         # Return and add land to grid distances to final distances
         return distances + land_grid
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 uri_list, land_ocean_dist, tmp_dist_final_uri, gdal.GDT_Float32,
                 out_nodata, pixel_size, 'intersection', vectorize_op=False)
 
@@ -1991,25 +1991,25 @@ def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_fina
 
         returns - Nothing
     """
-    land_pts_rasterized_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+    land_pts_rasterized_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
     # Get nodata value to use in raster creation and masking
-    out_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
+    out_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(harvested_masked_uri)
     # Get pixel size from biophysical output
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(harvested_masked_uri)
     # Create a new raster based on harvested_masked_uri and fill with 0's
     # to set up for distance transform
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
         harvested_masked_uri, land_pts_rasterized_uri, 'GTiff',
         out_nodata, gdal.GDT_Float32, fill_value=0.0)
     # Burn features from land_shape_uri onto raster with values of 1 to
     # set up for distance transform
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
         land_pts_rasterized_uri, land_shape_uri, burn_values=[1.0],
         option_list=["ALL_TOUCHED=TRUE"])
 
-    tmp_dist_uri = pygeoprocessing.geoprocessing.temporary_filename('.tif')
+    tmp_dist_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename('.tif')
     # Run distance transform
-    pygeoprocessing.geoprocessing.distance_transform_edt(
+    pygeoprocessing_vmesh.geoprocessing.distance_transform_edt(
         land_pts_rasterized_uri, tmp_dist_uri, process_pool=None)
 
     def dist_meters_op(tmp_dist):
@@ -2022,6 +2022,6 @@ def calculate_distances_grid(land_shape_uri, harvested_masked_uri, tmp_dist_fina
         return np.where(
             tmp_dist != out_nodata, tmp_dist * pixel_size, out_nodata)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,
         out_nodata, pixel_size, 'intersection', vectorize_op=False)

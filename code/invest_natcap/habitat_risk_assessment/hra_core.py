@@ -13,7 +13,7 @@ import random
 import numpy
 
 from osgeo import gdal, ogr, osr
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 LOGGER = logging.getLogger('invest_natcap.habitat_risk_assessment.hra_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -594,14 +594,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     avgs_r_sum = {}
 
     # Set a temp filename for the AOI raster.
-    aoi_rast_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    aoi_rast_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
     # Need an arbitrary element upon which to base the new raster.
     arb_raster_uri = next(risk_dict.itervalues())
     LOGGER.debug("arb_uri: %s" % arb_raster_uri)
 
     # Use the first overlap raster as the base for the AOI
-    pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+    pygeoprocessing_vmesh.geoprocessing.new_raster_from_base_uri(
         arb_raster_uri,
         aoi_rast_uri,
         'GTiff',
@@ -611,7 +611,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     # This rasterize should burn a unique burn ID int to each. Need to have a
     # dictionary which associates each burn ID with the AOI 'name' attribute
     # that's required.
-    pygeoprocessing.geoprocessing.rasterize_layer_uri(
+    pygeoprocessing_vmesh.geoprocessing.rasterize_layer_uri(
         aoi_rast_uri,
         cp_aoi_uri,
         option_list=["ATTRIBUTE=BURN_ID", "ALL_TOUCHED=TRUE"])
@@ -761,17 +761,17 @@ def aggregate_multi_rasters_uri(aoi_rast_uri, rast_uris, rast_labels, ignore_val
             }
     '''
 
-    cell_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_rast_uri)
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_rast_uri)
+    cell_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(aoi_rast_uri)
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(aoi_rast_uri)
 
     rast_uris = [aoi_rast_uri] + rast_uris
 
     # Want to create a set of temporary filenames, just need to be sure to
     # clean them up at the end.
     temp_rast_uris = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in range(len(rast_uris))]
+        pygeoprocessing_vmesh.geoprocessing.temporary_filename() for _ in range(len(rast_uris))]
 
-    pygeoprocessing.geoprocessing.align_dataset_list(
+    pygeoprocessing_vmesh.geoprocessing.align_dataset_list(
         rast_uris,
         temp_rast_uris,
         ['nearest'] * len(rast_uris),
@@ -972,11 +972,11 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         # Need to get the arbitrary first element in order to have a pixel size
         # to use in vectorize_datasets. One hopes that we have at least 1 thing
         # in here.
-        pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(curr_list[0])
+        pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(curr_list[0])
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             curr_list,
             add_recov_pix,
             out_uri,
@@ -1014,9 +1014,9 @@ def make_ecosys_risk_raster(dir, h_dict):
     '''
     # Need a straight list of the values from h_dict
     h_list = h_dict.values()
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(h_list[0])
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(h_list[0])
 
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(h_list[0])
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(h_list[0])
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
@@ -1039,7 +1039,7 @@ def make_ecosys_risk_raster(dir, h_dict):
 
         return numpy.where(all_nodata, -1, value)
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         h_list,
         add_e_pixels,
         out_uri,
@@ -1267,11 +1267,11 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         old_ds_uri = h_dict[h]
         risk_raster_list = [old_ds_uri] + h_s_dict[h]
 
-        grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(old_ds_uri)
+        grid_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             risk_raster_list,
             high_risk_raster,
             h_out_uri_r,
@@ -1287,7 +1287,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         # Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             risk_raster_list,
             med_risk_raster,
             m_out_uri_r,
@@ -1303,7 +1303,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         # Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             risk_raster_list,
             low_risk_raster,
             l_out_uri_r,
@@ -1321,7 +1321,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         single_raster_uri_r = os.path.join(dir, '[' + h + ']_ALL_RISK.tif')
         single_raster_uri = os.path.join(dir, '[' + h + ']_RISK.shp')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [l_out_uri_r, m_out_uri_r, h_out_uri_r],
             combo_risk_raster,
             single_raster_uri_r,
@@ -1449,7 +1449,7 @@ def make_hab_risk_raster(dir, risk_dict):
     '''
 
     #Use arbitrary element to get the nodata for habs
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(risk_dict.values()[0])
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(risk_dict.values()[0])
 
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the
@@ -1495,7 +1495,7 @@ def make_hab_risk_raster(dir, risk_dict):
     stressors = list(set(stressors))
 
     #Want to get an arbitrary element in order to have a pixel size.
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(
         risk_dict[(habitats[0], stressors[0])])
 
     #List to store the completed h rasters in. Will be passed on to the
@@ -1518,7 +1518,7 @@ def make_hab_risk_raster(dir, risk_dict):
         #Once we have the complete list, we can pass it to vectorize.
         out_uri = os.path.join(dir, 'cum_risk_[' + h + '].tif')
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             ds_list,
             add_risk_pixels,
             out_uri,
@@ -1709,7 +1709,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     Returns the URI for a raster representing the multiplied E raster,
         C raster, and the base raster.
     '''
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_uri)
+    grid_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(base_uri)
 
     # Rules should be similar to euclidean risk in that nothing happens
     # without there being c_pixels there.
@@ -1738,7 +1738,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         else:
             return e_pix * c_pix'''
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [base_uri, e_uri, c_uri],
         combine_risk_mult,
         risk_uri,
@@ -1771,7 +1771,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''
     # Already have base open for nodata values, just using pixel_size
     # version of the function.
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_uri)
+    grid_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(base_uri)
 
     # we need to know very explicitly which rasters are being passed in which
     # order. However, since it's all within the make_risk_euc function, should
@@ -1829,7 +1829,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
 
             return value'''
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         [base_uri, e_uri, c_uri],
         combine_risk_euc,
         risk_uri,
@@ -1858,7 +1858,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     Returns nothing.
     '''
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(h_s_base_uri)
+    grid_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(h_s_base_uri)
 
     # Using regex to pull out the criteria name after the last ]_. Will do this
     # for all full URI's.
@@ -1930,7 +1930,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         uri_list,
         add_e_pix,
         out_uri,
@@ -1978,8 +1978,8 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
             '.*\]_([^_]*)',
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_list)
 
-    grid_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(tot_crit_list[0])
-    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(h_s_list[0])
+    grid_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(tot_crit_list[0])
+    nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(h_s_list[0])
 
     # The first two spots are habitat raster and h_s raster
     h_count = len(h_list)
@@ -2067,7 +2067,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
 
         return h_s_value / h_s_denom_value'''
 
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
         tot_crit_list,
         add_c_pix,
         out_uri,
@@ -2208,8 +2208,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = h_s_c[pair]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         # First, want to make a raster of added individual numerator criteria.
         # We will pre-sum all r / (dq*w), and then vectorize that with the
@@ -2259,7 +2259,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return crit_rate_numerator'''
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_single_hs,
             single_crit_C_uri,
@@ -2283,7 +2283,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         for crit_name, crit_dict in h_s_c[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -2304,7 +2304,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     burn_rating = float(pixel) / (dq * w)
                     return burn_rating'''
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_hs,
                 crit_C_uri,
@@ -2331,8 +2331,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = hab[h]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
@@ -2369,7 +2369,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return risk_crit_rate_numerator
             '''
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_risk_single,
             single_crit_C_uri,
@@ -2398,7 +2398,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return rec_crit_rate_numerator'''
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_rec_single,
             single_crit_rec_uri,
@@ -2420,7 +2420,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             w = crit_dict['Weight']
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             denoms['Risk']['h'][h][crit_name] = 1 / float(dq * w)
             denoms['Recovery'][h][crit_name] = 1 / float(dq)
@@ -2440,7 +2440,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     burn_rating = float(pixel) / (w*dq)
                     return burn_rating'''
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_risk,
                 crit_C_uri,
@@ -2469,7 +2469,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     burn_rating = float(pixel) / dq
                     return burn_rating'''
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_rec,
                 crit_recov_uri,
@@ -2494,8 +2494,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         # The base dataset for all h_s overlap criteria. Will need to load bases
         # for each of the h/s crits too.
         base_ds_uri = h_s_e[pair]['DS']
-        base_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(base_ds_uri)
+        base_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(base_ds_uri)
 
         # First, want to make a raster of added individual numerator criteria.
         # We will pre-sum all r / (dq*w), and then vectorize that with the
@@ -2540,7 +2540,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return crit_rate_numerator'''
 
-        pygeoprocessing.geoprocessing.vectorize_datasets(
+        pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [base_ds_uri],
             burn_numerator_single_hs,
             single_crit_E_uri,
@@ -2564,7 +2564,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         for crit_name, crit_dict in h_s_e[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
-            crit_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(crit_ds_uri)
+            crit_nodata = pygeoprocessing_vmesh.geoprocessing.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -2584,7 +2584,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     burn_rating = float(pixel) / (dq * w)
                     return burn_rating'''
 
-            pygeoprocessing.geoprocessing.vectorize_datasets(
+            pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
                 [crit_ds_uri],
                 burn_numerator_hs,
                 crit_E_uri,

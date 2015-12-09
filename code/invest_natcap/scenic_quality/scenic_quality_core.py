@@ -6,7 +6,7 @@ import logging
 
 from osgeo import gdal
 
-from pygeoprocessing import geoprocessing
+from pygeoprocessing_vmesh import geoprocessing
 import scenic_quality_cython_core
 
 

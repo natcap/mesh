@@ -2,7 +2,7 @@
 """
 from osgeo import gdal, ogr, osr
 #gdal.UseExceptions()
-from pygeoprocessing import geoprocessing as raster_utils
+from pygeoprocessing_vmesh import geoprocessing as raster_utils
 
 import logging
 

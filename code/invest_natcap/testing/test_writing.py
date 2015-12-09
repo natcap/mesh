@@ -4,7 +4,7 @@ import shutil
 import imp
 
 import invest_natcap.testing
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 
 def file_has_class(test_file_uri, test_class_name):
@@ -96,7 +96,7 @@ def add_test_to_class(file_uri, test_class_name, test_func_name,
 
     test_file = codecs.open(file_uri, 'r', encoding='utf-8')
 
-    temp_file_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    temp_file_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
     new_file = codecs.open(temp_file_uri, 'w+', encoding='utf-8')
 
     cls_exists = file_has_class(file_uri, test_class_name)

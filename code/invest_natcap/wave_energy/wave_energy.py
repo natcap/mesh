@@ -14,7 +14,7 @@ from osgeo import ogr
 from bisect import bisect
 import scipy
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing_vmesh.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -218,11 +218,11 @@ def execute(args):
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
-    dem_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(dem_uri)
+    dem_gt = pygeoprocessing_vmesh.geoprocessing.get_geotransform_uri(dem_uri)
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(
+    analysis_area_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(
             analysis_area_points_uri)
 
     # This try/except statement differentiates between having an AOI or doing
@@ -237,7 +237,7 @@ def execute(args):
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
-        pygeoprocessing.geoprocessing.copy_datasource_uri(
+        pygeoprocessing_vmesh.geoprocessing.copy_datasource_uri(
                 analysis_area_points_uri, clipped_wave_shape_path)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
@@ -246,7 +246,7 @@ def execute(args):
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
+        aoi_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
     else:
@@ -260,9 +260,9 @@ def execute(args):
 
         # Set the wave data shapefile to the same projection as the
         # area of interest
-        temp_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
+        temp_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
         output_wkt = temp_sr.ExportToWkt()
-        pygeoprocessing.geoprocessing.reproject_datasource_uri(
+        pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(
                 analysis_area_points_uri, output_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the
@@ -275,11 +275,11 @@ def execute(args):
 
         # Get the spacial reference of the Extract shape and export to WKT to
         # use in reprojecting the AOI
-        extract_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
+        extract_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
         extract_wkt = extract_sr.ExportToWkt()
 
         # Project AOI to Extract shape
-        pygeoprocessing.geoprocessing.reproject_datasource_uri(
+        pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(
                 aoi_shape_path, extract_wkt, aoi_proj_uri)
 
         aoi_clipped_to_extract_uri = os.path.join(
@@ -296,14 +296,14 @@ def execute(args):
                 intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
 
         # Reproject the clipped AOI back
-        pygeoprocessing.geoprocessing.reproject_datasource_uri(
+        pygeoprocessing_vmesh.geoprocessing.reproject_datasource_uri(
                 aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
 
         aoi_shape_path = aoi_clip_proj_uri
 
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
-        aoi_sr = pygeoprocessing.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
+        aoi_sr = pygeoprocessing_vmesh.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
 
@@ -338,11 +338,11 @@ def execute(args):
         # datasets / datasource by passing URI's. This function lacks memory
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
-        tmp_dem_path = pygeoprocessing.geoprocessing.temporary_filename()
+        tmp_dem_path = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
 
         clipped_wave_shape = ogr.Open(point_shape_uri, 1)
-        dem_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(dataset_uri)
-        dem_matrix = pygeoprocessing.geoprocessing.load_memory_mapped_array(
+        dem_gt = pygeoprocessing_vmesh.geoprocessing.get_geotransform_uri(dataset_uri)
+        dem_matrix = pygeoprocessing_vmesh.geoprocessing.load_memory_mapped_array(
             dataset_uri, tmp_dem_path, array_type=None)
 
         # Create a new field for the depth attribute
@@ -413,29 +413,29 @@ def execute(args):
     wave_power(clipped_wave_shape_path)
 
     # Create blank rasters bounded by the shape file of analyis area
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             aoi_shape_path, pixel_size, datatype, nodata,
             wave_energy_unclipped_path)
 
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             aoi_shape_path, pixel_size, datatype, nodata,
             wave_power_unclipped_path)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
 
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_points_uri(
             clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
 
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
     # Clip the wave energy and wave power rasters so that they are confined
     # to the AOI
-    pygeoprocessing.geoprocessing.clip_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.clip_dataset_uri(
             wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
 
-    pygeoprocessing.geoprocessing.clip_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.clip_dataset_uri(
             wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
@@ -698,7 +698,7 @@ def execute(args):
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.debug('Creating Raster From Vector Extents')
-    pygeoprocessing.geoprocessing.create_raster_from_vector_extents_uri(
+    pygeoprocessing_vmesh.geoprocessing.create_raster_from_vector_extents_uri(
             clipped_wave_shape_path, pixel_size, datatype, nodata,
             raster_projected_path)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
@@ -708,14 +708,14 @@ def execute(args):
     # values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
 
-    pygeoprocessing.geoprocessing.vectorize_points_uri(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_points_uri(
             clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
 
     npv_out_uri = os.path.join(
             output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    pygeoprocessing.geoprocessing.clip_dataset_uri(
+    pygeoprocessing_vmesh.geoprocessing.clip_dataset_uri(
             raster_projected_path, aoi_shape_path, npv_out_uri, False)
 
     #Create the percentile raster for net present value
@@ -919,7 +919,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
             reference_point_x, reference_point_y)
 
     # Get the size of the pixels in meters, to be used for creating rasters
-    pixel_size_tuple = pygeoprocessing.geoprocessing.pixel_size_based_on_coordinate_transform(
+    pixel_size_tuple = pygeoprocessing_vmesh.geoprocessing.pixel_size_based_on_coordinate_transform(
             global_dem, coord_trans, reference_point_latlng)
 
     return pixel_size_tuple
@@ -998,11 +998,11 @@ def create_percentile_rasters(
 
     # Set nodata to a very small negative number
     nodata = -9999919
-    pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(raster_path)
+    pixel_size = pygeoprocessing_vmesh.geoprocessing.get_cell_size_from_uri(raster_path)
 
     # Classify the pixels of raster_dataset into groups and write
     # then to output
-    pygeoprocessing.geoprocessing.vectorize_datasets(
+    pygeoprocessing_vmesh.geoprocessing.vectorize_datasets(
             [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
             nodata, pixel_size, 'intersection',
             assert_datasets_projected=False, aoi_uri=aoi_shape_path)
@@ -1023,7 +1023,7 @@ def create_percentile_rasters(
         perc_dict[percentile_groups[index]] = percentile_ranges[index]
 
     col_name = "Val_Range"
-    pygeoprocessing.geoprocessing.create_rat_uri(output_path, perc_dict, col_name)
+    pygeoprocessing_vmesh.geoprocessing.create_rat_uri(output_path, perc_dict, col_name)
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
@@ -1489,7 +1489,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         # Read in raster chunk as array
         arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
 
-        tmp_uri = pygeoprocessing.geoprocessing.temporary_filename()
+        tmp_uri = pygeoprocessing_vmesh.geoprocessing.temporary_filename()
         tmp_file = open(tmp_uri, 'wb')
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()

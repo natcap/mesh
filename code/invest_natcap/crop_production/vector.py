@@ -11,7 +11,7 @@ import osr
 from shapely.geometry import *
 import shapely.wkt
 
-import pygeoprocessing as pygeo
+import pygeoprocessing_vmesh as pygeo
 
 
 class Vector(object):

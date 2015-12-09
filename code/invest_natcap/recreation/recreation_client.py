@@ -12,7 +12,7 @@ import imp
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 
-from pygeoprocessing.geoprocessing import temporary_filename
+from pygeoprocessing_vmesh.geoprocessing import temporary_filename
 import invest_natcap
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
