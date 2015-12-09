@@ -10,9 +10,11 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
+import pygeoprocessing as pgp
+
 import pygeoprocessing_vmesh.geoprocessing
 import pygeoprocessing_vmesh.routing
-import pygeoprocessing_vmesh.routing.routing_core
+import pygeoprocessing.routing.routing_core
 
 import ndr_core
 

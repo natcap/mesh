@@ -7,7 +7,7 @@ import logging
 
 import pygeoprocessing_vmesh.geoprocessing
 import pygeoprocessing_vmesh.routing
-import pygeoprocessing_vmesh.routing.routing_core
+import pygeoprocessing.routing.routing_core
 
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \

@@ -31,7 +31,7 @@ import shapely.ops
 from shapely import speedups
 import shapely.prepared
 
-import pygeoprocessing_vmesh.geoprocessing_core
+import pygeoprocessing.geoprocessing_core
 from pygeoprocessing_vmesh import fileio
 
 
@@ -341,7 +341,7 @@ def new_raster_from_base_uri(
 
     """
 
-    pygeoprocessing_vmesh.geoprocessing_core.new_raster_from_base_uri(
+    pygeoprocessing.geoprocessing_core.new_raster_from_base_uri(
         base_uri,output_uri, gdal_format, nodata, datatype,
         fill_value=fill_value, n_rows=n_rows, n_cols=n_rows,
         dataset_options=dataset_options)
@@ -384,7 +384,7 @@ def new_raster_from_base(
 
     """
 
-    return pygeoprocessing_vmesh.geoprocessing_core.new_raster_from_base(
+    return pygeoprocessing.geoprocessing_core.new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value,
         n_rows, n_cols, dataset_options)
 
@@ -826,8 +826,11 @@ def aggregate_raster_values_uri(
     #make a shapefile that non-overlapping layers can be added to
     driver = ogr.GetDriverByName('ESRI Shapefile')
     layer_dir = temporary_folder()
-    subset_layer_datasouce = driver.CreateDataSource(
-        os.path.join(layer_dir, 'subset_layer.shp'))
+    # Replaced with below because the creation fails when layer =! subset_layer
+    # subset_layer_datasouce = driver.CreateDataSource(
+    #     os.path.join(layer_dir, 'subset_layer.shp'))
+    subset_layer_datasouce = driver.CreateDataSource(layer_dir)
+
     spat_ref = get_spatial_ref_uri(shapefile_uri)
     subset_layer = subset_layer_datasouce.CreateLayer(
         'subset_layer', spat_ref, ogr.wkbPolygon)
@@ -1080,7 +1083,7 @@ def calculate_slope(
     slope_nodata = -9999.0
     new_raster_from_base_uri(
         dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
-    pygeoprocessing_vmesh.geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
+    pygeoprocessing.geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
     calculate_raster_stats_uri(slope_uri)
 
     os.remove(dem_small_uri)
@@ -1685,34 +1688,6 @@ def remove_file_at_exit(temporary_uri):
     atexit.register(remove_file, path)
 
 
-def thread_safe_temporary_file(file_ext=''):
-    """
-    When temporary_filename() is called in one thread but is required to finish before an action in another
-    thread, it can throw Errno 2. I think this happens because it uses the python tempfile module and the
-    atexit module. Perhaps it removes the file when the thread exits? This function creates a temproary file without
-    tempfile.
-    """
-    def remove_file(path):
-        """Function to remove a file and handle exceptions to register
-            in atexit"""
-        try:
-            os.remove(path)
-            LOGGER.info('Successfully removed file in temporary_filename_in_working_directory via atexit.')
-        except OSError:
-            LOGGER.info('Failed to remove file in temporary_filename_in_working_directory via atexit. Ensure this was desired')
-            pass
-
-
-    temporary_uri = 'tempfile_' + str(time.time()).replace('.','') + '_' + str(numpy.random.randint(0, 1000000))
-    if file_ext:
-        temporary_uri = os.path.join(to_return, file_ext)
-    else:
-        temporary_uri = os.path.join(to_return, '.tmp')
-
-    atexit.register(remove_file, temporary_uri)
-
-    return temporary_uri
-
 def temporary_filename(suffix=''):
     """
     Returns a temporary filename using mkstemp. The file is deleted
@@ -1732,9 +1707,9 @@ def temporary_filename(suffix=''):
     #     path = str(time.time()) + str(np.random.randint(0, 1000000)) + '.tmp'
     temporary_uri = 'tempfile_' + str(time.time()).replace('.','') + '_' + str(numpy.random.randint(0, 1000000))
     if suffix:
-        temporary_uri = os.path.join(to_return, suffix)
+        temporary_uri = temporary_uri + suffix
     else:
-        temporary_uri = os.path.join(to_return, '.tmp')
+        temporary_uri = temporary_uri + '.tmp'
 
 
 
@@ -2358,7 +2333,9 @@ def vectorize_datasets(
 
         # The following code replaces the pygeoprocessing implementation of tempfile.
         dataset_out_uri_list = [
-                os.path.join(os.path.split(dataset_uri_list[0])[0], 'temp_' + str(time.time()).replace('.','') + '.tif') for _ in dataset_uri_list]
+                # os.path.join(os.path.split(dataset_uri_list[0])[0], 'temp_' + str(time.time()).replace('.','') + '.tif') for _ in dataset_uri_list]
+                os.path.join(os.path.split(dataset_uri_list[0])[0], temporary_filename(suffix='.tif')) for _ in dataset_uri_list]
+
 
         #Align and resample the datasets, then load datasets into a list
         align_dataset_list(
@@ -2486,12 +2463,14 @@ def vectorize_datasets(
     for dataset in aligned_datasets:
         gdal.Dataset.__swig_destroy__(dataset)
     aligned_datasets = None
+
     if not datasets_are_pre_aligned:
         #if they weren't pre-aligned then we have temporary files to remove
         for temp_dataset_uri in dataset_out_uri_list:
             try:
                 os.remove(temp_dataset_uri)
             except OSError:
+                raise
                 LOGGER.warn("couldn't delete file %s", temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
 
@@ -2712,14 +2691,16 @@ def create_directories(directory_list):
         nothing
 
     """
+
     for dir_name in directory_list:
-        try:
-            os.makedirs(dir_name)
-        except OSError as exception:
-            #It's okay if the directory already exists, if it fails for
-            #some other reason, raise that exception
-            if exception.errno != errno.EEXIST:
-                raise
+        if dir_name:
+            try:
+                os.makedirs(dir_name)
+            except OSError as exception:
+                #It's okay if the directory already exists, if it fails for
+                #some other reason, raise that exception
+                if exception.errno != errno.EEXIST:
+                    raise
 
 
 def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
@@ -3050,7 +3031,7 @@ def distance_transform_edt(
             'TILED=YES', 'BLOCKXSIZE=%d' % blocksize,
             'BLOCKYSIZE=%d' % blocksize])
 
-    pygeoprocessing_vmesh.geoprocessing_core.distance_transform_edt(
+    pygeoprocessing.geoprocessing_core.distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
         os.remove(mask_as_byte_uri)

@@ -31,7 +31,8 @@ import os
 from osgeo import gdal
 import numpy
 
-import pygeoprocessing_vmesh.routing.routing_core
+import pygeoprocessing_vmesh
+import pygeoprocessing.routing.routing_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -74,7 +75,7 @@ def route_flux(
 
         returns nothing"""
 
-    pygeoprocessing_vmesh.routing.routing_core.route_flux(
+    pygeoprocessing.routing.routing_core.route_flux(
         in_flow_direction, in_dem, in_source_uri, in_absorption_rate_uri,
         loss_uri, flux_uri, absorption_mode, aoi_uri=aoi_uri,
         stream_uri=stream_uri)
@@ -199,7 +200,7 @@ def pixel_amount_exported(
     #Calculate flow direction and weights
     outflow_weights_uri = pygeoprocessing_vmesh.temporary_filename(suffix='.tif')
     outflow_direction_uri = pygeoprocessing_vmesh.temporary_filename(suffix='.tif')
-    pygeoprocessing_vmesh.routing.routing_core.calculate_flow_weights(
+    pygeoprocessing.routing.routing_core.calculate_flow_weights(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     #Calculate the percent to sink
@@ -208,7 +209,7 @@ def pixel_amount_exported(
     else:
         effect_uri = pygeoprocessing_vmesh.temporary_filename(suffix='.tif')
 
-    pygeoprocessing_vmesh.routing.routing_core.percent_to_sink(
+    pygeoprocessing.routing.routing_core.percent_to_sink(
         stream_uri, export_rate_uri, outflow_direction_uri,
         outflow_weights_uri, effect_uri)
 
@@ -249,7 +250,7 @@ def fill_pits(dem_uri, dem_out_uri):
             value
 
         returns nothing"""
-    pygeoprocessing_vmesh.routing.routing_core.fill_pits(dem_uri, dem_out_uri)
+    pygeoprocessing.routing.routing_core.fill_pits(dem_uri, dem_out_uri)
 
 
 def distance_to_stream(
@@ -266,7 +267,7 @@ def distance_to_stream(
 
         returns nothing"""
 
-    pygeoprocessing_vmesh.routing.routing_core.distance_to_stream(
+    pygeoprocessing.routing.routing_core.distance_to_stream(
         flow_direction_uri, stream_uri, distance_uri, factor_uri=factor_uri)
 
 
@@ -289,13 +290,13 @@ def flow_direction_d_inf(
             nothing"""
 
     #inital pass to define flow directions off the dem
-    pygeoprocessing_vmesh.routing.routing_core.flow_direction_inf(
+    pygeoprocessing.routing.routing_core.flow_direction_inf(
         dem_uri, flow_direction_uri)
 
     flat_mask_uri = pygeoprocessing_vmesh.temporary_filename()
     labels_uri = pygeoprocessing_vmesh.temporary_filename()
 
-    flats_exist = pygeoprocessing_vmesh.routing.routing_core.resolve_flats(
+    flats_exist = pygeoprocessing.routing.routing_core.resolve_flats(
         dem_uri, flow_direction_uri, flat_mask_uri, labels_uri,
         drain_off_edge=False)
 
@@ -303,7 +304,7 @@ def flow_direction_d_inf(
     #nodata that was not calculated on the first pass
     if flats_exist:
         LOGGER.debug('flats exist, calculating flow direction for them')
-        pygeoprocessing_vmesh.routing.routing_core.\
+        pygeoprocessing.routing.routing_core.\
             flow_direction_inf_masked_flow_dirs(
                 flat_mask_uri, labels_uri, flow_direction_uri)
         try:
@@ -316,14 +317,14 @@ def flow_direction_d_inf(
 
         #check to make sure there isn't a flat only region that should drain
         #off the edge of the raster
-        flats_exist = pygeoprocessing_vmesh.routing.routing_core.resolve_flats(
+        flats_exist = pygeoprocessing.routing.routing_core.resolve_flats(
             dem_uri, flow_direction_uri, flat_mask_uri, labels_uri,
             drain_off_edge=True)
         if flats_exist:
             LOGGER.info(
                 'flats exist on second pass, must be flat areas that abut the '
                 'raster edge')
-            pygeoprocessing_vmesh.routing.routing_core.\
+            pygeoprocessing.routing.routing_core.\
                 flow_direction_inf_masked_flow_dirs(
                     flat_mask_uri, labels_uri, flow_direction_uri)
 

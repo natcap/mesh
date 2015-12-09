@@ -11,7 +11,7 @@ import numpy
 
 import pygeoprocessing_vmesh.geoprocessing
 import pygeoprocessing_vmesh.routing
-import pygeoprocessing_vmesh.routing.routing_core
+import pygeoprocessing.routing.routing_core
 import invest_natcap.hydropower.hydropower_water_yield
 
 
@@ -150,7 +150,6 @@ def execute(args):
             for (lulc_code, table) in biophysical_table.iteritems():
                 try:
                     float_value = float(table[table_key])
-                    #print lulc_code, table_key, table_key, low_range, upper_range, float_value
                     if not (low_range <= float_value <= upper_range):
                         raise Exception(
                             'Value should be within range %f..%f offending value '
@@ -191,7 +190,6 @@ def execute(args):
     if 'results_suffix' in args:
         water_yield_args['results_suffix'] = args['results_suffix']
 
-    print 'water_yield_args', water_yield_args
     invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
 
     #Get the pixel output of hydropower to plug into nutrient retention.

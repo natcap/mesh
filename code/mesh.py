@@ -850,9 +850,9 @@ class Scenario(MeshAbstractObject, QWidget):
 
     def load_element(self, name, uri):
         if not name:
-            LOGGER.warn('Asked to load an element with a blank name.')
+            LOGGER.debug('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            LOGGER.debug('Attempted to add element that already exists.')
         else:
             element = Source(name, uri, self.root_app, self)
             self.elements[name] = element
@@ -3366,7 +3366,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         try:
             self.scenario_model_pairs_gridlayout.setParent(None)
         except:
-            print('scenario_model_pairs_gridlayout Does not exist')
+            LOGGER.debug('scenario_model_pairs_gridlayout Does not exist')
         self.scenario_model_pairs_gridlayout = QGridLayout()
         self.main_layout.addLayout(self.scenario_model_pairs_gridlayout)
 

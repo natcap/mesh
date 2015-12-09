@@ -10,7 +10,7 @@ import numpy
 
 import pygeoprocessing_vmesh.geoprocessing
 import pygeoprocessing_vmesh.routing
-import pygeoprocessing_vmesh.routing.routing_core
+import pygeoprocessing.routing.routing_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -286,7 +286,7 @@ def execute(args):
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
-    pygeoprocessing_vmesh.routing.routing_core.distance_to_stream(
+    pygeoprocessing.routing.routing_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri, factor_uri=ws_factor_inverse_uri)
 
     LOGGER.info('calculate ic')
@@ -378,7 +378,7 @@ def execute(args):
         dataset_to_align_index=0, vectorize_op=False)
     d_dn_bare_soil_uri = os.path.join(intermediate_dir, 'd_dn_bare_soil%s.tif' % file_suffix)
     d_up_nodata = -1.0
-    pygeoprocessing_vmesh.routing.routing_core.distance_to_stream(
+    pygeoprocessing.routing.routing_core.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_bare_soil_uri, factor_uri=s_factor_inverse_uri)
 
     ic_factor_bare_soil_uri = os.path.join(
