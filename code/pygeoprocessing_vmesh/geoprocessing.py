@@ -26,12 +26,14 @@ import scipy.interpolate
 import scipy.sparse
 import scipy.signal
 import scipy.ndimage
-import shapely.wkt
-import shapely.ops
-from shapely import speedups
-import shapely.prepared
+#import shapely.wkt
+#import shapely.ops
+#from shapely import speedups
+#import shapely.prepared
 
-import pygeoprocessing.geoprocessing_core
+
+from pygeoprocessing import geoprocessing_core
+from pygeoprocessing import calculate_disjoint_polygon_set as pgp_calculate_disjoint_polygon_set
 from pygeoprocessing_vmesh import fileio
 
 
@@ -341,7 +343,7 @@ def new_raster_from_base_uri(
 
     """
 
-    pygeoprocessing.geoprocessing_core.new_raster_from_base_uri(
+    geoprocessing_core.new_raster_from_base_uri(
         base_uri,output_uri, gdal_format, nodata, datatype,
         fill_value=fill_value, n_rows=n_rows, n_cols=n_rows,
         dataset_options=dataset_options)
@@ -384,7 +386,7 @@ def new_raster_from_base(
 
     """
 
-    return pygeoprocessing.geoprocessing_core.new_raster_from_base(
+    return geoprocessing_core.new_raster_from_base(
         base, output_uri, gdal_format, nodata, datatype, fill_value,
         n_rows, n_cols, dataset_options)
 
@@ -872,7 +874,7 @@ def aggregate_raster_values_uri(
     pixel_max_dict = pixel_min_dict.copy()
 
     #Loop over each polygon and aggregate
-    minimal_polygon_sets = calculate_disjoint_polygon_set(
+    minimal_polygon_sets = pgp_calculate_disjoint_polygon_set(
         shapefile_uri)
 
     clipped_band = clipped_raster.GetRasterBand(1)
@@ -1083,7 +1085,7 @@ def calculate_slope(
     slope_nodata = -9999.0
     new_raster_from_base_uri(
         dem_small_uri, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
-    pygeoprocessing.geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
+    geoprocessing_core._cython_calculate_slope(dem_small_uri, slope_uri)
     calculate_raster_stats_uri(slope_uri)
 
     os.remove(dem_small_uri)
@@ -3031,7 +3033,7 @@ def distance_transform_edt(
             'TILED=YES', 'BLOCKXSIZE=%d' % blocksize,
             'BLOCKYSIZE=%d' % blocksize])
 
-    pygeoprocessing.geoprocessing_core.distance_transform_edt(
+    geoprocessing_core.distance_transform_edt(
         mask_as_byte_uri, output_distance_uri)
     try:
         os.remove(mask_as_byte_uri)
