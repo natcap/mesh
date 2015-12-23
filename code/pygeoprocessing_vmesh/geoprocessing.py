@@ -26,11 +26,13 @@ import scipy.interpolate
 import scipy.sparse
 import scipy.signal
 import scipy.ndimage
+
 #import shapely.wkt
 #import shapely.ops
 #from shapely import speedups
 #import shapely.prepared
 
+import pygeoprocessing
 
 from pygeoprocessing import geoprocessing_core
 from pygeoprocessing import calculate_disjoint_polygon_set as pgp_calculate_disjoint_polygon_set

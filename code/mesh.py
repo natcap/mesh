@@ -109,6 +109,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             {'scenario_generators_settings_uri': os.path.join(self.settings_folder, 'scenario_generators.csv')})
         initialization_preferences.update(
             {'baseline_generators_settings_uri': os.path.join(self.settings_folder, 'baseline_generators.csv')})
+        initialization_preferences.update({'loaded_plugins': ''})
         utilities.python_object_to_csv(initialization_preferences, self.initialization_preferences_uri)
 
     def initialize_model_from_preferences(self, initialization_preferences_uri):
@@ -1158,7 +1159,10 @@ class ModelsWidget(ScrollWidget):
         self.running_setup_uis.append(modelui.main(json_file_name, last_run_override=override_args))
 
     def modify_args_to_match_project(self, args, model_name, input_mapping=None):
-        return_args = args.copy()
+        if args:
+            return_args = args.copy()
+        else:
+            return None
         for key, value in args.items():
             if isinstance(value, (str, unicode)):
                 if 'configure_based_on_project_input' in value:
@@ -3512,6 +3516,8 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(InstallPluginsDialog, self).__init__(root_app, parent)
+        self.plugin_folder = None
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Add plugins to MESH')
@@ -3529,29 +3535,44 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
 
         self.add_plugin_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.add_plugin_hbox)
-        self.add_plugin_hbox.addWidget(QLabel('Enter path or download link for plugin:'))
+
+        self.add_plugin_hbox.addWidget(QLabel('Add plugin by folder name'))
         self.plugin_path_le = QLineEdit()
         self.add_plugin_hbox.addWidget(self.plugin_path_le)
-        self.add_pb = QPushButton('Add plugin')
-        self.add_plugin_hbox.addWidget(self.add_pb)
-        self.add_pb.clicked.connect(self.add_plugin)
-        self.add_pb.setMaximumWidth(100)
+
+        self.select_folder_pb = QPushButton()
+        #self.select_folder_pb.setMaximumWidth(32)
+        self.select_folder_icon = QIcon(QPixmap('icons/document-open-7.png'))
+        self.select_folder_pb.setIcon(self.select_folder_icon)
+        self.add_plugin_hbox.addWidget(self.select_folder_pb)
+        self.select_folder_pb.clicked.connect(self.select_folder)
+
+        self.install_plugin_pb = QPushButton('Install')
+        self.install_plugin_icon = QIcon(QPixmap('icons/emblem-package.png'))
+        self.install_plugin_pb.setIcon(self.install_plugin_icon)
+        self.add_plugin_hbox.addWidget(self.install_plugin_pb)
+        self.install_plugin_pb.clicked.connect(self.install_plugin)
 
         self.main_layout.addWidget(QLabel())
         self.main_layout.addWidget(QLabel('Currently installed plugins:'))
 
         self.scroll_widget = ScrollWidget(self.root_app, self)
+        self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.setMinimumSize(800, 700)
 
         for plugin in self.root_app.models_dock.models_widget.elements:
             self.scroll_widget.scroll_layout.addWidget(QLabel(plugin))
 
-        self.scroll_widget.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
 
         self.show()
 
-    def add_plugin(self):
+    def select_folder(self):
+        self.plugin_folder = str(QFileDialog.getExistingDirectory(self, 'Select plugin\'s folder', 'plugins'))
+        self.plugin_path_le.setText(self.plugin_folder)
+
+
+    def install_plugin(self):
         # SHORTCUT NYI
         self.scroll_widget.scroll_layout.addWidget(QLabel('Not yet implemented.'))
 
