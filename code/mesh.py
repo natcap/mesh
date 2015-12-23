@@ -37,7 +37,7 @@ rcParams.update({'figure.autolayout': True})  # This line makes matplotlib autom
 
 class MeshApplication(MeshAbstractObject, QMainWindow):
     """
-    Main application, an instance of which is passed to all other objects as root_app.
+    Main application, an instance of which is passed to all other objects as root_app. gg
     """
 
     def __init__(self):
