@@ -20,7 +20,12 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+
+
+
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+
+#from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 
@@ -2579,7 +2584,7 @@ class MapCanvas(
         self.ax = self.fig.add_subplot(111)
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(False)
-        self.fig.set_lod(True)
+#        self.fig.set_lod(True)
 
     def draw_visible_array(self):
         try:
