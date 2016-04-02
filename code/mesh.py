@@ -25,8 +25,6 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 
-#from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 
 from mesh_models.data_creation import data_creation
@@ -59,6 +57,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
+        self.decision_contexts = OrderedDict()
+        self.external_drivers = OrderedDict()
+        self.assessment_times = OrderedDict()
+
 
         ## Used the Listener() below rather than a timer loop.
         # self.timer_loop_events = []
@@ -127,6 +129,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = self.project_to_load_on_launch
             self.project_folder = os.path.join(self.application_args['project_folder_location'], self.project_name)
             config.global_folder = self.project_folder  # config provides a global set of variables shared across py files
+        else: # No project was defined, so force the user to make a new one.
+            self.create_new_project()
+
+
         self.base_data_folder = self.application_args['base_data_folder']
 
     def create_application_window(self):
@@ -567,6 +573,9 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     def create_configure_base_data_dialog(self):
         self.configure_base_data_dialog = ConfigureBaseDataDialog(self, self)
+
+    def create_define_decision_context_dialog(self):
+        self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
@@ -1014,7 +1023,7 @@ class ModelsWidget(ScrollWidget):
         self.project_vbox.addWidget(self.title_l)
         self.project_name_hbox = QHBoxLayout()
         self.project_vbox.addLayout(self.project_name_hbox)
-        self.current_project_header_l = QLabel('Current project: ')
+        self.current_project_header_l = QLabel('Project name: ')
         self.current_project_header_l.setFont(config.italic_font)
         self.project_name_hbox.addWidget(self.current_project_header_l)
         self.project_name_hbox.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
@@ -1037,6 +1046,28 @@ class ModelsWidget(ScrollWidget):
         self.choose_set_aoi_method_pb.setIcon(self.choose_set_aoi_method_icon)
         self.project_aoi_hbox.addWidget(self.choose_set_aoi_method_pb)
         self.choose_set_aoi_method_pb.clicked.connect(self.root_app.choose_set_aoi_method)
+
+        self.creation_hbox = QHBoxLayout()
+        self.project_vbox.addLayout(self.creation_hbox)
+
+        self.define_decision_context_pb = QPushButton('Define decision context')
+        self.define_decision_context_icon = QIcon()
+        self.define_decision_context_icon.addPixmap(QPixmap('icons/filter.png'), QIcon.Normal, QIcon.Off)
+        self.define_decision_context_pb.setIcon(self.define_decision_context_icon)
+        self.define_decision_context_pb.clicked.connect(self.root_app.create_define_decision_context_dialog)
+        self.creation_hbox.addWidget(self.define_decision_context_pb)
+
+        self.create_data_pb = QPushButton('Generate your data')
+        self.create_data_icon = QIcon()
+        self.create_data_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
+        self.create_data_pb.setIcon(self.create_data_icon)
+        self.creation_hbox.addWidget(self.create_data_pb)
+        # TODO this fails in other contexts. Fix this to be a more robust check that also assumes the person has the data.
+        if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'lulc')):
+            self.create_data_pb.clicked.connect(self.root_app.create_configure_base_data_dialog)
+        else:
+            self.create_data_pb.clicked.connect(self.create_data)
+
 
         self.scroll_layout.addWidget(QLabel())
         self.title_l = QLabel()
@@ -1063,16 +1094,7 @@ class ModelsWidget(ScrollWidget):
         self.asterisk_nyi_l.setFont(config.italic_font)
         self.scroll_layout.addWidget(self.asterisk_nyi_l)
 
-        self.create_data_pb = QPushButton('MESH baseline data generator')
-        self.create_data_icon = QIcon()
-        self.create_data_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
-        self.create_data_pb.setIcon(self.create_data_icon)
-        self.create_data_hbox.addWidget(self.create_data_pb)
 
-        if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'lulc')):
-            self.create_data_pb.clicked.connect(self.root_app.create_configure_base_data_dialog)
-        else:
-            self.create_data_pb.clicked.connect(self.create_data)
 
         self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
         self.additional_models_l = QLabel('\nAdditional models can be added as plugins.')
@@ -3637,31 +3659,31 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                                                           parent=self)
                         self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
 
-            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            # self.optional_l = QLabel('Optional Inputs')
-            # self.optional_l.setFont(config.minor_heading_font)
-            # self.scroll_widget.scroll_layout.addWidget(self.optional_l)
-            #
-            # self.optional_model_headers = OrderedDict()
-            # self.optional_specify_buttons = OrderedDict()
-            # for model in checked_models:
-            #     self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            #     self.optional_model_headers[model.name] = QLabel(model.long_name)
-            #     self.optional_model_headers[model.name].setFont(config.bold_font)
-            #     self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
-            #
-            #     self.input_mapping_uri = os.path.join('../settings/default_setup_files',
-            #                                           model.name + '_input_mapping.csv')
-            #     input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-            #
-            #     for key, value in input_mapping.items():
-            #         if not utilities.convert_to_bool(value['required']):
-            #             self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
-            #                                                                               specify_function=self.create_data_from_args,
-            #                                                                               root_app=self.root_app,
-            #                                                                               parent=self)
-            #             self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            self.optional_l = QLabel('Optional Inputs')
+            self.optional_l.setFont(config.minor_heading_font)
+            self.scroll_widget.scroll_layout.addWidget(self.optional_l)
+
+            self.optional_model_headers = OrderedDict()
+            self.optional_specify_buttons = OrderedDict()
+            for model in checked_models:
+                self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+                self.optional_model_headers[model.name] = QLabel(model.long_name)
+                self.optional_model_headers[model.name].setFont(config.bold_font)
+                self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
+
+                self.input_mapping_uri = os.path.join('../settings/default_setup_files',
+                                                      model.name + '_input_mapping.csv')
+                input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+
+                for key, value in input_mapping.items():
+                    if not utilities.convert_to_bool(value['required']):
+                        self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
+                                                                                          specify_function=self.create_data_from_args,
+                                                                                          root_app=self.root_app,
+                                                                                          parent=self)
+                        self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')
@@ -3744,6 +3766,159 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
     def select_folder(self):
         self.root_app.base_data_folder = str(QFileDialog.getExistingDirectory(self, 'Select folder', self.root_app.project_folder))
         self.close()
+
+class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
+    """
+    Choose where to set base_data folder and give info on how to download data if not yet available.
+    """
+    def __init__(self, root_app=None, parent=None):
+        super(DefineDecisionContextDialog, self).__init__(root_app, parent)
+
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.setWindowTitle('Define Decision Context')
+        self.title_l = QLabel('Define the options, drivers and timeframe of your decision')
+        self.title_l.setFont(config.heading_font)
+        self.main_layout.addWidget(self.title_l)
+        self.main_layout.addWidget(QLabel())
+
+        self.add_decision_option_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.add_decision_option_hbox)
+        self.add_decision_option_pb = QPushButton('Add decision option')
+        self.add_decision_option_icon = QIcon(QPixmap('icons/document-properties.png'))
+        self.add_decision_option_pb.setIcon(self.add_decision_option_icon)
+        self.add_decision_option_pb.setMaximumWidth(250)
+        self.add_decision_option_pb.clicked.connect(self.add_decision_option)
+        self.add_decision_option_hbox.addWidget(self.add_decision_option_pb)
+        self.add_decision_option_description_l = QLabel('Choose a name for one of the decisions being considered, e.g. reforestation, business-as-usual, agricultural expansion.')
+        self.add_decision_option_description_l.setWordWrap(True)
+        self.add_decision_option_hbox.addWidget(self.add_decision_option_description_l)
+
+
+        self.define_external_driver_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.define_external_driver_hbox)
+        self.define_external_driver_pb = QPushButton('Define external driver')
+        self.define_external_driver_icon = QIcon(QPixmap('icons/office-chart-area.png'))
+        self.define_external_driver_pb.setIcon(self.define_external_driver_icon)
+        self.define_external_driver_pb.setMaximumWidth(250)
+        self.define_external_driver_pb.clicked.connect(self.define_external_driver)
+        self.define_external_driver_hbox.addWidget(self.define_external_driver_pb)
+        self.define_external_driver_description_l = QLabel('Define any external drivers that might affect your decision, e.g. climate change, price changes.')
+        self.define_external_driver_description_l.setWordWrap(True)
+        self.define_external_driver_hbox.addWidget(self.define_external_driver_description_l)
+
+
+        self.add_assessment_time_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.add_assessment_time_hbox)
+        self.add_assessment_time_pb = QPushButton('Add assessment time')
+        self.add_assessment_time_icon = QIcon(QPixmap('icons/edit-clear-history-3.png'))
+        self.add_assessment_time_pb.setIcon(self.add_assessment_time_icon)
+        self.add_assessment_time_pb.setMaximumWidth(250)
+        self.add_assessment_time_pb.clicked.connect(self.add_assessment_time)
+        self.add_assessment_time_hbox.addWidget(self.add_assessment_time_pb)
+        self.add_assessment_time_description_l = QLabel('Specify which moments in time you want to assess the outcomes of your decision, e.g. 2010, 2015, 2020.')
+        self.add_assessment_time_description_l.setWordWrap(True)
+        self.add_assessment_time_hbox.addWidget(self.add_assessment_time_description_l)
+
+        self.main_layout.addWidget(QLabel())
+
+        self.use_these_pathways_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.use_these_pathways_hbox)
+        self.use_these_pathways_pb = QPushButton('Use these pathways')
+        self.use_these_pathways_icon = QIcon(QPixmap('icons/crab16.png'))
+        self.use_these_pathways_pb.setIcon(self.use_these_pathways_icon)
+        self.use_these_pathways_pb.setMaximumWidth(250)
+        self.use_these_pathways_pb.clicked.connect(self.use_these_pathways)
+        self.use_these_pathways_hbox.addWidget(self.use_these_pathways_pb)
+
+        self.clear_pathways_pb = QPushButton('Clear pathways')
+        self.clear_pathways_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
+        self.clear_pathways_pb.setIcon(self.clear_pathways_icon)
+        self.clear_pathways_pb.setMaximumWidth(250)
+        self.clear_pathways_pb.clicked.connect(self.clear_pathways)
+        self.use_these_pathways_hbox.addWidget(self.clear_pathways_pb)
+
+
+
+
+
+
+        self.scroll_widget = ScrollWidget(self.root_app, self)
+        self.main_layout.addWidget(self.scroll_widget)
+        self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
+        self.scroll_widget.setMinimumSize(800, 700)
+
+        self.tree = QTreeWidget()
+        self.tree.setColumnCount(1)
+        self.tree.setHeaderLabel(QString('Decision Contexts'))
+        self.scroll_widget.scroll_layout.addWidget(self.tree)
+
+        self.show()
+
+    def add_decision_option(self):
+        input_text, ok = QInputDialog.getText(self, 'Add decision', 'Name of decision option:')
+        if ok:
+            name = str(input_text)
+            tree_item = QTreeWidgetItem()
+            self.root_app.decision_contexts[name] = tree_item
+            self.root_app.external_drivers[name] = OrderedDict()
+
+
+
+            tree_item.setText(0, QString(name))
+            self.tree.addTopLevelItem(tree_item)
+
+    def define_external_driver(self):
+        input_text, ok = QInputDialog.getText(self, 'Add external driver', 'Name of external driver:')
+        if ok:
+            for decision_option_name, decision_option_item in self.root_app.decision_contexts.items():
+                name = str(input_text)
+                tree_item = QTreeWidgetItem()
+                tree_item.setText(0, QString(name))
+                self.root_app.external_drivers[decision_option_name][name] = tree_item
+                decision_option_item.addChild(tree_item)
+
+
+    def add_assessment_time(self):
+        input_text, ok = QInputDialog.getText(self, 'Add assessment time', 'Add assessment time moment')
+        if ok:
+            name = str(input_text)
+            for decision_option_name, decision_option_dict in self.root_app.external_drivers.items():
+                # self.root_app.assessment_times[decision_option_name] = OrderedDict()
+                # self.root_app.assessment_times[decision_option_name][driver_name] = OrderedDict()
+                for driver_name, driver_item in decision_option_dict.items():
+                    name = str(input_text)
+                    tree_item = QTreeWidgetItem()
+                    tree_item.setText(0, QString(name))
+
+                    # [name] = tree_item
+                    driver_item.addChild(tree_item)
+
+
+    def create_data_from_args(self, args):
+        save_location = os.path.join(self.root_app.project_folder, args['save_location'])
+        # save_location = args['save_location']
+        if args['load_method'] == 'copy_default':
+            data_creation.copy_from_base_data(args['default_value'], save_location)
+        if args['load_method'] == 'clip_from_global':
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, args['default_value'], save_location)
+        self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
+        self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
+
+    def use_these_pathways(self):
+        root = self.tree.invisibleRootItem()
+        child_count = root.childCount()
+        for i in range(child_count):
+            self.root_app.scenarios_dock.scenarios_widget.create_element(str(root.child(i).text(0)))
+
+    def clear_pathways(self):
+        root = self.tree.invisibleRootItem()
+        child_count = root.childCount()
+        for i in range(child_count):
+            item = root.child(i)
+            root.removeChild(item)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
