@@ -14,12 +14,14 @@ from collections import OrderedDict
 import warnings
 
 from markdown import markdown
-from osgeo import gdal
+from osgeo import gdal, ogr
 import numpy as np
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+import zipfile
 
 
 
@@ -27,11 +29,17 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as Navigatio
 
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 
+from mpl_toolkits.basemap import Basemap
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import PathPatch
+
 from mesh_models.data_creation import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
 from invest_natcap.iui import modelui
+
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
 LOGGER.setLevel(logging.WARN)
@@ -57,20 +65,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
+
+        # Project state variables
         self.decision_contexts = OrderedDict()
         self.external_drivers = OrderedDict()
         self.assessment_times = OrderedDict()
-
-
-        ## Used the Listener() below rather than a timer loop.
-        # self.timer_loop_events = []
-        # self.timer = TimerThread(self, self)
-        # self.timer.run()
-
-        # Create a listener to receive signals from other threads. When a model is called as a seperate ProcessingThread,
-        # it emits a 'model_finished' signal to the Listener to prompt a UI update.
-        # self.listener = Listener(self, self)
-        # self.listener.start()
 
         # Initialize application from preferences files and build UI
         self.load_or_create_application_settings_files()
@@ -577,6 +576,19 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_define_decision_context_dialog(self):
         self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
+    # TODO Implement a generalized version of this that checks for each plugin's requied data.
+    def is_base_data_valid(self):
+        required_files_set = set([os.path.join(self.base_data_folder, 'lulc', 'lulc_modis_2012.tif'), os.path.join(self.base_data_folder, 'Hydrosheds\hybas_af_lev01-06_v1c', 'hybas_af_lev01_v1c.shp')])
+        recursive_file_set = set()
+        if os.path.exists(self.base_data_folder):
+            for dir_name, subdir_list, file_list in os.walk(self.base_data_folder):
+                [recursive_file_set.add(os.path.join(dir_name, file)) for file in file_list]
+            if required_files_set.issubset(recursive_file_set):
+                return True
+            else:
+                return False
+        else:
+            return False
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
     """
@@ -1062,11 +1074,16 @@ class ModelsWidget(ScrollWidget):
         self.create_data_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.create_data_pb.setIcon(self.create_data_icon)
         self.creation_hbox.addWidget(self.create_data_pb)
-        # TODO this fails in other contexts. Fix this to be a more robust check that also assumes the person has the data.
-        if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'lulc')):
-            self.create_data_pb.clicked.connect(self.root_app.create_configure_base_data_dialog)
-        else:
-            self.create_data_pb.clicked.connect(self.create_data)
+
+        self.create_data_pb.clicked.connect(self.create_data)
+
+
+
+        # # TODO NOW this fails in other contexts. Fix this to be a more robust check that also assumes the person has the data.
+        # if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'lulc')):
+        #     self.create_data_pb.clicked.connect(self.root_app.create_configure_base_data_dialog)
+        # else:
+        #     self.create_data_pb.clicked.connect(self.create_data)
 
 
         self.scroll_layout.addWidget(QLabel())
@@ -1230,9 +1247,10 @@ class ModelsWidget(ScrollWidget):
         """
 
     def create_data(self):
-        self.create_baseline_data_dialog = CreateBaselineDataDialog(self.root_app,
-                                                                    self)  # Skips the dialog below becuase implied that the user wants to create data.
-        # self.create_baseline_data_dialog = BaselinePopulatorDialog(self.root_app, self)
+        if self.root_app.is_base_data_valid():
+            self.create_baseline_data_dialog = CreateBaselineDataDialog(self.root_app, self)
+        else:
+            self.create_baseline_data_dialog = ConfigureBaseDataDialog(self.root_app, self)
 
     def get_checked_elements(self):
         checked_elements = []
@@ -2584,8 +2602,111 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
         self.main_layout.addWidget(self.map_viewer_nav)
 
 
-class MapCanvas(
-    FigureCanvas):  # Objects created from this class generate a FigureCanvas QTWidget that displays a MatPlotLib Figure. Benefits of MPL is that it allows easy navigation and formatting, but is quite slow at rendering. Good for final outputs that are static.
+class ShapefileViewerCanvas(FigureCanvas):
+    def __init__(self, root_app=None, parent=None):
+        self.fig = Figure(figsize=(100, 100), dpi=75)
+        super(ShapefileViewerCanvas, self).__init__(self.fig)
+        self.root_app = root_app
+        self.parent = parent
+
+        self.ax = self.fig.add_subplot(111)
+        self.shapefile = None
+
+    def draw_shapefile(self, shapefile_uri):
+        # if self.shapefile:
+        #     print 'removing'
+        #     self.fig = None
+        #     self.fig = Figure(figsize=(100, 100), dpi=75)
+        #     self.basemap = None
+        #     self.ax = None
+        #     self.ax = self.fig.add_subplot(111)
+        #     #self.shapefile[3].remove() # the third objet returned is the mpl object
+        #
+        # # try:
+        # #     self.ax = None
+        # # except:
+        # # #     'wasnt there'
+        # self.fig = Figure(figsize=(100, 100), dpi=75)
+        #
+        # self.ax = self.fig.add_subplot(111)
+
+        ds = ogr.Open(shapefile_uri)
+        nlay = ds.GetLayerCount()
+        lyr = ds.GetLayer(0)
+
+        ext = lyr.GetExtent()
+
+        xoff = (ext[3] - ext[2]) / 2.0
+        yoff = (ext[1] - ext[0]) / 2.0
+
+        self.basemap = Basemap(llcrnrlon=ext[0],llcrnrlat=ext[2],urcrnrlon=ext[1],urcrnrlat=ext[3],
+                     resolution='c', projection='cyl', lat_0 = yoff, lon_0 = xoff, ax=self.ax) #cyl tmerc merc
+
+        self.basemap.drawmapboundary(fill_color='aqua')
+        self.basemap.fillcontinents(color='#ddaa66',lake_color='aqua')
+        #self.basemap.drawcoastlines()
+        self.basemap.drawparallels(range(-90,90,45))
+        self.basemap.drawmeridians(range(-180,180,45))
+
+        self.shapefile = self.basemap.readshapefile(os.path.splitext(shapefile_uri)[0], os.path.split(shapefile_uri)[1], ax=self.ax) # NOTE: basemap calls exclude the shp extension
+
+        self.draw()
+
+
+
+    def draw_shapefile_DEPRECATED(self, shapefile_uri):
+        try:
+            self.ax = None
+        except:
+            'wasnt there'
+
+        self.ax = self.fig.add_subplot(111)
+
+        ds = ogr.Open(shapefile_uri)
+        nlay = ds.GetLayerCount()
+        lyr = ds.GetLayer(0)
+
+        ext = lyr.GetExtent()
+        xoff = (ext[1]-ext[0])/50
+        yoff = (ext[3]-ext[2])/50
+
+        self.ax.set_xlim(ext[0]-xoff,ext[1]+xoff)
+        self.ax.set_ylim(ext[2]-yoff,ext[3]+yoff)
+
+        paths = []
+        lyr.ResetReading()
+
+        # Read all features in layer and store as paths
+        for feat in lyr:
+            geom = feat.geometry()
+            codes = []
+            all_x = []
+            all_y = []
+            for i in range(geom.GetGeometryCount()):
+                # Read ring geometry and create path
+                r = geom.GetGeometryRef(i)
+                print 'r', r
+                x = [r.GetX(j) for j in range(r.GetPointCount())]
+                y = [r.GetY(j) for j in range(r.GetPointCount())]
+                # skip boundary between individual rings
+                #codes += [matplotlib.path.Path.MOVETO] + (len(x)-1)*[matplotlib.path.Path.LINETO]
+                all_x += x
+                all_y += y
+            #path = matplotlib.path.Path(np.column_stack((all_x,all_y)), codes)
+            path = matplotlib.path.Path(np.column_stack((all_x,all_y)))
+            paths.append(path)
+
+        # Add paths as patches to axes
+        for path in paths:
+            patch = matplotlib.patches.PathPatch(path, \
+                    facecolor='blue', edgecolor='black')
+            self.ax.add_patch(patch)
+
+        self.draw()
+
+
+
+class MapCanvas(FigureCanvas):  # Objects created from this class generate a FigureCanvas QTWidget that displays a MatPlotLib Figure. Benefits of MPL is that it allows easy navigation and formatting, but is quite slow at rendering. Good for final outputs that are static.
     """
     Subclass to represent the FigureCanvas widget. This gets added to the MapCanvasHolderWidget which connects it to the Nav
     and adds Qt controsl.
@@ -2597,8 +2718,7 @@ class MapCanvas(
         to the Canvas, I had to make MapCanvas NOT inherit MeshAbstractObject. Thus, i manually set self.root_app and self.parent
         and call self.root_app to access the other parts of MeshAbstractObject.
         """
-        self.fig = Figure(figsize=(100, 100),
-                          dpi=75)  # Must be created before super is called becuase FigureCanvas needs it, figsize sets the maximium size but it will be scaled as a qwidget if smalller, dpi affects relatives sizes within the figure, esp font sizes relative to mapa.
+        self.fig = Figure(figsize=(100, 100), dpi=75)  # Must be created before super is called becuase FigureCanvas needs it, figsize sets the maximium size but it will be scaled as a qwidget if smalller, dpi affects relatives sizes within the figure, esp font sizes relative to mapa.
         super(MapCanvas, self).__init__(self.fig)
         self.root_app = root_app
         self.parent = parent
@@ -3095,23 +3215,27 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.setMinimumSize(800, 700)
 
+        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
+
+        self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
+        self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
+
         self.show()
 
     def show_map(self):
-        # SHORTCUT I only populated africa.
-        self.map_l = QLabel()
-        self.map_pixmap = QPixmap('icons/af_hydrobasins.png')
-        self.map_l.setPixmap(self.map_pixmap)
-        self.scroll_widget.scroll_layout.addWidget(self.map_l)
-
-    def display_hybas_shapefile(self):
-        '''NYI'''
         selected_shapefile_uri = self.get_selected_hybas_uri()
-        self.hybas_canvas_holder_widget = MapCanvasHolderWidget(self.root_app, self)
-        self.scroll_widget.scroll_layout.addWidget(self.hybas_canvas_holder_widget)
 
-        self.hybas_canvas_holder_widget.map_viewer_canvas.draw_shapefile(
-            os.path.splitext(selected_shapefile_uri)[0])  # Seems to add another shp
+        self.shapefile_viewer_canvas.close()
+        self.shapefile_viewer_nav.close()
+        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
+
+        self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
+        self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
+
+        self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
+
 
     def get_selected_hybas_uri(self):
         selected_continent = str(self.continents_combobox.currentText())
@@ -3720,7 +3844,7 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.setMinimumWidth(650)
 
         self.setWindowTitle('Configure Base Data')
-        self.title_l = QLabel('Configure Base Data')
+        self.title_l = QLabel('You need to obtain or configure your base data')
         self.title_l.setFont(config.heading_font)
         self.main_layout.addWidget(self.title_l)
 
@@ -3732,39 +3856,45 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.subtitle_l)
         self.main_layout.addWidget(QLabel())
 
-        self.download_data_l = QLabel('Due to licensing reasons, MESH does not currently come with the base data '
-                                      'pre-installed. However, all of the data is available for free online from '
-                                      'its respective providers. See the users guide or the forums at www.naturalcapitalproject.org '
-                                      'for details on installing the data for each model.\n'
+        self.download_data_l = QLabel('When you installed MESH, you should have downloaded or made a local version of the MESH Base Data.  '
+                                      'By default, this folder is installed at <your mesh root directory>/base_data. If you do not have the base data, '
+                                      'go to the Natural Capital Project forum, Experimental Software section to find a link to the latest download link. '
+                                      ' Once you have the data, put the base_data folder in your mesh root directory as specified above. The dataset only works if '
+                                      'it is in exactly the right location, so that for instance the default land-use, land-cover map is located at (for example) '
+                                      'C:/mesh/base_data/lulc/lulc_modis_2012.tif.'
+
                                       )
         self.download_data_l.setWordWrap(True)
         self.main_layout.addWidget(self.download_data_l)
 
-        self.set_base_data_folder_decription_l = QLabel('By default, your base data is stored in c:/mesh/base_data. If you would like to set a different '
-                                                        'folder to be your base_data directoy, click \'Select Folder.\' For some '
-                                                        'of the data_creation tools, you need to have the correct datasets '
-                                                        'placed in the base_data folder, e.g. c:/mesh/base_data/Hydrosheds.'
+        self.set_base_data_folder_decription_l = QLabel('If you would like to change where the data is located (perhaps to an external hard-drive), '
+                                                        ', click \'Select Folder.\ and then save and restart MESH.'
                                                         '\n')
         self.set_base_data_folder_decription_l.setWordWrap(True)
         self.main_layout.addWidget(self.set_base_data_folder_decription_l)
 
+        self.buttons_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.buttons_hbox)
+
         self.set_folder_to_default_pb = QPushButton('Set folder to default')
         self.set_folder_to_default_pb.clicked.connect(self.set_folder_to_default)
-        self.main_layout.addWidget(self.set_folder_to_default_pb)
+        self.buttons_hbox.addWidget(self.set_folder_to_default_pb)
 
         self.select_folder_pb = QPushButton('Select folder')
         self.select_folder_pb.clicked.connect(self.select_folder)
-        self.main_layout.addWidget(self.select_folder_pb)
+        self.buttons_hbox.addWidget(self.select_folder_pb)
 
 
         self.show()
 
     def set_folder_to_default(self):
         self.root_app.base_data_folder = '../base_data'
+        self.root_app.save_application_settings()
         self.close()
 
     def select_folder(self):
         self.root_app.base_data_folder = str(QFileDialog.getExistingDirectory(self, 'Select folder', self.root_app.project_folder))
+        self.root_app.save_application_settings()
         self.close()
 
 class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
