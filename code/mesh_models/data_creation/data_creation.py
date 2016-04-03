@@ -33,7 +33,7 @@ def save_shp_feature_by_attribute(shp_uri, attribute, output_shp_uri):
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     output_layer = output_shp.CreateLayer("selected_watershed", srs, ogr.wkbPolygon)
-    input_layer.SetAttributeFilter('HYBAS_ID = ' + attribute)
+    input_layer.SetAttributeFilter('HYBAS_ID = ' + str(attribute))
 
     for input_feature in input_layer:
         geometry = input_feature.GetGeometryRef()

@@ -23,7 +23,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
-
+# EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
+os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 
@@ -2612,36 +2613,18 @@ class ShapefileViewerCanvas(FigureCanvas):
         self.ax = self.fig.add_subplot(111)
         self.shapefile = None
 
+        cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+
     def draw_shapefile(self, shapefile_uri):
-        # if self.shapefile:
-        #     print 'removing'
-        #     self.fig = None
-        #     self.fig = Figure(figsize=(100, 100), dpi=75)
-        #     self.basemap = None
-        #     self.ax = None
-        #     self.ax = self.fig.add_subplot(111)
-        #     #self.shapefile[3].remove() # the third objet returned is the mpl object
-        #
-        # # try:
-        # #     self.ax = None
-        # # except:
-        # # #     'wasnt there'
-        # self.fig = Figure(figsize=(100, 100), dpi=75)
-        #
-        # self.ax = self.fig.add_subplot(111)
+        self.ds = ogr.Open(shapefile_uri)
+        self.n_layers = self.ds.GetLayerCount()
+        self.layer = self.ds.GetLayer(0)
+        self.extent = self.layer.GetExtent()
+        self.x_center = (self.extent[3] - self.extent[2]) / 2.0
+        self.y_center = (self.extent[1] - self.extent[0]) / 2.0
 
-        ds = ogr.Open(shapefile_uri)
-        nlay = ds.GetLayerCount()
-        lyr = ds.GetLayer(0)
-
-        ext = lyr.GetExtent()
-
-        xoff = (ext[3] - ext[2]) / 2.0
-        yoff = (ext[1] - ext[0]) / 2.0
-
-        self.basemap = Basemap(llcrnrlon=ext[0],llcrnrlat=ext[2],urcrnrlon=ext[1],urcrnrlat=ext[3],
-                     resolution='c', projection='cyl', lat_0 = yoff, lon_0 = xoff, ax=self.ax) #cyl tmerc merc
-
+        self.basemap = Basemap(llcrnrlon=self.extent[0],llcrnrlat=self.extent[2],urcrnrlon=self.extent[1],urcrnrlat=self.extent[3],
+                     resolution='c', projection='cyl', lat_0 = self.y_center, lon_0 = self.x_center, ax=self.ax) #cyl tmerc merc
         self.basemap.drawmapboundary(fill_color='aqua')
         self.basemap.fillcontinents(color='#ddaa66',lake_color='aqua')
         #self.basemap.drawcoastlines()
@@ -2649,61 +2632,23 @@ class ShapefileViewerCanvas(FigureCanvas):
         self.basemap.drawmeridians(range(-180,180,45))
 
         self.shapefile = self.basemap.readshapefile(os.path.splitext(shapefile_uri)[0], os.path.split(shapefile_uri)[1], ax=self.ax) # NOTE: basemap calls exclude the shp extension
-
         self.draw()
 
 
+    def onclick(self, event):
+        print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
+            event.button, event.x, event.y, event.xdata, event.ydata)
+        if event.button == 1:
+            self.select_feature_by_point(event.xdata, event.ydata)
 
-    def draw_shapefile_DEPRECATED(self, shapefile_uri):
-        try:
-            self.ax = None
-        except:
-            'wasnt there'
+    def select_feature_by_point(self, x, y):
+        wkt = 'POINT (' + str(x) + ' ' + str(y) + ')'
 
-        self.ax = self.fig.add_subplot(111)
-
-        ds = ogr.Open(shapefile_uri)
-        nlay = ds.GetLayerCount()
-        lyr = ds.GetLayer(0)
-
-        ext = lyr.GetExtent()
-        xoff = (ext[1]-ext[0])/50
-        yoff = (ext[3]-ext[2])/50
-
-        self.ax.set_xlim(ext[0]-xoff,ext[1]+xoff)
-        self.ax.set_ylim(ext[2]-yoff,ext[3]+yoff)
-
-        paths = []
-        lyr.ResetReading()
-
-        # Read all features in layer and store as paths
-        for feat in lyr:
-            geom = feat.geometry()
-            codes = []
-            all_x = []
-            all_y = []
-            for i in range(geom.GetGeometryCount()):
-                # Read ring geometry and create path
-                r = geom.GetGeometryRef(i)
-                print 'r', r
-                x = [r.GetX(j) for j in range(r.GetPointCount())]
-                y = [r.GetY(j) for j in range(r.GetPointCount())]
-                # skip boundary between individual rings
-                #codes += [matplotlib.path.Path.MOVETO] + (len(x)-1)*[matplotlib.path.Path.LINETO]
-                all_x += x
-                all_y += y
-            #path = matplotlib.path.Path(np.column_stack((all_x,all_y)), codes)
-            path = matplotlib.path.Path(np.column_stack((all_x,all_y)))
-            paths.append(path)
-
-        # Add paths as patches to axes
-        for path in paths:
-            patch = matplotlib.patches.PathPatch(path, \
-                    facecolor='blue', edgecolor='black')
-            self.ax.add_patch(patch)
-
-        self.draw()
-
+        # In a clever turn of events, turns out you can select a specific polygon by filtering on a point wkt.
+        self.layer.SetSpatialFilter(ogr.CreateGeometryFromWkt(wkt))
+        for feature in self.layer:
+            selected_id = feature.GetField("HYBAS_ID")
+        self.parent.select_id(selected_id)
 
 
 class MapCanvas(FigureCanvas):  # Objects created from this class generate a FigureCanvas QTWidget that displays a MatPlotLib Figure. Benefits of MPL is that it allows easy navigation and formatting, but is quite slow at rendering. Good for final outputs that are static.
@@ -3198,16 +3143,9 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.main_layout.addWidget(QLabel())
 
-        self.select_hbox = QHBoxLayout()
-        self.main_layout.addLayout(self.select_hbox)
-        self.id_header_l = QLabel('Enter HydroBASINS ID')
-        self.select_hbox.addWidget(self.id_header_l)
-        self.id_le = QLineEdit()
-        self.select_hbox.addWidget(self.id_le)
-        self.select_pb = QPushButton('Select ID')
-        self.select_hbox.addWidget(self.select_pb)
-        self.select_pb.clicked.connect(self.select_id)
-        self.select_pb.setMaximumWidth(100)
+        self.click_to_select_l = QLabel('Click the map below to select your project\'s watershed.')
+        self.main_layout.addWidget(self.click_to_select_l)
+
 
         self.main_layout.addWidget(QLabel())
 
@@ -3220,6 +3158,17 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
+
+        self.select_hbox = QHBoxLayout()
+        self.main_layout.addLayout(self.select_hbox)
+        self.id_header_l = QLabel('Alternatively, you can select your watershed by typing its HydroBASINS ID.')
+        self.select_hbox.addWidget(self.id_header_l)
+        self.id_le = QLineEdit()
+        self.select_hbox.addWidget(self.id_le)
+        self.select_pb = QPushButton('Select ID')
+        self.select_hbox.addWidget(self.select_pb)
+        self.select_pb.clicked.connect(self.select_id)
+        self.select_pb.setMaximumWidth(100)
 
         self.show()
 
@@ -3271,16 +3220,17 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         return hybas_uri
 
-    def select_id(self):
-        selected_id = str(self.id_le.text())
+    def select_id(self, id=None):
+        if not id:
+            id = str(self.id_le.text())
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
         hybas_uri = self.get_selected_hybas_uri()
         #TODO BUG 1 in the executable, this throws an error swaying it expects a folder not a shp.
         output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
-                                      selected_continent + '_' + selected_level + '_' + str(selected_id) + '.shp')
+                                      selected_continent + '_' + selected_level + '_' + str(id) + '.shp')
 
-        data_creation.save_shp_feature_by_attribute(hybas_uri, selected_id, output_shp_uri)
+        data_creation.save_shp_feature_by_attribute(hybas_uri, id, output_shp_uri)
 
         self.root_app.set_project_aoi(output_shp_uri)
         self.parent.close()
