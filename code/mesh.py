@@ -67,6 +67,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
 
+
+
+
+
         # Project state variables
         self.decision_contexts = OrderedDict()
         self.external_drivers = OrderedDict()
@@ -74,6 +78,16 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         # Initialize application from preferences files and build UI
         self.load_or_create_application_settings_files()
+
+        # The following couullld be made programatic, based on a csv.
+        self.base_data_lulc_folder = os.path.join(self.base_data_folder, 'lulc')
+        self.base_data_hydrosheds_folder = os.path.join(self.base_data_folder, 'hydrosheds\\hydrobasins')
+
+        self.base_data_lulc_test_uri = os.path.join(self.base_data_lulc_folder, 'lulc_modis_2012.tif')
+        self.base_data_hydrosheds_test_uri = os.path.join(self.base_data_hydrosheds_folder, 'hybas_af_lev01-06_v1c\\hybas_af_lev03_v1c.shp')
+
+
+        # build UI elements
         self.create_application_window()
         self.create_docks()
         self.create_central_widgets()
@@ -478,6 +492,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 self.create_default_project_settings_file_for_name(input_text)
                 self.create_default_model_elements_settings_files()
 
+                self.save_application_settings()
+
         self.load_project_by_name(self.project_args['project_name'])
 
     def select_project_to_load(self):
@@ -579,7 +595,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     # TODO Implement a generalized version of this that checks for each plugin's requied data.
     def is_base_data_valid(self):
-        required_files_set = set([os.path.join(self.base_data_folder, 'lulc', 'lulc_modis_2012.tif'), os.path.join(self.base_data_folder, 'Hydrosheds\hybas_af_lev01-06_v1c', 'hybas_af_lev01_v1c.shp')])
+        required_files_set = set([self.base_data_lulc_test_uri, self.base_data_hydrosheds_test_uri])
         recursive_file_set = set()
         if os.path.exists(self.base_data_folder):
             for dir_name, subdir_list, file_list in os.walk(self.base_data_folder):
@@ -2636,8 +2652,6 @@ class ShapefileViewerCanvas(FigureCanvas):
 
 
     def onclick(self, event):
-        print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
-            event.button, event.x, event.y, event.xdata, event.ydata)
         if event.button == 1:
             self.select_feature_by_point(event.xdata, event.ydata)
 
@@ -2725,6 +2739,14 @@ class Source(MeshAbstractObject, QWidget):
         del self.parent.elements[self.name]
         self.setParent(None)
 
+class WarningPopupWidget(QMessageBox):
+    def __init__(self, message_text):
+        QMessageBox.__init__(self)
+        self.widget = QWidget()
+        self.warning(self.widget, 'Warning', message_text)
+        self.setMinimumHeight(400)
+        self.setMinimumWidth(600)
+        # self.message_box.exec_()
 
 class NewProjectWidget(MeshAbstractObject, QWidget):
     """
@@ -2958,11 +2980,16 @@ class ChooseSetAOIMethodDialog(MeshAbstractObject, QDialog):
         aoi_uri = str(
             QFileDialog.getOpenFileName(self, 'Select shape file of desired extent', self.root_app.project_folder))
         if aoi_uri:
-            if aoi_uri.endswith('.shp'):
+            if ' ' in os.path.split(aoi_uri)[1]:
+                self.warning = WarningPopupWidget('Shapefile cannot have spaces in the name.')
+            elif aoi_uri.endswith('.shp'):
                 self.root_app.set_project_aoi(aoi_uri)
 
+            else:
+                self.warning = WarningPopupWidget('Invalid file selected. Must be a .shp file.')
+
     def set_as_hydrosheds_watershed(self):
-        if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'Hydrosheds')):
+        if not os.path.exists(self.root_app.base_data_hydrosheds_folder):
             self.root_app.create_configure_base_data_dialog()
         else:
             self.root_app.clip_from_hydrosheds_watershed_dialog = ClipFromHydroshedsWatershedDialog(self.root_app, self)
@@ -3191,32 +3218,32 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_level = str(self.hybas_level_combobox.currentText())
 
         if selected_continent == 'Africa':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Arctic':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Asia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Australia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Europe':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Greenland':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'North America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'South America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Siberia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder,
-                                     'Hydrosheds/hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
+            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+                                     'hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
 
         return hybas_uri
 
@@ -3226,9 +3253,9 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
         hybas_uri = self.get_selected_hybas_uri()
-        #TODO BUG 1 in the executable, this throws an error swaying it expects a folder not a shp.
+
         output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
-                                      selected_continent + '_' + selected_level + '_' + str(id) + '.shp')
+                                      selected_continent.replace(' ', '_').lower() + '_' + selected_level + '_' + str(id) + '.shp')
 
         data_creation.save_shp_feature_by_attribute(hybas_uri, id, output_shp_uri)
 
