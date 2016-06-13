@@ -67,10 +67,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
 
-
-
-
-
         # Project state variables
         self.decision_contexts = OrderedDict()
         self.external_drivers = OrderedDict()
@@ -82,10 +78,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         # The following couullld be made programatic, based on a csv.
         self.base_data_lulc_folder = os.path.join(self.base_data_folder, 'lulc')
         self.base_data_hydrosheds_folder = os.path.join(self.base_data_folder, 'hydrosheds\\hydrobasins')
-
         self.base_data_lulc_test_uri = os.path.join(self.base_data_lulc_folder, 'lulc_modis_2012.tif')
         self.base_data_hydrosheds_test_uri = os.path.join(self.base_data_hydrosheds_folder, 'hybas_af_lev01-06_v1c\\hybas_af_lev03_v1c.shp')
-
 
         # build UI elements
         self.create_application_window()
@@ -107,7 +101,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialize_model_from_preferences(self.initialization_preferences_uri)
 
         if not os.path.exists(self.application_args['baseline_generators_settings_uri']):
-            # TODO I changed how baseline generators are used (now with a fuller UI), so update this to reflect that.
+            # TODO DOUG 6 CHECK I changed how baseline generators are used (now with a fuller UI), so update this to reflect that.
             self.create_baseline_generators_settings_file_from_default()
         self.baseline_generators_settings = utilities.file_to_python_object(
             self.application_args['baseline_generators_settings_uri'])
@@ -552,7 +546,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         if size > 5000000:
             max_side_length = 2048
-            # SHORTCUT I did not write a memory robust plotting method. However, I've implemented this elsewhere so it can be added easily.
+            # TODO JUSTIN I did not write a memory robust plotting method. However, I've implemented this elsewhere so it can be added easily.
             LOGGER.critical(
                 'Attempting to load very large array. May not display correctly or fail. Array set to the top left 2048 by 2048 cells.')
             self.visible_matrix = band.ReadAsArray(0, 0, max_side_length, max_side_length)
@@ -593,7 +587,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_define_decision_context_dialog(self):
         self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
-    # TODO Implement a generalized version of this that checks for each plugin's requied data.
+    # TODO DOUG COMMENT 7 Implement a generalized version of this that checks for each plugin's requied data.
     def is_base_data_valid(self):
         required_files_set = set([self.base_data_lulc_test_uri, self.base_data_hydrosheds_test_uri])
         recursive_file_set = set()
@@ -858,15 +852,10 @@ class Scenario(MeshAbstractObject, QWidget):
             self.cb.setChecked(False)
 
         if isinstance(self.args['sources'], str):
-            self.load_element(self.args['sources'], self.args[
-                'sources'])  # NOTE This line is trouble because of my shortcut to have the name == the uri.
+            self.load_element(self.args['sources'], self.args['sources'])  # NOTE This line is trouble because of my shortcut to have the name == the uri.
         elif isinstance(self.args['sources'], list):
             for name in self.args['sources']:
-                self.load_element(name,
-                                  name)  # NOTE This line is trouble because of my shortcut to have the name == the uri.
-
-                # if self.name == 'Baseline':
-                #     self.update_baseline_elements()
+                self.load_element(name,  name)  # NOTE This line is trouble because of my shortcut to have the name == the uri.
 
     def get_element_state_as_args(self):
         to_return = OrderedDict()
@@ -890,7 +879,7 @@ class Scenario(MeshAbstractObject, QWidget):
     def remove_self(self):
         del self.parent.elements[self.name]
         self.setParent(None)
-        # TODO Implement a good way to safely remove files from OS safely. Currently, many files are created with ramndom names rather than temp files.
+        # TODO JUSTIN Implement a good way to safely remove files from OS safely. Currently, many files are created with ramndom names rather than temp files.
 
     def load_element(self, name, uri):
         if not name:
@@ -1094,15 +1083,6 @@ class ModelsWidget(ScrollWidget):
 
         self.create_data_pb.clicked.connect(self.create_data)
 
-
-
-        # # TODO NOW this fails in other contexts. Fix this to be a more robust check that also assumes the person has the data.
-        # if not os.path.exists(os.path.join(self.root_app.base_data_folder, 'lulc')):
-        #     self.create_data_pb.clicked.connect(self.root_app.create_configure_base_data_dialog)
-        # else:
-        #     self.create_data_pb.clicked.connect(self.create_data)
-
-
         self.scroll_layout.addWidget(QLabel())
         self.title_l = QLabel()
         self.title_l.setText('Setup Baseline model runs')
@@ -1203,7 +1183,7 @@ class ModelsWidget(ScrollWidget):
             iui_model_name = 'scenario-generator'
         else:
             iui_model_name = model_name
-        # TODO Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
+        # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
 
         json_file_name = iui_model_name + '.json'
         input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
@@ -1281,7 +1261,9 @@ class ModelsWidget(ScrollWidget):
         returns 2 numbers, the number of models that hvae been validated and the number that have been checked. this is useful
         for updating the baseline scenario label.
         """
-        # SHORTCUT Doesn't actually check anything besides the existence of a json setup file. Make mnore robust.
+        # TODO DOUG 9 This doesn't actually check anything besides the existence of a json setup file. Make mnore robust.
+        # Additionally, this is a key area where we can work with Jame's new UI elements.
+
         num_validated = 0
         checked_elements = self.get_checked_elements()
         num_checked = len(checked_elements)
@@ -1406,7 +1388,6 @@ class Model(MeshAbstractObject, QWidget):
         to run the baseline. If this file exists, I asume that means the full MESH model can be run with that submodel
         using the current data.
         """
-        # TODO SHORTCUT I only checked if the json file exists, not if it's enough to run successfully, but because the JSON file is only generated if the Setup run can validate, this should be approximately right..
         self.setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', self.name,
                                            self.name + '_setup_file.json')
         return os.path.exists(self.setup_file_uri)
@@ -1732,7 +1713,7 @@ class ModelRun(MeshAbstractObject, QWidget):
     def add_run_to_map_viewer_signal_wrapper(self):
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
-                # SHORTCUT I manually decided which reports are actually interesting outputs. Have this be programatic.
+                # TODO JUSTIN SHORTCUT I manually decided which reports are actually interesting outputs. Have this be programatic.
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
@@ -1768,7 +1749,7 @@ class ModelRun(MeshAbstractObject, QWidget):
                     args['source_uri'] = uri
                     self.root_app.map_widget.create_element(name_of_map_to_add, args)
 
-    # TODO SHORTCUT. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
+    # TODO JUSTIN. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
     # Instead I just used some placeholder, hardcoded BS for time-sake.
     def use_run_to_load_choose_report_dialog(self):
         self.choose_report_type_dialog = ChooseReportTypeDialog(self.root_app, self)
@@ -1918,7 +1899,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         for element in self.elements.values():
             element.remove_self()
 
-    # TODO For consistency, rename/combine update_ui here with the set_state_to_args in other widgets?
+    # TODO DOUG COMMENT 5 For consistency, rename/combine update_ui here with the set_state_to_args in other widgets?
     def update_ui(self):
         if not len(self.elements):
             self.no_reports_l.setVisible(True)
@@ -1950,7 +1931,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
             55
 
     def save_report_as_pdf(self):
-        # TODO 1 Implement this before beta release.
+        # TODO DOUG 7 Implement this before beta release.
         """
         save as pdf doc
         """
@@ -2279,10 +2260,10 @@ class Report(MeshAbstractObject, QFrame):
         return args
 
     def add_report_list(self, uri):
-        reports_folder = os.path.join(self.root_app.project_folder,
-                                      '../volta_demo/output/reports')  # SHORTCUT make this per project.
+        # TODO JUSTIN SHORTCUT make this per project.
+        reports_folder = os.path.join(self.root_app.project_folder, '../volta_demo/output/reports')
 
-        # SHORTCUT Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
+        # TODO JUSTIN SHORTCUT Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
         # Ultimatly this should draw from XML or JSON files that define a report type and the images should be based on the
         # define_report_ready_object() from upcoming release.
         qt_objects = utilities.read_txt_file_as_serialized_headers(uri)
@@ -2301,7 +2282,6 @@ class Report(MeshAbstractObject, QFrame):
         scaled_pixmap = image_pixmap
         if width:
             scaled_pixmap = image_pixmap.scaledToWidth(width)
-        # image_l.setMaximumWidth(width)
         image_l.setPixmap(scaled_pixmap)
         centered_hbox.addWidget(image_l)
 
@@ -2344,10 +2324,8 @@ class MapWidget(MeshAbstractObject, QDockWidget):
     def __init__(self, root_app=None, parent=None):
         super(MapWidget, self).__init__(root_app, parent)
         self.default_state = MapWidget.default_state.copy()
-
         self.elements = OrderedDict()
         self.create_ui()
-
         self.name_of_toggled = None
 
     def create_ui(self):
@@ -2472,6 +2450,8 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         utilities.python_object_to_csv(to_write, self.save_uri)
 
     def map_cb_toggle(self, state):
+        # TODO DOUG 1 BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
+        # is a probability of a concurrency error. Fix this by making the canvas be preloaded?
         toggled_signal = str(self.sender().text())
         if state:
             self.name_of_toggled = toggled_signal
@@ -2699,7 +2679,7 @@ class MapCanvas(FigureCanvas):  # Objects created from this class generate a Fig
         self.ax.set_title(self.root_app.visible_map.title)
         self.cbar.set_label(self.root_app.visible_map.cbar_label)
         self.cax.set_cmap(self.root_app.visible_map.color_scheme)
-        # TODO Incorporate auto-interpolation.
+        # TODO JUSTIN Incorporate auto-interpolation.
         self.draw()
 
 
@@ -2727,11 +2707,10 @@ class Source(MeshAbstractObject, QWidget):
         self.main_hbox = QHBoxLayout()
         self.main_hbox.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.main_hbox)
-        shortened_name = os.path.split(self.name)[
-            1]  # I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
+        # TODO JUSTIN CONSIDER I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
+        shortened_name = os.path.split(self.name)[1]
         self.source_l = QLabel(shortened_name)
-        self.source_l.setContentsMargins(0, 0, 2,
-                                         0)  # L T R B. Because sources are itallic, this doesn't work without a tiny bit of padding.
+        self.source_l.setContentsMargins(0, 0, 2, 0)  # L T R B. Because sources are itallic, this doesn't work without a tiny bit of padding.
         self.source_l.setFont(config.italic_font)
         self.main_hbox.addWidget(self.source_l)
 
@@ -2812,8 +2791,8 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
 
         self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
                              'Full Technical Report']
-        # SHORTCUT I didn't follow the approach i used for the other things, like scenario generators, of having this be an external file, though, i am not sure that was the best choice anyhow.
-        # SHORTCUT I also didn't follow the OrderedDict.name, .longname notation
+        # TODO JUSTIN SHORTCUT I didn't follow the approach i used for the other things, like scenario generators, of having this be an external file, though, i am not sure that was the best choice anyhow.
+        # TODO JUSTIN SHORTCUT I also didn't follow the OrderedDict.name, .longname notation
 
         self.pbs = OrderedDict()
         for report_type in self.report_types:
@@ -3478,8 +3457,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.cancel_pb.clicked.connect(self.cancel)
         self.run_cancel_hbox.addWidget(self.cancel_pb)
 
-        self.listener = Listener(self.root_app,
-                                 self)  # Give the dialog it's OWN listener so that the run_in_next_queue fn can update the info box during run time.
+        self.listener = Listener(self.root_app, self)  # Give the dialog it's OWN listener so that the run_in_next_queue fn can update the info box during run time.
         self.listener.start()
 
         self.exec_()
@@ -3701,7 +3679,7 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
 
 
     def install_plugin(self):
-        # SHORTCUT NYI
+        # TODO JUSTIN NYI
         self.scroll_widget.scroll_layout.addWidget(QLabel('Not yet implemented.'))
 
 

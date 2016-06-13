@@ -28,16 +28,14 @@ class ProcessingThread(QThread):
         self.root_app = root_app
         self.parent = parent
         self.json_file_name = json_file_name
-
         self.parent.listener.connect_slots(self)
-
-
         sys.excepthook(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) # Required to have the logger/IDE pick up error messages from other threads.
 
     def run(self):
         try:
-            # SHORTCUT I only instantiated this subset of models and i did it non-programatically with horrible horrible hard-coding..
-            # BUG Critical. If you run InVEST as a setup model, and then without closing MESH, run the full model, the tmpfile module
+            # TODO DOUG SHORTCUT I only instantiated this subset of models and i did it non-programatically with horrible horrible hard-coding..
+
+            # TODO DOUG BUG Critical. If you run InVEST as a setup model, and then without closing MESH, run the full model, the tmpfile module
             # in InVEST throws an Errno2. This may be a threading issue?
 
             if self.model_name == 'nutrition':
@@ -80,18 +78,6 @@ class ProcessingThread(QThread):
     def emit_finished(self):
         self.emit(SIGNAL('model_finished'))
 
-
-    # def send_finish_message(self):
-    #     self.emit('finished')
-        # try:
-        #     self.parent.args_queue.popitem(last=False)  # removes the first item, last=False sets it to be First In First out rather than Last In First Out
-        #     if len(self.parent.args_queue) > 0:
-        #         self.parent.run_next_in_queue()
-        # except:
-        #     'Probably was not called as an args_queue item'
-        # self.root_app.model_runs_widget.process_finish_message(self.model_name)
-        # ATTEMPTED FAILURE self.parent.process_finish_messages(self.model_name)
-
     def stop(self):
         self.stopped = True
         try:
@@ -99,31 +85,6 @@ class ProcessingThread(QThread):
         except:
             'not needed'
 
-
-class TimerThread(QThread):
-    """
-    Can be used to update the UI according to time. NYI fully.
-    """
-
-    # TODO SHORTCUT Rather than learn how threads were implemented in IUI, I just use the timer thread here to check if a file
-    # exists in the OS rather than have a proper "model finished" message sent.
-
-    def __init__(self, root_app=None, parent=None):
-        sys.excepthook(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) # Required to have the logger/IDE pick up error messages from other threads.
-
-        QThread.__init__(self)
-        self.root_app = root_app
-        self.parent = parent
-        self.stopped = False
-
-    def run(self):
-        while not self.stopped:
-            self.root_app.update_ui()
-
-            time.sleep(.2)
-
-    def stop(self):
-        self.stopped = True
 
 class Listener(QThread):
     def __init__(self, root_app, parent):
@@ -139,27 +100,7 @@ class Listener(QThread):
         self.root_app.args_queue.popitem(last=False)  # removes the first item, last=False sets it to be First In First out rather than Last In First Out
         if len(self.root_app.args_queue) > 0:
             self.parent.run_next_in_queue() # Feels awkward
-
-        # try:
-        #     self.root_app.args_queue.popitem(last=False)  # removes the first item, last=False sets it to be First In First out rather than Last In First Out
-        #     if len(self.root_app.args_queue) > 0:
-        #         self.parent.run_next_in_queue() # Feels awkward
-        # except:
-        #     print('Probably was not called as an args_queue item')
-        #     raise
-
         self.root_app.update_ui()
-#
-# class Sender(QThread):
-#     def __init__(self):
-#         super(Sender,self).__init__()
-#
-#     def emit_finished(self):
-#         self.emit(SIGNAL('model_finished'))
-#
-
-
-
 
 
 class MeshAbstractObject(object):
@@ -172,7 +113,6 @@ class MeshAbstractObject(object):
             self.root_app = root_app
         if parent:
             self.parent = parent
-
 
 
 class ScrollWidget(MeshAbstractObject, QWidget):
@@ -201,7 +141,6 @@ class ScrollWidget(MeshAbstractObject, QWidget):
         self.scroll_area.setWidget(self.scroll_widget)
 
         self.setLayout(self.main_layout)
-
 
 
 class InputSelector(MeshAbstractObject, QWidget):
