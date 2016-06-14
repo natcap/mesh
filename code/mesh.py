@@ -27,9 +27,7 @@ import zipfile
 os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
-
 from mpl_toolkits.basemap import Basemap
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -137,8 +135,9 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = self.project_to_load_on_launch
             self.project_folder = os.path.join(self.application_args['project_folder_location'], self.project_name)
             config.global_folder = self.project_folder  # config provides a global set of variables shared across py files
-        else: # No project was defined, so force the user to make a new one.
-            self.create_new_project()
+        # TODO JUSTIN Had to disable this due to fresh install problem.
+        # else: # No project was defined, so force the user to make a new one.
+        #     self.create_new_project()
 
 
         self.base_data_folder = self.application_args['base_data_folder']
@@ -435,7 +434,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         input_text = str(input_text)
 
         if ok:
-            self.unload_project()
+            # TODO Justin, check that unload_project works even on fresh install.
+            try:
+                self.unload_project()
+            except:
+                'ui wasnt created yet.'
             if os.path.exists('../projects/' + input_text):
                 QDialog('Project of that name already exists. Specify a different one.')
             else:
