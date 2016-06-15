@@ -99,7 +99,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialize_model_from_preferences(self.initialization_preferences_uri)
 
         if not os.path.exists(self.application_args['baseline_generators_settings_uri']):
-            # TODO DOUG 6 CHECK I changed how baseline generators are used (now with a fuller UI), so update this to reflect that.
+            # TODO DOUG 6 check that THIS one is done exactly like the other CSV loading things, just generally
+            # debug this, try to get it to fail with deleting settings files, etc
             self.create_baseline_generators_settings_file_from_default()
         self.baseline_generators_settings = utilities.file_to_python_object(
             self.application_args['baseline_generators_settings_uri'])
@@ -590,7 +591,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_define_decision_context_dialog(self):
         self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
-    # TODO DOUG COMMENT 7 Implement a generalized version of this that checks for each plugin's requied data.
+    # TODO DOUG COMMENT 7 Implement a generalized version of this that verifies the base data is actually there and
+    # installed.
     def is_base_data_valid(self):
         required_files_set = set([self.base_data_lulc_test_uri, self.base_data_hydrosheds_test_uri])
         recursive_file_set = set()
@@ -1187,6 +1189,8 @@ class ModelsWidget(ScrollWidget):
         else:
             iui_model_name = model_name
         # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
+        # TODO DOUG BROADER: Rich's criticism: too much was hardcoded. needs to be generalized.
+
 
         json_file_name = iui_model_name + '.json'
         input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
@@ -2603,6 +2607,7 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
 
 
 class ShapefileViewerCanvas(FigureCanvas):
+    # TODO DOUG 2 Make better. Work with bigger files without crashing.
     def __init__(self, root_app=None, parent=None):
         self.fig = Figure(figsize=(100, 100), dpi=75)
         super(ShapefileViewerCanvas, self).__init__(self.fig)
