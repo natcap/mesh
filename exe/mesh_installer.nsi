@@ -1,9 +1,9 @@
 ; Variables needed at the command line:
-; VERSION         - the version of InVEST we're building (example: 3.4.5)
-; VERSION_DISK    - the windows-safe version of InVEST we're building
+; VERSION         - the version of MESH we're building (example: 3.4.5)
+; VERSION_DISK    - the windows-safe version of MESH we're building
 ;                   This needs to be a valid filename on windows (no : , etc),
 ;                   but could represent a development build.
-; FORKNAME        - The username of the InVEST fork we're building off of.
+; FORKNAME        - The username of the MESH fork we're building off of.
 
 !include nsProcess.nsh
 !include LogicLib.nsh
@@ -29,6 +29,7 @@ SetCompressor zlib
 !include "x64.nsh"
 !include "FileFunc.nsh"
 !include "nsDialogs.nsh"
+!include "genesis.nsh"
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -37,6 +38,7 @@ SetCompressor zlib
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE.txt"
 !insertmacro MUI_PAGE_COMPONENTS
+Page Custom BaseDataFunction BaseDataFunctionLeave
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -172,6 +174,23 @@ Section "MESH" Section_MESH_Tool
   Call DumpLog
 
 SectionEnd
+
+var basedataFile
+var basedataFromLocal
+LangString BASE_DATA ${LANG_ENGLISH} "Base Data"
+Section "-$(BASE_DATA)" BaseDataPage
+AddSize "3747991"
+; Parameter 2 is the location (relative to the installation directory) where the data should be unzipped.
+!insertmacro DownloadIfEmpty "$basedataFile" "$INSTDIR" "http://data.naturalcapitalproject.org/mesh-releases/${VERSION}/basedata.zip" "basedata.zip"
+SectionEnd
+
+LangString BASE_DATA_LABEL ${LANG_ENGLISH} "Select an option to download base data"
+Function BaseDataFunction
+    !insertmacro DataPage ${BaseDataPage} "" "$(BASE_DATA_LABEL)" $basedataFile $basedataFromLocal
+FunctionEnd
+Function BaseDataFunctionLeave
+    !insertmacro DataPageLeave $basedataFile $basedataFromLocal
+FunctionEnd
 
 Section "uninstall"
   ; Need to enforce execution level as admin.  See
