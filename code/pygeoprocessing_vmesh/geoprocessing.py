@@ -32,10 +32,10 @@ import scipy.ndimage
 #from shapely import speedups
 #import shapely.prepared
 
-import pygeoprocessing_vmesh
+#import pygeoprocessing
 
-from pygeoprocessing_vmesh import geoprocessing_core
-from pygeoprocessing_vmesh import calculate_disjoint_polygon_set as pgp_calculate_disjoint_polygon_set
+from pygeoprocessing import geoprocessing_core
+from pygeoprocessing import calculate_disjoint_polygon_set as pgp_calculate_disjoint_polygon_set
 from pygeoprocessing_vmesh import fileio
 
 
