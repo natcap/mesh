@@ -1,6 +1,0 @@
-project_to_load_on_launch,FWAT
-project_folder_location,../projects/
-base_data_folder,E:\base_data
-scenario_generators_settings_uri,../settings/scenario_generators.csv
-baseline_generators_settings_uri,../settings/baseline_generators.csv
-loaded_plugins,
