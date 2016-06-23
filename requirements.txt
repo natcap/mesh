@@ -1,6 +1,6 @@
 distribute
 gdal
-matplotlib>=1.2.0
+matplotlib>=1.4.2
 markdown
 xlrd
 git+https://github.com/pyinstaller/pyinstaller.git@3.0

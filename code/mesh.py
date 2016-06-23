@@ -30,10 +30,9 @@ os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
-from mpl_toolkits.basemap import Basemap
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import PathPatch
+#from matplotlib.patches import Polygon
+#from matplotlib.collections import PatchCollection
+#from matplotlib.patches import PathPatch
 
 from mesh_models.data_creation import data_creation
 from mesh_utilities import config
@@ -2622,6 +2621,9 @@ class ShapefileViewerCanvas(FigureCanvas):
         cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
     def draw_shapefile(self, shapefile_uri):
+        """Function currently unimplemented after removing dependency on
+            mpl_toolkits.basemap
+        """
         self.ds = ogr.Open(shapefile_uri)
         self.n_layers = self.ds.GetLayerCount()
         self.layer = self.ds.GetLayer(0)
@@ -2629,15 +2631,7 @@ class ShapefileViewerCanvas(FigureCanvas):
         self.x_center = (self.extent[3] - self.extent[2]) / 2.0
         self.y_center = (self.extent[1] - self.extent[0]) / 2.0
 
-        self.basemap = Basemap(llcrnrlon=self.extent[0],llcrnrlat=self.extent[2],urcrnrlon=self.extent[1],urcrnrlat=self.extent[3],
-                     resolution='c', projection='cyl', lat_0 = self.y_center, lon_0 = self.x_center, ax=self.ax) #cyl tmerc merc
-        self.basemap.drawmapboundary(fill_color='aqua')
-        self.basemap.fillcontinents(color='#ddaa66',lake_color='aqua')
-        #self.basemap.drawcoastlines()
-        self.basemap.drawparallels(range(-90,90,45))
-        self.basemap.drawmeridians(range(-180,180,45))
-
-        self.shapefile = self.basemap.readshapefile(os.path.splitext(shapefile_uri)[0], os.path.split(shapefile_uri)[1], ax=self.ax) # NOTE: basemap calls exclude the shp extension
+        # After removing basemap dependency, currenly unfinished function
         self.draw()
 
 
@@ -3199,7 +3193,9 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
 
-        self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
+        # Commenting out this line becasue the function being called is
+        # unfinished after removing dependency on basemap
+        #self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
 
 
     def get_selected_hybas_uri(self):
