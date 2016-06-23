@@ -16,7 +16,7 @@ if is_win:
     path_base = os.path.join('mesh_env', 'lib')
 else:
     path_base = os.path.join('mesh_env', 'lib', 'python2.7')
-path_base = os.path.abspath(path_base)    
+path_base = os.path.abspath(path_base)
 path_extension.insert(0, path_base)
 path_extension.insert(0, os.path.join(path_base, 'site-packages'))
 print 'PATH EXT: %s' % path_extension
@@ -30,6 +30,7 @@ kwargs = {
         'distutils',
         'distutils.dist',
         'mesh_models.data_creation',
+        'natcap.versioner',
     ],
 }
 
