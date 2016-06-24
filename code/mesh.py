@@ -20,13 +20,14 @@ from osgeo import gdal, ogr
 import numpy as np
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+
 import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
-os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
@@ -1938,12 +1939,6 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         for element in self.elements.values():
             55
 
-    def save_report_as_pdf(self):
-        # TODO DOUG 7 Implement this before beta release.
-        """
-        save as pdf doc
-        """
-
     def create_choose_report_type_dialog(self):
         self.choose_report_type_dialog = ChooseReportTypeDialog(self.root_app, self)
 
@@ -2041,13 +2036,13 @@ class Report(MeshAbstractObject, QFrame):
         # self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
         # self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
         #
-        # self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
-        # self.save_report_as_pdf_icon = QIcon()
-        # self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
-        # self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
-        # self.save_report_as_pdf_pb.setMaximumWidth(260)
-        # self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
-        # self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
+        self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
+        self.save_report_as_pdf_icon = QIcon()
+        self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
+        self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
+        self.save_report_as_pdf_pb.setMaximumWidth(260)
+        self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
+        self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
 
         self.clear_pb = QPushButton()
         self.clear_pb.clicked.connect(self.remove_self)
@@ -2308,6 +2303,29 @@ class Report(MeshAbstractObject, QFrame):
         dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.html')
         open(dst, 'w').write(to_write)
 
+    def save_report_as_pdf(self):
+        """Save the generated html report from 'self.html' as a PDF file.
+
+        Returns:
+            Nothing
+        """
+        html = str(self.html)
+
+        doc = QTextDocument()
+        doc.setHtml(html)
+
+        pdf_disk_path = os.path.join(
+            self.root_app.project_folder, 'output/reports',
+            'report_at_' + utilities.pretty_time() + '.pdf')
+
+        printer = QPrinter()
+
+        printer.setOutputFileName(pdf_disk_path)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setPageSize(QPrinter.A4)
+        printer.setPageMargins(15,15,15,15,QPrinter.Millimeter)
+
+        doc.print_(printer)
 
 class MapWidget(MeshAbstractObject, QDockWidget):
     """
