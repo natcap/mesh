@@ -9,6 +9,7 @@ import csv
 from osgeo import gdal
 from PyQt4.QtGui import *
 import xlrd
+import pygeoprocessing.geoprocessing
 
 # OR IS IT from mesh_utilities import config
 import config
@@ -56,23 +57,58 @@ def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):
 
     return qt_objects
 
+def get_raster_min_max(raster_path, value):
+    """Return the min or the max of a raster found at 'raster_path'.
 
-def as_array(uri, return_all_parts = False): #use GDAL to laod uri. By default only returns the array"
-    # Simplest function for loading a geotiff as an array. returns only the array by defauls, ignoring the DS and BAND unless return_all_parts = True.
-    ds = gdal.Open(uri)
-    band = ds.GetRasterBand(1)
+    Use gdal.band.GetStatistics to return the minimun or maximum value
+    from a raster
 
-    try:
-        array = band.ReadAsArray()
-    except:
-        config.LOGGER.critical('\n\nFAILED TO LOAD ALL OF THE ARRAY. Probably because the array is too large to fit into memory. Consult your local nerd for fixes.')
-        array = None
-        print('\n\nFAILED TO LOAD ALL OF THE ARRAY. Probably because the array is too large to fit into memory. Consult your local nerd for fixes.')
+    Parameters:
+        raster_path (string): location to a raster on disk
+        value (string): a string of either "min" or "max"
 
-    if return_all_parts:
-        return ds, band, array
-    else:
-        return array
+    Return:
+        a float being the minimum or maximum
+    """
+    value_mapping = {"min": 0, "max": 1}
+    index = value_mapping[value]
+
+    raster = gdal.Open(raster_path)
+    band = raster.GetRasterBand(1)
+    statistics = band.GetStatistics(0, 1)
+
+    # Close and clean up dataset
+    band = None
+    gdal.Dataset.__swig_destroy__(raster)
+    raster = None
+
+    return statistics[index]
+
+ def get_raster_sum(raster_path):
+    """Returns the sum of the non nodata pixels in a raster
+
+    Parameters:
+        raster_path (string): a location to a raster on disk
+
+    Returns:
+        a number of the sum of the pixels
+    """
+    nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(raster_path)
+
+    sum_val = 0.0
+    for data, block in pygeoprocessing.geoprocessing.iterblocks(
+        raster_path, band_list=[1]):
+
+        # Create a mask to ignore nodata values from summation
+        pixels_mask = (block != nodata)
+
+        # If there are only nodata values in this block skip block
+        if np.all(~pixels_mask):
+            continue
+
+        sum_val = sum_val + np.sum(block[pixels_mask])
+
+    return sum_val
 
 def iterable_to_json(input_iterable, output_uri):
     with open(output_uri, 'w') as fp:
