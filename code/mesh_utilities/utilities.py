@@ -84,7 +84,7 @@ def get_raster_min_max(raster_path, value):
 
     return statistics[index]
 
- def get_raster_sum(raster_path):
+def get_raster_sum(raster_path):
     """Returns the sum of the non nodata pixels in a raster
 
     Parameters:
