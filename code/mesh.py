@@ -2322,8 +2322,10 @@ class Report(MeshAbstractObject, QFrame):
 
         printer.setOutputFileName(pdf_disk_path)
         printer.setOutputFormat(QPrinter.PdfFormat)
+        # Set page size to standard A4
         printer.setPageSize(QPrinter.A4)
-        printer.setPageMargins(15,15,15,15,QPrinter.Millimeter)
+        # Set page margins to be reasonable
+        printer.setPageMargins(15, 15, 15, 15, QPrinter.Millimeter)
 
         doc.print_(printer)
 
