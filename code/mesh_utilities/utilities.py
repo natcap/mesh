@@ -10,6 +10,7 @@ from osgeo import gdal
 from PyQt4.QtGui import *
 import xlrd
 import pygeoprocessing.geoprocessing
+import numpy
 
 # OR IS IT from mesh_utilities import config
 import config
@@ -103,10 +104,10 @@ def get_raster_sum(raster_path):
         pixels_mask = (block != nodata)
 
         # If there are only nodata values in this block skip block
-        if np.all(~pixels_mask):
+        if numpy.all(~pixels_mask):
             continue
 
-        sum_val = sum_val + np.sum(block[pixels_mask])
+        sum_val = sum_val + numpy.sum(block[pixels_mask])
 
     return sum_val
 
