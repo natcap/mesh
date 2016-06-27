@@ -2181,8 +2181,7 @@ class Report(MeshAbstractObject, QFrame):
                 if model.name == 'carbon_combined':
                     output_uri = os.path.join(model_output_folder, 'tot_C_cur.tif')
                     if os.path.exists(output_uri):
-                        ds = gdal.Open(output_uri)
-                        value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                        value = str(utilities.get_raster_sum(output_uri))
                         st += '<p>Tons of carbon storage: ' + value + '</p>'
                         for filename in os.listdir(model_output_folder):
                             if os.path.splitext(filename)[1] == '.png':
@@ -2192,8 +2191,7 @@ class Report(MeshAbstractObject, QFrame):
                 if model.name == 'hydropower_water_yield':
                     output_uri = os.path.join(model_output_folder, 'per_pixel/wyield.tif')
                     if os.path.exists(output_uri):
-                        ds = gdal.Open(output_uri)
-                        value = str(np.sum(ds.GetRasterBand(1).ReadAsArray()))
+                        value = str(utilities.get_raster_sum(output_uri))
                         st += '<p>Total water yield: ' + value
                         for filename in os.listdir(model_output_folder):
                             if os.path.splitext(filename)[1] == '.png':
@@ -2530,11 +2528,8 @@ class Map(MeshAbstractObject, QWidget):
         self.checked = self.args['checked']
 
         if not self.args['vmin'] or self.args['vmin']:
-            ds = gdal.Open(self.source_uri)
-            band = ds.GetRasterBand(1)
-            array = band.ReadAsArray()
-            self.vmin = np.min(array)
-            self.vmax = np.max(array)
+            self.vmin = utilities.get_raster_min_max(self.source_uri, "min")
+            self.vmax = utilities.get_raster_min_max(self.source_uri, "max")
         else:
             self.vmin = self.args['vmin']
             self.vmax = self.args['vmax']
