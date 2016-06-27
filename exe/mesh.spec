@@ -31,6 +31,7 @@ kwargs = {
         'distutils.dist',
         'mesh_models.data_creation',
         'natcap.versioner',
+        'natcap.versioner.version',
         'pygeoprocessing.version',
     ],
 }
