@@ -27,7 +27,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
-#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
@@ -2307,18 +2307,23 @@ class Report(MeshAbstractObject, QFrame):
         Returns:
             Nothing
         """
+        # Default path for where the user "should" save the report
+        # Copied from how HTML reports paths are hardcoded
+        pdf_default_path = os.path.join(
+            self.root_app.project_folder, 'output/reports',
+            'report_at_' + utilities.pretty_time() + '.pdf')
+        # Open a file dialogue and let the user select where to save
+        # pdf file
+        pdf_out_path = QFileDialog.getSaveFileName(
+            self, 'Save File', pdf_default_path, "*.pdf")
+
         html = str(self.html)
 
         doc = QTextDocument()
         doc.setHtml(html)
 
-        pdf_disk_path = os.path.join(
-            self.root_app.project_folder, 'output/reports',
-            'report_at_' + utilities.pretty_time() + '.pdf')
-
         printer = QPrinter()
-
-        printer.setOutputFileName(pdf_disk_path)
+        printer.setOutputFileName(pdf_out_path)
         printer.setOutputFormat(QPrinter.PdfFormat)
         # Set page size to standard A4
         printer.setPageSize(QPrinter.A4)
