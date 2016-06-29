@@ -27,7 +27,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
-os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
@@ -145,6 +145,19 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         self.base_data_folder = self.application_args['base_data_folder']
 
+    def create_action(self, text, slot=None, icon_path=None, tip=None, checkable=False, parent=None):
+        if parent is not None:
+            action = QAction(text, parent)
+        else:
+            action = QAction(text, self)
+        if icon_path is not None:
+            icon = QIcon()
+            icon.addPixmap(QPixmap(icon_path), QIcon.Normal, QIcon.Off)
+            action.setIcon(icon)
+        if slot is not None:
+            action.triggered.connect(slot)
+        return action
+
     def create_application_window(self):
         if 'window_size' in self.application_args:
             'NYI in updating the preferences csv, but could be done manually.'
@@ -160,55 +173,86 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.setWindowIcon(self.mainWindowIcon)
 
         # Add Actions. Actions define BOTH toolbar items and menu items.
-        self.new_project_qaction = QAction(self)
-        self.new_project_qaction.setText("New")
-        self.new_project_icon = QIcon()
-        self.new_project_icon.addPixmap(QPixmap("icons/document-new-3.png"), QIcon.Normal, QIcon.Off)
-        self.new_project_qaction.setIcon(self.new_project_icon)
-        self.new_project_qaction.triggered.connect(self.create_new_project)
-        self.open_project_qaction = QAction(self)
-        self.open_project_qaction.setText("Open")
-        self.open_project_icon = QIcon()
-        self.open_project_icon.addPixmap(QPixmap("icons/document-open-7.png"), QIcon.Normal, QIcon.Off)
-        self.open_project_qaction.setIcon(self.open_project_icon)
-        self.open_project_qaction.triggered.connect(self.select_project_to_load)
-        self.save_project_qaction = QAction(self)
-        self.save_project_qaction.setText("Save")
-        self.save_project_icon = QIcon()
-        self.save_project_icon.addPixmap(QPixmap("icons/document-export.png"), QIcon.Normal, QIcon.Off)
-        self.save_project_qaction.setIcon(self.save_project_icon)
-        self.save_project_qaction.triggered.connect(self.save_project)
-        self.unload_project_qaction = QAction(self)
-        self.unload_project_qaction.setText("Unload project")
-        self.unload_project_icon = QIcon()
-        self.unload_project_icon.addPixmap(QPixmap("icons/crab16.png"), QIcon.Normal, QIcon.Off)
-        self.unload_project_qaction.setIcon(self.unload_project_icon)
-        self.unload_project_qaction.triggered.connect(self.unload_project)
+        self.new_project_qaction = self.create_action(
+            "New", self.create_new_project, "icons/document-new-3.png")
+        self.open_project_qaction = self.create_action(
+            "Open", self.select_project_to_load, "icons/document-open-7.png")
+        self.save_project_qaction = self.create_action(
+            "Save", self.save_project, "icons/document-export.png")
+        self.unload_project_qaction = self.create_action(
+            "Unload Project", self.unload_project, "icons/crab16.png")
+        # By default, MESH assumes you have the base data set in ../base_data.
+        # However, you can override that by manually setting it here.
+        self.configure_base_data_folder_qaction = self.create_action(
+            "Set base data location", self.create_configure_base_data_dialog,
+            "icons/crab16.png")
+        #self.new_project_qaction = QAction(self)
+        #self.new_project_qaction.setText("New")
+        #self.new_project_icon = QIcon()
+        #self.new_project_icon.addPixmap(QPixmap("icons/document-new-3.png"), QIcon.Normal, QIcon.Off)
+        #self.new_project_qaction.setIcon(self.new_project_icon)
+        #self.new_project_qaction.triggered.connect(self.create_new_project)
 
-        # By default, MESH assumes you have the base data set in ../base_data. However, you can override that by manually setting it here.
-        self.configure_base_data_folder_qaction = QAction(self)
-        self.configure_base_data_folder_qaction.setText("Set base data location")
-        self.configure_base_data_folder_icon = QIcon()
-        self.configure_base_data_folder_icon.addPixmap(QPixmap("icons/crab16.png"), QIcon.Normal, QIcon.Off)
-        self.configure_base_data_folder_qaction.setIcon(self.configure_base_data_folder_icon)
-        self.configure_base_data_folder_qaction.triggered.connect(self.create_configure_base_data_dialog)
+        #self.open_project_qaction
+        #self.open_project_qaction = QAction(self)
+        #self.open_project_qaction.setText("Open")
+        #self.open_project_icon = QIcon()
+        #self.open_project_icon.addPixmap(QPixmap("icons/document-open-7.png"), QIcon.Normal, QIcon.Off)
+        #self.open_project_qaction.setIcon(self.open_project_icon)
+        #self.open_project_qaction.triggered.connect(self.select_project_to_load)
+
+
+        #self.save_project_qaction = QAction(self)
+        #self.save_project_qaction.setText("Save")
+        #self.save_project_icon = QIcon()
+        #self.save_project_icon.addPixmap(QPixmap("icons/document-export.png"), QIcon.Normal, QIcon.Off)
+        #self.save_project_qaction.setIcon(self.save_project_icon)
+        #self.save_project_qaction.triggered.connect(self.save_project)
+        #self.unload_project_qaction = QAction(self)
+        #self.unload_project_qaction.setText("Unload project")
+        #self.unload_project_icon = QIcon()
+        #self.unload_project_icon.addPixmap(QPixmap("icons/crab16.png"), QIcon.Normal, QIcon.Off)
+        #self.unload_project_qaction.setIcon(self.unload_project_icon)
+        #self.unload_project_qaction.triggered.connect(self.unload_project)
+
+        #self.configure_base_data_folder_qaction = QAction(self)
+        #self.configure_base_data_folder_qaction.setText("Set base data location")
+        #self.configure_base_data_folder_icon = QIcon()
+        #self.configure_base_data_folder_icon.addPixmap(QPixmap("icons/crab16.png"), QIcon.Normal, QIcon.Off)
+        #self.configure_base_data_folder_qaction.setIcon(self.configure_base_data_folder_icon)
+        #self.configure_base_data_folder_qaction.triggered.connect(self.create_configure_base_data_dialog)
 
         self.qaction_state_actiongroup = QActionGroup(self)
-        self.run_models_qaction = QAction(self)
-        self.qaction_state_actiongroup.addAction(self.run_models_qaction)
-        self.run_models_qaction.triggered.connect(self.place_model_runs_widget)
-        self.run_models_qaction.setText("Run MESH Model")
-        self.run_models_qaction.setCheckable(True)
-        self.map_viewer_qaction = QAction(self)
-        self.qaction_state_actiongroup.addAction(self.map_viewer_qaction)
-        self.map_viewer_qaction.triggered.connect(self.set_map_viewer_as_central_widget)
-        self.map_viewer_qaction.setText("View Maps")
-        self.map_viewer_qaction.setCheckable(True)
-        self.create_report_qaction = QAction(self)
-        self.qaction_state_actiongroup.addAction(self.create_report_qaction)
-        self.create_report_qaction.triggered.connect(self.set_report_generator_as_central_widget)
-        self.create_report_qaction.setText("View/Create Report")
-        self.create_report_qaction.setCheckable(True)
+
+        self.run_models_qaction = self.create_action(
+            "Run MESH Model", self.place_model_runs_widget,
+            checkable=True,  parent=self.qaction_state_actiongroup)
+        self.map_viewer_qaction = self.create_action(
+            "View Maps", self.set_map_viewer_as_central_widget,
+            checkable=True, parent=self.qaction_state_actiongroup)
+        self.create_report_qaction = self.create_action(
+            "View/Create Report", self.set_report_generator_as_central_widget,
+            checkable=True, parent=self.qaction_state_actiongroup)
+
+        #self.qaction_state_actiongroup.addAction(self.run_models_qaction)
+        #self.qaction_state_actiongroup.addAction(self.map_viewer_qaction)
+        #self.qaction_state_actiongroup.addAction(self.create_report_qaction)
+
+        #self.run_models_qaction = QAction(self)
+        #self.run_models_qaction.triggered.connect(self.place_model_runs_widget)
+        #self.run_models_qaction.setText("Run MESH Model")
+        #self.run_models_qaction.setCheckable(True)
+
+
+        #self.map_viewer_qaction = QAction(self)
+        #self.map_viewer_qaction.triggered.connect(self.set_map_viewer_as_central_widget)
+        #self.map_viewer_qaction.setText("View Maps")
+        #self.map_viewer_qaction.setCheckable(True)
+
+        #self.create_report_qaction = QAction(self)
+        #self.create_report_qaction.triggered.connect(self.set_report_generator_as_central_widget)
+        #self.create_report_qaction.setText("View/Create Report")
+        #self.create_report_qaction.setCheckable(True)
 
         # Create menubar and top-level menu items
         self.menu_bar = QMenuBar(self)
@@ -221,14 +265,22 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.help_menu.setTitle("Help")
 
         # Add actions under each top-level menu item
-        self.file_menu.addAction(self.new_project_qaction)
-        self.file_menu.addAction(self.open_project_qaction)
-        self.file_menu.addAction(self.save_project_qaction)
-        self.file_menu.addAction(self.unload_project_qaction)
-        self.file_menu.addAction(self.configure_base_data_folder_qaction)
-        self.view_menu.addAction(self.run_models_qaction)
-        self.view_menu.addAction(self.map_viewer_qaction)
-        self.view_menu.addAction(self.create_report_qaction)
+        self.file_menu.addActions(
+            (self.new_project_qaction, self.open_project_qaction,
+            self.save_project_qaction, self.unload_project_qaction,
+            self.configure_base_data_folder_qaction))
+        #self.file_menu.addAction(self.new_project_qaction)
+        #self.file_menu.addAction(self.open_project_qaction)
+        #self.file_menu.addAction(self.save_project_qaction)
+        #self.file_menu.addAction(self.unload_project_qaction)
+        #self.file_menu.addAction(self.configure_base_data_folder_qaction)
+        self.view_menu.addActions(
+            (self.run_models_qaction, self.map_viewer_qaction,
+            self.create_report_qaction))
+
+        #self.view_menu.addAction(self.run_models_qaction)
+        #self.view_menu.addAction(self.map_viewer_qaction)
+        #self.view_menu.addAction(self.create_report_qaction)
 
         # Add the top-level actions to the menu
         self.menu_bar.addAction(self.file_menu.menuAction())
