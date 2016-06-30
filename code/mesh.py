@@ -291,16 +291,24 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.file_tool_bar = QToolBar(self)
         self.file_tool_bar.setWindowTitle("File toolbar")
         self.addToolBar(Qt.TopToolBarArea, self.file_tool_bar)
-        self.file_tool_bar.addAction(self.new_project_qaction)
-        self.file_tool_bar.addAction(self.open_project_qaction)
-        self.file_tool_bar.addAction(self.save_project_qaction)
+        self.file_tool_bar.addActions(
+            (self.new_project_qaction, self.open_project_qaction,
+            self.save_project_qaction))
+
+        #self.file_tool_bar.addAction(self.new_project_qaction)
+        #self.file_tool_bar.addAction(self.open_project_qaction)
+        #self.file_tool_bar.addAction(self.save_project_qaction)
 
         self.view_tool_bar = QToolBar(self)
         self.view_tool_bar.setWindowTitle("View toolbar")
         self.addToolBar(Qt.TopToolBarArea, self.view_tool_bar)
-        self.view_tool_bar.addAction(self.run_models_qaction)
-        self.view_tool_bar.addAction(self.map_viewer_qaction)
-        self.view_tool_bar.addAction(self.create_report_qaction)
+        self.view_tool_bar.addActions(
+            (self.run_models_qaction, self.map_viewer_qaction,
+            self.create_report_qaction))
+
+        #self.view_tool_bar.addAction(self.run_models_qaction)
+        #self.view_tool_bar.addAction(self.map_viewer_qaction)
+        #self.view_tool_bar.addAction(self.create_report_qaction)
 
         # Statusbar
         self.statusbar = QStatusBar(self)
