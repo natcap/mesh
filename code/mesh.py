@@ -139,7 +139,21 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         self.base_data_folder = self.application_args['base_data_folder']
 
-    def create_action(self, text, slot=None, icon_path=None, tip=None, checkable=False, parent=None):
+    def create_action(self, text, slot=None, icon_path=None, checkable=False,
+                        parent=None):
+        """Create and return a QAction with optional properties
+
+        Parameters:
+            self ():
+            text (string): a name to assign to the QAction
+            slot ()
+            icon_path (string): path name for image file to be used as icon
+            checkable (boolean):
+            parent (QObject): QActionGroup to assing the QAction to
+
+        Returns:
+            QAction
+        """
         if parent is not None:
             action = QAction(text, parent)
         else:
@@ -255,9 +269,19 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.setCentralWidget(self.center_column_widget)
 
     def create_docks(self):
-        self.create_models_dock()
-        self.create_scenarios_dock()
-        self.create_map_widget()
+        """Creates and adds 3 main docks to Main Window
+
+        """
+        # Create and add models dock to main window
+        self.models_dock = ModelsDock(self)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.models_dock)
+        # Create and add scenarios dock to main window
+        self.scenarios_dock = ScenariosDock(
+            self)  # Note that you have to have this extra self here as an arg to __init__
+        self.addDockWidget(Qt.RightDockWidgetArea, self.scenarios_dock)
+        # Create and add map dock to main window
+        self.map_widget = MapWidget(self, self)  # Note that you have to have this extra self here as an arg to __init__
+        self.addDockWidget(Qt.RightDockWidgetArea, self.map_widget)
 
         # self.tabifyDockWidget(self.models_dock, self.map_widget)
 
@@ -404,19 +428,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def process_finish_message(self, message, args=None):
         if message == 'model_finished':
             self.scenarios_dock.scenarios_widget.create_element(args['clipped_uri'])
-
-    def create_models_dock(self):
-        self.models_dock = ModelsDock(self)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.models_dock)
-
-    def create_scenarios_dock(self):
-        self.scenarios_dock = ScenariosDock(
-            self)  # Note that you have to have this extra self here as an arg to __init__
-        self.addDockWidget(Qt.RightDockWidgetArea, self.scenarios_dock)
-
-    def create_map_widget(self):
-        self.map_widget = MapWidget(self, self)  # Note that you have to have this extra self here as an arg to __init__
-        self.addDockWidget(Qt.RightDockWidgetArea, self.map_widget)
 
     def create_new_project(self):
         input_text, ok = QInputDialog.getText(self, 'Create new project', 'Name of new project:')
