@@ -440,7 +440,9 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             except:
                 'ui wasnt created yet.'
             if os.path.exists('../projects/' + input_text):
-                QDialog('Project of that name already exists. Specify a different one.')
+                QMessageBox.warning(
+                    self, 'Project Creation Error',
+                    unicode("Project of that name already exists."))
             else:
                 self.project_args = OrderedDict()
                 self.project_name = input_text
@@ -451,40 +453,17 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 config.global_folder = self.project_folder
 
                 # Make the  directories
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
+                for directory in ['input', 'output', 'settings']:
+                    # If we're here then '../projects/input_text' doesn't exist
+                    # so creating directories recursively should be fine
+                    os.makedirs(
+                        os.path.join('../projects/', input_text, directory))
 
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'input/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/reports'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/model_setup_runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'settings/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
+                for sub_dir in ['runs', 'reports', 'model_setup_runs']:
+                    # 'output' directory must exist from above, so should be
+                    # able to add these without worries.
+                    os.mkdir(os.path.join(
+                                '../projects/', input_text, 'output', sub_dir))
 
                 self.create_default_project_settings_file_for_name(input_text)
                 self.create_default_model_elements_settings_files()
