@@ -1215,7 +1215,7 @@ class ModelsWidget(ScrollWidget):
             return None
         for key, value in args.items():
             if isinstance(value, (str, unicode)):
-                if 'configure_based_on_project_input' in value:
+                if 'set_based_on_project_input' in value:
                     if isinstance(self.sender, Scenario):
                         return_args[key] = os.path.join(self.root_app.project_folder, 'input', 'Baseline',
                                                         input_mapping[key]['save_location'])
