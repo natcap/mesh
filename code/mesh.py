@@ -1392,14 +1392,29 @@ class Model(MeshAbstractObject, QWidget):
                 to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
 
     def check_if_validated(self):
+        """Makes sure that a given InVEST setup run has completed successfully.
+
+        Success is determined by the log file from the InVEST run, if the
+        file has "Operations completed successfully", then it is validated.
+
+        Returns
+            True if a run for the associated model completed successfully,
+            False otherwise
         """
-        Validation is defined for InVEST models by whether or not a json file exists that describes the parameters used
-        to run the baseline. If this file exists, I asume that means the full MESH model can be run with that submodel
-        using the current data.
-        """
-        self.setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', self.name,
-                                           self.name + '_setup_file.json')
-        return os.path.exists(self.setup_file_uri)
+        # Get path for InVEST model logfile
+        log_file_dir = os.path.join(
+            self.root_app.project_folder, 'output', 'model_setup_runs',
+            self.name)
+        # String to match to verify a valid run of an InVEST model
+        success_string = "Operations completed successfully"
+
+        if os.path.isdir(log_file_dir):
+            for file in os.listdir(log_file_dir):
+                if file.endswith('.txt') and "log" in file:
+                    log_file_path = os.path.join(log_file_dir, file)
+                    if success_string in open(log_file_path).read():
+                        return True
+        return False
 
     def place_check_if_ready_button(self):
         self.clear_model_state()
