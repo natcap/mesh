@@ -1270,9 +1270,6 @@ class ModelsWidget(ScrollWidget):
         returns 2 numbers, the number of models that hvae been validated and the number that have been checked. this is useful
         for updating the baseline scenario label.
         """
-        # TODO DOUG 9 This doesn't actually check anything besides the existence of a json setup file. Make mnore robust.
-        # Additionally, this is a key area where we can work with Jame's new UI elements.
-
         num_validated = 0
         checked_elements = self.get_checked_elements()
         num_checked = len(checked_elements)
