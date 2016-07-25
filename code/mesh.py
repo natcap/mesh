@@ -1180,24 +1180,12 @@ class ModelsWidget(ScrollWidget):
         """
         self.sender = sender
 
-        if isinstance(self.sender, Scenario):
-            model_name = 'scenario_generator'
-        else:
-            model_name = self.sender.name
-
-        #if model_name == 'carbon_combined':
-        #    iui_model_name = 'carbon'
-        #elif model_name == 'scenario_generator':
-        #    iui_model_name = 'scenario-generator'
-        #else:
-        #    iui_model_name = model_name
-        iui_model_name = model_name
+        model_name = self.sender.name
 
         # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
         # TODO DOUG BROADER: Rich's criticism: too much was hardcoded. needs to be generalized.
 
-
-        json_file_name = iui_model_name + '.json'
+        json_file_name = model_name + '.json'
         input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
 
