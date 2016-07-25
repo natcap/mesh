@@ -7,13 +7,6 @@ from collections import OrderedDict
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-#from invest_natcap.iui import modelui
-#from invest_natcap.hydropower.hydropower_water_yield import execute as execute_hydropower_model
-#from invest_natcap.nutrient.nutrient import execute as execute_nutrient_model
-#from invest_natcap.carbon.carbon_combined import execute as execute_carbon_model
-#from invest_natcap.pollination.pollination import execute as execute_pollination_model
-#from invest_natcap.sdr.sdr import execute as execute_sdr_model
-
 from natcap.invest.iui import modelui
 from natcap.invest.hydropower.hydropower_water_yield import execute as execute_hydropower_model
 #from natcap.invest.nutrient.nutrient import execute as execute_nutrient_model
