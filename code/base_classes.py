@@ -58,7 +58,7 @@ class ProcessingThread(QThread):
                 self.update_run_log('Starting Water Yield Model.')
                 execute_hydropower_model(self.args)
                 self.update_run_log('Finished Water Yield Model.')
-            if self.model_name == 'carbon_combined':
+            if self.model_name == 'carbon':
                 self.update_run_log('Starting Carbon Model.')
                 execute_carbon_model(self.args)
                 self.update_run_log('Finished Carbon Model.')
