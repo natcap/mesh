@@ -39,7 +39,8 @@ from mesh_models.data_creation import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
-from invest_natcap.iui import modelui
+from natcap.invest.iui import modelui
+#from invest_natcap.iui import modelui
 
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
@@ -1206,7 +1207,7 @@ class ModelsWidget(ScrollWidget):
         else:
             default_args = utilities.file_to_python_object(default_last_run_uri)
             override_args = self.modify_args_to_match_project(default_args, model_name, input_mapping)
-        self.running_setup_uis.append(modelui.main(json_file_name, last_run_override=override_args))
+        self.running_setup_uis.append(modelui.main(json_file_name))
 
     def modify_args_to_match_project(self, args, model_name, input_mapping=None):
         if args:
