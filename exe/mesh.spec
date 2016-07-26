@@ -32,6 +32,7 @@ kwargs = {
         'mesh_models.data_creation',
         'natcap.versioner',
         'natcap.versioner.version',
+        'natcap.invest.version',
         'pygeoprocessing.version',
     ],
 }
