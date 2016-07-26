@@ -39,7 +39,8 @@ from mesh_models.data_creation import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
-from invest_natcap.iui import modelui
+from natcap.invest.iui import modelui
+#from invest_natcap.iui import modelui
 
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
@@ -1018,10 +1019,10 @@ class ModelsWidget(ScrollWidget):
     default_state['hydropower_water_yield']['long_name'] = 'Hydropower Water Yield'
     default_state['hydropower_water_yield']['model_type'] = 'InVEST Model'
 
-    default_state['carbon_combined'] = default_element_args.copy()
-    default_state['carbon_combined']['name'] = 'carbon_combined'
-    default_state['carbon_combined']['long_name'] = 'Carbon Storage'
-    default_state['carbon_combined']['model_type'] = 'InVEST Model'
+    default_state['carbon'] = default_element_args.copy()
+    default_state['carbon']['name'] = 'carbon'
+    default_state['carbon']['long_name'] = 'Carbon Storage'
+    default_state['carbon']['model_type'] = 'InVEST Model'
 
     default_state['pollination'] = default_element_args.copy()
     default_state['pollination']['name'] = 'pollination'
@@ -1187,22 +1188,12 @@ class ModelsWidget(ScrollWidget):
         """
         self.sender = sender
 
-        if isinstance(self.sender, Scenario):
-            model_name = 'scenario_generator'
-        else:
-            model_name = self.sender.name
+        model_name = self.sender.name
 
-        if model_name == 'carbon_combined':
-            iui_model_name = 'carbon'
-        elif model_name == 'scenario_generator':
-            iui_model_name = 'scenario-generator'
-        else:
-            iui_model_name = model_name
         # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
         # TODO DOUG BROADER: Rich's criticism: too much was hardcoded. needs to be generalized.
 
-
-        json_file_name = iui_model_name + '.json'
+        json_file_name = model_name + '.json'
         input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
 
@@ -1214,7 +1205,7 @@ class ModelsWidget(ScrollWidget):
         else:
             default_args = utilities.file_to_python_object(default_last_run_uri)
             override_args = self.modify_args_to_match_project(default_args, model_name, input_mapping)
-        self.running_setup_uis.append(modelui.main(json_file_name, last_run_override=override_args))
+        self.running_setup_uis.append(modelui.main(json_file_name))
 
     def modify_args_to_match_project(self, args, model_name, input_mapping=None):
         if args:
@@ -1746,17 +1737,17 @@ class ModelRun(MeshAbstractObject, QWidget):
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
-                if model.name == 'carbon_combined':
+                if model.name == 'carbon':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'tot_c_cur.tif'))
                 if model.name == 'hydropower_water_yield':
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
-                if model.name == 'nutrient':
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'p_export_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'p_retention_.tif'))
+                #if model.name == 'nutrient':
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_export_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_retention_.tif'))
                 if model.name == 'pollination':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
@@ -2193,7 +2184,7 @@ class Report(MeshAbstractObject, QFrame):
             for model in models_list:
                 st += '<h3>Model: ' + model.long_name + '</h3>'
                 model_output_folder = os.path.join(scenario_folder, model.name, 'output')
-                if model.name == 'carbon_combined':
+                if model.name == 'carbon':
                     output_uri = os.path.join(model_output_folder, 'tot_C_cur.tif')
                     if os.path.exists(output_uri):
                         value = str(utilities.get_raster_sum(output_uri))
@@ -2261,7 +2252,7 @@ class Report(MeshAbstractObject, QFrame):
         return table
 
     def get_value_from_scenario_model_pair(self, scenario, model, value_to_get=None):
-        if model.name == 'carbon_combined':
+        if model.name == 'carbon':
             return 'carbon_value'
         elif model.name == 'hydropower_water_yield':
             return 'hydropower'
@@ -3622,7 +3613,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         args['demand_table_uri'] = args['demand_table']
                         args['lulc_uri'] = args['land_use']
 
-                    if model.name == 'carbon_combined':
+                    if model.name == 'carbon':
                         args['do_biophysical'] = True
                         args['do_valuation'] = False
                         args['do_uncertainty'] = False
@@ -3775,7 +3766,6 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-
                 for key, value in input_mapping.items():
                     if utilities.convert_to_bool(value['required']):
                         self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
