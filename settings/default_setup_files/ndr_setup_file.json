@@ -1,0 +1,16 @@
+{
+    "workspace_dir": "set_based_on_model_setup_runs_folder",
+    "results_suffix": "",
+    "dem_uri": "set_based_on_project_input",
+    "lulc_uri": "set_based_on_project_input",
+    "runoff_proxy_uri": "set_based_on_project_input",
+    "watersheds_uri": "set_based_on_project_input",
+    "biophysical_table_uri": "set_based_on_project_input",
+    "calc_p": false,
+    "calc_n": false,
+    "threshold_flow_accumulation": "1000",
+    "k_param": "2",
+    "subsurface_critical_length_n": "150",
+    "subsurface_eff_n": "0.8",
+    "subsurface_eff_p": "0.8"
+}
