@@ -76,12 +76,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         # Initialize application from preferences files and build UI
         self.load_or_create_application_settings_files()
 
-        # The following couullld be made programatic, based on a csv.
-        self.base_data_lulc_folder = os.path.join(self.base_data_folder, 'lulc')
-        self.base_data_hydrosheds_folder = os.path.join(self.base_data_folder, 'hydrosheds\\hydrobasins')
-        self.base_data_lulc_test_uri = os.path.join(self.base_data_lulc_folder, 'lulc_modis_2012.tif')
-        self.base_data_hydrosheds_test_uri = os.path.join(self.base_data_hydrosheds_folder, 'hybas_af_lev01-06_v1c\\hybas_af_lev03_v1c.shp')
-
         # build UI elements
         self.create_application_window()
         self.create_docks()
@@ -596,18 +590,32 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     # TODO DOUG COMMENT 7 Implement a generalized version of this that verifies the base data is actually there and
     # installed.
+    # Doug says: I think the update below is sufficient for now.
+    # The sub directory list can be updated easily without creating a CSV
+    # file mapping out the data. File IO errors should be handled in a dialogue
     def is_base_data_valid(self):
-        required_files_set = set([self.base_data_lulc_test_uri, self.base_data_hydrosheds_test_uri])
-        recursive_file_set = set()
-        if os.path.exists(self.base_data_folder):
-            for dir_name, subdir_list, file_list in os.walk(self.base_data_folder):
-                [recursive_file_set.add(os.path.join(dir_name, file)) for file in file_list]
-            if required_files_set.issubset(recursive_file_set):
-                return True
+        """Verify Base Data folder is set up properly.
+
+        Check to make sure that the base data folder exists and that is has
+        major subfolders which are not empty
+
+        Returns:
+            True if setup, False otherwise
+        """
+
+        base_data_folder = self.base_data_folder
+        # Major sub directories that should be present and not empty
+        sub_directories = ['lulc', 'hydrosheds', 'models']
+
+        for sub_dir in sub_directories:
+            sub_dir_path = os.path.join(base_data_folder, sub_dir)
+            if os.path.isdir(sub_dir_path):
+                if not os.listdir(sub_dir_path):
+                    return False
             else:
                 return False
-        else:
-            return False
+        return True
+
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
     """
