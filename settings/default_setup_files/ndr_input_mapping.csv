@@ -8,7 +8,7 @@ calc_p,parameter,FALSE,FALSE,calc_p,Calculate phosphorous retention,ndr,copy_def
 calc_n,parameter,FALSE,FALSE,calc_n,Calculate Nitrogen Retention,ndr,copy_default,,false
 threshold_flow_accumulation,parameter,TRUE,FALSE,threshold_flow_accumulation,Threshold Flow Accumulation,ndr,copy_default,,1000
 k_param,parameter,TRUE,FALSE,k_param,Borselli k Parameter,ndr,copy_default,,2
-subsurface_critical_length_n,parameter,TRUE,FALSE,subsurface_critical_length_n,Subsurface Critical Length (Nitrogen),copy_default,,150
-subsurface_critical_length_p,parameter,TRUE,FALSE,subsurface_critical_length_p,Subsurface Critical Length (Phosphorous),copy_default,,150
-subsurface_eff_n,parameter,TRUE,FALSE,subsurface_eff_n,Subsurface Maximum Retention Efficiency (Nitrogen),copy_default,,0.8
-subsurface_eff_p,parameter,TRUE,FALSE,subsurface_eff_p,Subsurface Maximum Retention Efficiency (Phosphorous),copy_default,,0.8
+subsurface_critical_length_n,parameter,TRUE,FALSE,subsurface_critical_length_n,Subsurface Critical Length (Nitrogen),ndr,copy_default,,150
+subsurface_critical_length_p,parameter,TRUE,FALSE,subsurface_critical_length_p,Subsurface Critical Length (Phosphorous),ndr,copy_default,,150
+subsurface_eff_n,parameter,TRUE,FALSE,subsurface_eff_n,Subsurface Maximum Retention Efficiency (Nitrogen),ndr,copy_default,,0.8
+subsurface_eff_p,parameter,TRUE,FALSE,subsurface_eff_p,Subsurface Maximum Retention Efficiency (Phosphorous),ndr,copy_default,,0.8
