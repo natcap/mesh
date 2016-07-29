@@ -1011,10 +1011,10 @@ class ModelsWidget(ScrollWidget):
     default_element_args['checked'] = ''
 
     default_state = OrderedDict()
-    default_state['nutrient'] = default_element_args.copy()
-    default_state['nutrient']['name'] = 'nutrient'
-    default_state['nutrient']['long_name'] = 'Nutrient Retention'
-    default_state['nutrient']['model_type'] = 'InVEST Model'
+    default_state['ndr'] = default_element_args.copy()
+    default_state['ndr']['name'] = 'ndr'
+    default_state['ndr']['long_name'] = 'Nutrient Retention'
+    default_state['ndr']['model_type'] = 'InVEST Model'
 
     default_state['hydropower_water_yield'] = default_element_args.copy()
     default_state['hydropower_water_yield']['name'] = 'hydropower_water_yield'
