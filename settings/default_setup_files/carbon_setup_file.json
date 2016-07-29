@@ -10,7 +10,6 @@
 	"lulc_cur_uri": "set_based_on_project_input",
 	"lulc_fut_year": "2030",
 	"hwp_cur_shape_uri": "set_based_on_project_input",
-	"window": true,
 	"sequest_uri": "",
 	"yr_fut": "",
 	"lulc_cur_year": "2000",
