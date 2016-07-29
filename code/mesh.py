@@ -14,6 +14,8 @@ import os
 import logging
 from collections import OrderedDict
 import warnings
+import shutil
+import json
 
 from markdown import markdown
 from osgeo import gdal, ogr
@@ -40,7 +42,7 @@ from mesh_utilities import config
 from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
 from natcap.invest.iui import modelui
-#from invest_natcap.iui import modelui
+import natcap.invest.iui
 
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
@@ -1179,45 +1181,82 @@ class ModelsWidget(ScrollWidget):
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
         self.sender = sender
-
         model_name = self.sender.name
-
-        # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
-        # TODO DOUG BROADER: Rich's criticism: too much was hardcoded. needs to be generalized.
-
+        # Json file name with extension for InVEST model model.name
         json_file_name = model_name + '.json'
-        input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
+        # Path to CSV file for mapping MESH input data to the model model.name
+        input_mapping_uri = os.path.join(
+            '../settings/default_setup_files',
+            '%s_input_mapping.csv' % model_name)
+        # Read the input mapping CSV into a dictionary
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
-
-        existing_last_run_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model_name,
-                                             model_name + '_setup_file.json')
-        default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '_setup_file.json')
+        # Path where an InVEST setup run json file is saved. If the model
+        # has already been run and this file exists, use this as default.
+        existing_last_run_uri = os.path.join(
+            self.root_app.project_folder, 'output', 'model_setup_runs',
+            model_name, '%s_setup_file.json' % model_name)
+        # Path to the default json params
+        default_last_run_uri = os.path.join(
+            self.root_app.default_setup_files_folder,
+            '%s_setup_file.json' % model_name)
         if os.path.exists(existing_last_run_uri):
-            override_args = utilities.file_to_python_object(existing_last_run_uri)
+            #override_args = utilities.file_to_python_object(existing_last_run_uri)
+            new_json_path = existing_last_run_uri
         else:
             default_args = utilities.file_to_python_object(default_last_run_uri)
-            override_args = self.modify_args_to_match_project(default_args, model_name, input_mapping)
-        self.running_setup_uis.append(modelui.main(json_file_name))
+            invest_model_json_path = os.path.join(
+                os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+            invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
+            shutil.copy(invest_model_json_path, invest_json_copy)
+            invest_json_dict = utilities.file_to_python_object(invest_json_copy)
+            new_json_args = self.modify_args(invest_json_dict, default_args, model_name, input_mapping)
+            # Write new json file.
+            new_json_path = os.path.join(
+                self.root_app.project_folder, model_name + '_setup_file.json')
+            with open(new_json_path, 'w') as fp:
+                json.dump(new_json_args, fp)
+            os.remove(invest_json_copy)
+            #override_args = self.modify_args_to_match_project(default_args, model_name, input_mapping)
 
-    def modify_args_to_match_project(self, args, model_name, input_mapping=None):
-        if args:
-            return_args = args.copy()
-        else:
-            return None
-        for key, value in args.items():
-            if isinstance(value, (str, unicode)):
-                if 'set_based_on_project_input' in value:
+        self.running_setup_uis.append(modelui.main(new_json_path))
+
+    def modify_args(self, args, vals, model_name, input_mapping=None):
+        """
+            args - dictionary to walk
+            vals - dictionary to match
+        """
+        return_args = args.copy()
+
+        def recursive_update(args_copy, vals, model_name, input_mapping):
+
+            if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
+                key = args_copy["args_id"]
+
+                if vals[args_copy["args_id"]] == 'set_based_on_project_input':
                     if isinstance(self.sender, Scenario):
-                        return_args[key] = os.path.join(self.root_app.project_folder, 'input', 'Baseline',
-                                                        input_mapping[key]['save_location'])
+                        args_copy["defaultValue"] = os.path.join(self.root_app.project_folder, 'input', 'Baseline',
+                                                            input_mapping[key]['save_location'])
                     else:
-                        return_args[key] = os.path.join(self.root_app.project_folder,
-                                                        input_mapping[key]['save_location'])
-                elif 'set_based_on_model_setup_runs_folder' in value:  # I THINK this should only  be needed for setting the workspace.
-                    return_args[key] = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
-                                                    model_name)
-                elif 'set_based_on_scenario' in value:
-                    return_args[key] = os.path.join(self.root_app.project_folder, 'input', self.sender.name)
+                        args_copy["defaultValue"] = os.path.join(self.root_app.project_folder,
+                                                            input_mapping[key]['save_location'])
+                elif vals[args_copy["args_id"]] == 'set_based_on_model_setup_runs_folder': # I THINK this should only  be needed for setting the workspace.
+                    args_copy["defaultValue"] = os.path.join(
+                        self.root_app.project_folder, 'output', 'model_setup_runs', model_name)
+
+                elif vals[args_copy["args_id"]] == 'set_based_on_scenario':
+                        args_copy["defaultValue"] = os.path.join(self.root_app.project_folder, 'input', self.sender.name)
+
+                if "elements" in args_copy:
+                    for x in args_copy["elements"]:
+                        recursive_update(x, vals, model_name, input_mapping)
+            elif "elements" in args_copy:
+                for x in args_copy["elements"]:
+                    #print x
+                    recursive_update(x, vals, model_name, input_mapping)
+            else:
+                print "missed"
+
+        recursive_update(return_args, vals, model_name, input_mapping)
 
         return return_args
 
