@@ -1203,8 +1203,7 @@ class ModelsWidget(ScrollWidget):
         existing_last_run_uri = os.path.join(
             self.root_app.project_folder, 'output', 'model_setup_runs',
             model_name, '%s_setup_file.json' % model_name)
-        # Path to the MESH default json parameters. Though I think this is
-        # redundant with the input mapping csv.
+        # Path to the MESH default json parameters.
         default_last_run_uri = os.path.join(
             self.root_app.default_setup_files_folder,
             '%s_setup_file.json' % model_name)
@@ -1269,7 +1268,6 @@ class ModelsWidget(ScrollWidget):
             """Recursive function to walk dictionary."""
             if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
                 key = args_copy["args_id"]
-
                 if vals[args_copy["args_id"]] == 'set_based_on_project_input':
                     if isinstance(self.sender, Scenario):
                         args_copy["defaultValue"] = os.path.join(
@@ -1291,11 +1289,13 @@ class ModelsWidget(ScrollWidget):
                 # Check to see if there's another list of dictionaries and
                 # if so, walk them.
                 if "elements" in args_copy:
-                    for x in args_copy["elements"]:
-                        recursive_update(x, vals, model_name, input_mapping)
+                    for sub_args in args_copy["elements"]:
+                        recursive_update(
+                            sub_args, vals, model_name, input_mapping)
             elif "elements" in args_copy:
-                for x in args_copy["elements"]:
-                    recursive_update(x, vals, model_name, input_mapping)
+                for sub_args in args_copy["elements"]:
+                    recursive_update(
+                        sub_args, vals, model_name, input_mapping)
             else:
                 # It's possible that a dictionary doesn't have either
                 # 'args_id' or 'elements', in which case we don't care
