@@ -1,0 +1,14 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+dem_uri,raster,TRUE,TRUE,dem,DEM,ndr,clip_from_global,input/Baseline/dem.tif,../base_data/ndr/dem.tif
+lulc_uri,raster,TRUE,TRUE,lulc_uri,Land Use,ndr,clip_from_global,input/Baseline/lulc.tif,../base_data/lulc/lulc_modis_2012.tif
+runoff_proxy_uri,raster,TRUE,TRUE,runoff_proxy,Nutrient Runoff Proxy,ndr,clip_from_global,input/Baseline/runoff_proxy.tif,../base_data/models/ndr/runoff_proxy.tif
+watersheds_uri,shapefile,TRUE,TRUE,watersheds_uri,Watersheds,ndr,clip_from_global,input/Baseline/watersheds.shp,hydrobasin
+biophysical_table_uri,table,TRUE,TRUE,biophysical_table_uri,Biophysical Table,ndr,copy_default,input/Baseline/biophysical_table.csv,../base_data/models/ndr/biophysical_table.csv
+calc_p,parameter,FALSE,FALSE,calc_p,Calculate phosphorous retention,ndr,copy_default,,false
+calc_n,parameter,FALSE,FALSE,calc_n,Calculate Nitrogen Retention,ndr,copy_default,,false
+threshold_flow_accumulation,parameter,TRUE,FALSE,threshold_flow_accumulation,Threshold Flow Accumulation,ndr,copy_default,,1000
+k_param,parameter,TRUE,FALSE,k_param,Borselli k Parameter,ndr,copy_default,,2
+subsurface_critical_length_n,parameter,TRUE,FALSE,subsurface_critical_length_n,Subsurface Critical Length (Nitrogen),ndr,copy_default,,150
+subsurface_critical_length_p,parameter,TRUE,FALSE,subsurface_critical_length_p,Subsurface Critical Length (Phosphorous),ndr,copy_default,,150
+subsurface_eff_n,parameter,TRUE,FALSE,subsurface_eff_n,Subsurface Maximum Retention Efficiency (Nitrogen),ndr,copy_default,,0.8
+subsurface_eff_p,parameter,TRUE,FALSE,subsurface_eff_p,Subsurface Maximum Retention Efficiency (Phosphorous),ndr,copy_default,,0.8
