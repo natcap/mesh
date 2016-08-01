@@ -433,18 +433,22 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         if ok:
             # TODO Justin, check that unload_project works even on fresh install.
-            try:
-                self.unload_project()
-            except:
-                'ui wasnt created yet.'
-            if os.path.exists('../projects/' + input_text):
-                QDialog('Project of that name already exists. Specify a different one.')
+            if os.path.exists(os.path.join('..', 'projects', input_text)):
+                QMessageBox.warning(
+                    self, 'Project Already Exists',
+                    "Project '%s' already exists. Specify a different name." % input_text)
             else:
+                try:
+                    self.unload_project()
+                except:
+                    'ui wasnt created yet.'
+
                 self.project_args = OrderedDict()
                 self.project_name = input_text
                 self.project_args.update({'project_name': input_text})
                 self.project_args['project_aoi'] = ''
-                self.project_folder = os.path.join('../projects/', self.project_args['project_name'])
+                self.project_folder = os.path.join(
+                    '..', 'projects', self.project_args['project_name'])
 
                 config.global_folder = self.project_folder
 
@@ -489,7 +493,12 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
                 self.save_application_settings()
 
-        self.load_project_by_name(self.project_args['project_name'])
+        # If no current project is loaded, but user attempts to create
+        # a new project with an existing project name, then pass
+        # Checking attribute project_args exists to catch the possible
+        # case described above.
+        if getattr(self, 'project_args', -1) != -1:
+            self.load_project_by_name(self.project_args['project_name'])
 
     def select_project_to_load(self):
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
