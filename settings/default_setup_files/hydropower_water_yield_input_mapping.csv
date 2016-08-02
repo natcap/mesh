@@ -1,12 +1,12 @@
 name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
-biophysical_table,table,TRUE,TRUE,biophysical_table,Biophysical table,hydropower_water_yield,copy_default,input/Baseline/hydropower_biophysical_table.csv,../base_data/models/hydropower_water_yield/hydropower_biophysical_table.csv
-depth_to_root_rest_layer,raster,TRUE,TRUE,depth_to_root_rest_layer,Depth to root restricting layer,hydropower_water_yield,clip_from_global,input/Baseline/depth_to_root_restricting_layer.tif,../base_data/models/hydropower_water_yield/depth_to_root_restricting_layer.tif
-hydropower_valuation_table,table,FALSE,TRUE,hydropower_valuation_table,hydropower_valuation_table,hydropower_water_yield,copy_default,input/Baseline/water_purification_valuation.csv,../base_data/models/hydropower_water_yield/water_purification_valuation.csv
-watersheds,shapefile,FALSE,TRUE,watersheds,watersheds,hydropower_water_yield,clip_from_global,input/Baseline/watershed.shp,../base_data/models/hydropower_water_yield/watershed.shp
-potential_evapotranspiration,raster,TRUE,TRUE,potential_evapotranspiration,Potential evapotranspiration (PET),hydropower_water_yield,clip_from_global,input/Baseline/reference_evapotranspiration.tif,../base_data/models/hydropower_water_yield/reference_evapotranspiration.tif
-sub_watersheds,shapefile,FALSE,TRUE,sub_watersheds,sub_watersheds,hydropower_water_yield,clip_from_global,input/Baseline/subwatersheds.shp,../base_data/models/hydropower_water_yield/subwatersheds.shp
-demand_table,table,FALSE,TRUE,demand_table,demand_table,hydropower_water_yield,copy_default,input/Baseline/water_demand_table.csv,../base_data/models/hydropower_water_yield/water_demand_table.csv
-plant_available_water_fraction,raster,TRUE,TRUE,plant_available_water_fraction,Plant available water content (AWC),hydropower_water_yield,clip_from_global,input/Baseline/pawc.tif,../base_data/models/hydropower_water_yield/pawc.tif
-land_use,raster,FALSE,TRUE,land_use,Land-use,hydropower_water_yield,clip_from_global,input/Baseline/lulc.tif,../base_data/models/hydropower_water_yield/lulc.tif
-precipitation,raster,FALSE,TRUE,precipitation,Precipitation,hydropower_water_yield,clip_from_global,input/Baseline/precip.tif,../base_data/models/hydropower_water_yield/precip.tif
+biophysical_table_uri,table,TRUE,TRUE,biophysical_table,Biophysical table,hydropower_water_yield,copy_default,input/Baseline/hydropower_biophysical_table.csv,../base_data/models/hydropower_water_yield/hydropower_biophysical_table.csv
+depth_to_root_rest_layer_uri,raster,TRUE,TRUE,depth_to_root_rest_layer,Depth to root restricting layer,hydropower_water_yield,clip_from_global,input/Baseline/depth_to_root_restricting_layer.tif,../base_data/models/hydropower_water_yield/depth_to_root_restricting_layer.tif
+valuation_table_uri,table,FALSE,TRUE,hydropower_valuation_table,hydropower_valuation_table,hydropower_water_yield,copy_default,input/Baseline/water_purification_valuation.csv,../base_data/models/hydropower_water_yield/water_purification_valuation.csv
+watersheds_uri,shapefile,FALSE,TRUE,watersheds,watersheds,hydropower_water_yield,clip_from_global,input/Baseline/watershed.shp,../base_data/models/hydropower_water_yield/watershed.shp
+eto_uri,raster,TRUE,TRUE,potential_evapotranspiration,Potential evapotranspiration (PET),hydropower_water_yield,clip_from_global,input/Baseline/reference_evapotranspiration.tif,../base_data/models/hydropower_water_yield/reference_evapotranspiration.tif
+sub_watersheds_uri,shapefile,FALSE,TRUE,sub_watersheds,sub_watersheds,hydropower_water_yield,clip_from_global,input/Baseline/subwatersheds.shp,../base_data/models/hydropower_water_yield/subwatersheds.shp
+demand_table_uri,table,FALSE,TRUE,demand_table,demand_table,hydropower_water_yield,copy_default,input/Baseline/water_demand_table.csv,../base_data/models/hydropower_water_yield/water_demand_table.csv
+pawc_uri,raster,TRUE,TRUE,plant_available_water_fraction,Plant available water content (AWC),hydropower_water_yield,clip_from_global,input/Baseline/pawc.tif,../base_data/models/hydropower_water_yield/pawc.tif
+lulc_uri,raster,FALSE,TRUE,land_use,Land-use,hydropower_water_yield,clip_from_global,input/Baseline/lulc.tif,../base_data/models/hydropower_water_yield/lulc.tif
+precipitation_uri,raster,FALSE,TRUE,precipitation,Precipitation,hydropower_water_yield,clip_from_global,input/Baseline/precip.tif,../base_data/models/hydropower_water_yield/precip.tif
 seasonality_constant,parameter,FALSE,FALSE,seasonality_constant,Seasonality constant,,copy_default,,5

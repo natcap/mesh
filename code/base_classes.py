@@ -9,7 +9,7 @@ from PyQt4.QtCore import *
 
 from natcap.invest.iui import modelui
 from natcap.invest.hydropower.hydropower_water_yield import execute as execute_hydropower_model
-#from natcap.invest.nutrient.nutrient import execute as execute_nutrient_model
+from natcap.invest.ndr.ndr import execute as execute_nutrient_model
 from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
@@ -43,10 +43,10 @@ class ProcessingThread(QThread):
                 self.update_run_log('Starting Food Security and Nutrition Model.')
                 nutrition.execute(self.args, self)
                 self.update_run_log('Finished Food Security and Nutrition Model.')
-            #if self.model_name == 'nutrient':
-            #    self.update_run_log('Starting Nutrient Retention Model.')
-            #    execute_nutrient_model(self.args)
-            #    self.update_run_log('Finished Nutrient Retention Model.')
+            if self.model_name == 'ndr':
+                self.update_run_log('Starting Delivery Ratio Model.')
+                execute_nutrient_model(self.args)
+                self.update_run_log('Finished Nutrient Retention Model.')
             if self.model_name == 'hydropower_water_yield':
                 self.update_run_log('Starting Water Yield Model.')
                 execute_hydropower_model(self.args)
