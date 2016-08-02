@@ -434,19 +434,20 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         input_text = str(input_text)
 
         if ok:
-            # TODO Justin, check that unload_project works even on fresh install.
-            try:
-                self.unload_project()
-            except:
-                'ui wasnt created yet.'
-            if os.path.exists('../projects/' + input_text):
-                QDialog('Project of that name already exists. Specify a different one.')
+            if os.path.exists(os.path.join('..', 'projects', input_text)):
+                QMessageBox.warning(
+                    self, 'Project Already Exists',
+                    "Project '%s' already exists. Specify a different name." % input_text)
             else:
+                # TODO Justin, check that unload_project works even on fresh install.
+                self.unload_project()
+
                 self.project_args = OrderedDict()
                 self.project_name = input_text
                 self.project_args.update({'project_name': input_text})
                 self.project_args['project_aoi'] = ''
-                self.project_folder = os.path.join('../projects/', self.project_args['project_name'])
+                self.project_folder = os.path.join(
+                    '..', 'projects', self.project_args['project_name'])
 
                 config.global_folder = self.project_folder
 
@@ -490,8 +491,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 self.create_default_model_elements_settings_files()
 
                 self.save_application_settings()
-
-        self.load_project_by_name(self.project_args['project_name'])
+                self.load_project_by_name(self.project_args['project_name'])
 
     def select_project_to_load(self):
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
