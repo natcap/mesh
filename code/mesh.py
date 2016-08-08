@@ -1467,27 +1467,50 @@ class Model(MeshAbstractObject, QWidget):
     def check_if_validated(self):
         """Makes sure that a given InVEST setup run has completed successfully.
 
-        Success is determined by the log file from the InVEST run, if the
-        file has "Operations completed successfully", then it is validated.
+        Success is determined by two parts, the first being the log file
+        from the InVEST run. If the latest file has
+        "Operations completed successfully", then the first part is validated.
+        The second part to check is that the user saved a json archive of
+        the parameters that were used for the run. If that file exists in
+        the correct location the second part is validated.
 
         Returns
-            True if a run for the associated model completed successfully,
-            False otherwise
+            True if a run for the associated model completed successfully
+            and the json archive file exists, False otherwise
         """
-        # Get path for InVEST model logfile
+        # Get path for InVEST model logfile and archive
         log_file_dir = os.path.join(
             self.root_app.project_folder, 'output', 'model_setup_runs',
             self.name)
         # String to match to verify a valid run of an InVEST model
         success_string = "Operations completed successfully"
 
+        # Initialize validators to False
+        invest_run_valid = False
+        archive_params_valid = False
+
         if os.path.isdir(log_file_dir):
+            # Initialize variables to track latest log
+            date = ""
+            newest_log_path = ""
             for file in os.listdir(log_file_dir):
                 if file.endswith('.txt') and "log" in file:
                     log_file_path = os.path.join(log_file_dir, file)
-                    if success_string in open(log_file_path).read():
-                        return True
-        return False
+                    # Search for and capture the values comprising the date
+                    result = re.search("log-([0-9-_]*)", log_file_path)
+                    # Convert from string to Datetime object for comparisons
+                    new_date = datetime.strptime(
+                        result.group(1), "%Y-%m-%d--%H_%M_%S")
+                    if date == "" or new_date > date:
+                        # Either first log or the newest log
+                        date = new_date
+                        newest_log_path = log_file_path
+                elif file.endswith('.json') and "archive" in file:
+                    archive_params_valid = True
+            if success_string in open(newest_log_path).read():
+                invest_run_valid = True
+
+        return invest_run_valid and archive_params_valid
 
     def place_check_if_ready_button(self):
         self.clear_model_state()
