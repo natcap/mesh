@@ -16,6 +16,8 @@ from collections import OrderedDict
 import warnings
 import shutil
 import json
+import re
+from datetime import datetime
 
 from markdown import markdown
 from osgeo import gdal, ogr
@@ -29,7 +31,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
-os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
@@ -3676,58 +3678,28 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.parent.create_element(name, args)
         self.root_app.args_queue = OrderedDict()
 
-        # NEXT RELEASE These manual corrections to the args dict arise because they are not used uniformly across InVEST code and the JSON exporter. Incorporate these changes into the data schema that defines the model.
         args = {}
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
                 if model.model_type == 'InVEST Model':
-                    setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model.name,
-                                                  model.name + '_setup_file.json')
-                    args = utilities.file_to_python_object(setup_file_uri)
-                    args['workspace_dir'] = os.path.join(self.parent.elements[name].run_folder, scenario.name,
-                                                         model.name)
+                    # Directory where archived json file is saved
+                    setup_file_dir = os.path.join(
+                        self.root_app.project_folder, 'output',
+                        'model_setup_runs', model.name)
 
-                    try:
-                        os.makedirs(args['workspace_dir'])
-                    except:
-                        print('already there')
+                    # Find the archive json file, load and grab arguments
+                    for file in os.listdir(setup_file_dir):
+                        if file.endswith('.json') and "archive" in file:
+                            json_archive = open(os.path.join(setup_file_dir, file)).read()
+                            archive_args = json.loads(json_archive)
+                            args = archive_args["arguments"]
+                            print args
+                            break
 
-                    if model.name == 'nutrient':  # I couldn't think of a better way to do this, so I just manually parse the model names.
-                        # There were a few key errors in the args dict, which I think might be from the export dict function in InVEST not working properly
-                        # I fix them here.
-                        args['eto_uri'] = args['potential_evapotranspiration']
-                        args['precipitation_uri'] = args['precipitation']
-                        args['depth_to_root_rest_layer_uri'] = args['soil_depth']
-                        args['pawc_uri'] = args['plant_available_water_fraction']
-                        args['lulc_uri'] = args['land_use']
-                        args['accum_threshold'] = args['threshold_flow_accumulation']
-                        args['valuation_enabled'] = 'True'
-
-                    if model.name == 'hydropower_water_yield':
-                        args['watersheds_uri'] = args['watersheds']
-                        args['eto_uri'] = args['potential_evapotranspiration']
-                        args['depth_to_root_rest_layer_uri'] = args['depth_to_root_rest_layer']
-                        args['precipitation_uri'] = args['precipitation']
-                        args['pawc_uri'] = args['plant_available_water_fraction']
-                        args['biophysical_table_uri'] = args['biophysical_table']
-                        args['demand_table_uri'] = args['demand_table']
-                        args['lulc_uri'] = args['land_use']
-
-                    if model.name == 'carbon':
-                        args['do_biophysical'] = True
-                        args['do_valuation'] = False
-                        args['do_uncertainty'] = False
-                        args['carbon_pools_uri'] = args['carbon_pools']
-                        args['lulc_cur_uri'] = args['cur_lulc_raster']
-                        args['carbon_pools_uri'] = args['carbon_pools']
-
-                    if model.name == 'pollination':
-                        args['do_valuation'] = False
-                        args['landuse_cur_uri'] = args['cur_lulc_raster']
-
-                        args['landuse_attributes_uri'] = args['landcover_attribute_table']
-                        args['guilds_uri'] = args['guilds']
-                        args['landuse_cur_uri'] = args['cur_lulc_raster']
+                    args['workspace_dir'] = os.path.join(
+                        self.parent.elements[name].run_folder, scenario.name, model.name)
+                    if not os.path.isdir(args['workspace_dir']):
+                        os.mkdirs(args['workspace_dir'])
 
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
