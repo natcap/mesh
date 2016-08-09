@@ -29,7 +29,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
-os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
@@ -3890,12 +3890,15 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         self.show()
 
     def create_data_from_args(self, args):
-        save_location = os.path.join(self.root_app.project_folder, args['save_location'])
+        save_location = os.path.join(
+            self.root_app.project_folder, args['save_location'])
+        default_value = os.path.join(
+            self.root_app.base_data_folder, args['default_value'])
         # save_location = args['save_location']
         if args['load_method'] == 'copy_default':
-            data_creation.copy_from_base_data(args['default_value'], save_location)
+            data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, args['default_value'], save_location)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 
@@ -4095,12 +4098,15 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
 
 
     def create_data_from_args(self, args):
-        save_location = os.path.join(self.root_app.project_folder, args['save_location'])
+        save_location = os.path.join(
+            self.root_app.project_folder, args['save_location'])
+        default_value = os.path.join(
+            self.root_app.base_data_folder, args['default_value'])
         # save_location = args['save_location']
         if args['load_method'] == 'copy_default':
-            data_creation.copy_from_base_data(args['default_value'], save_location)
+            data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, args['default_value'], save_location)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 
