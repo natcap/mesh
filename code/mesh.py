@@ -1191,7 +1191,16 @@ class ModelsWidget(ScrollWidget):
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
         self.sender = sender
-        model_name = self.sender.name
+
+        # Check if trying to create a differenct scenario with
+        # InVEST Scenario generator
+        if isinstance(self.sender, Scenario):
+            # If a call from Scenario the sender.name is going to be the name
+            # of the user labeled scenario and not the InVEST model name
+            model_name = 'scenario_generator'
+        else:
+            model_name = self.sender.name
+
         # Json file name with extension for InVEST model model.name
         json_file_name = model_name + '.json'
         # Path to CSV file for mapping MESH input data to the model model.name
