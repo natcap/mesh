@@ -1241,9 +1241,12 @@ class ModelsWidget(ScrollWidget):
             # files
             new_json_args = self.modify_invest_args(
                 invest_json_dict, default_args, model_name, input_mapping)
+            # Make the model directory, which will also be the InVEST workspace
+            # In order to place the json file in that location
+            if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
+                os.mkdir(os.path.dirname(existing_last_run_uri))
             # Write updated dictionary to new json file.
-            new_json_path = os.path.join(
-                self.root_app.project_folder, model_name + '_setup_file.json')
+            new_json_path = existing_last_run_uri
             with open(new_json_path, 'w') as fp:
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
