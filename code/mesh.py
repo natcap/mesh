@@ -14,6 +14,8 @@ import os
 import logging
 from collections import OrderedDict
 import warnings
+import shutil
+import json
 
 from markdown import markdown
 from osgeo import gdal, ogr
@@ -26,6 +28,9 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
+# EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
+#os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
+
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 
@@ -33,7 +38,8 @@ from mesh_models.data_creation import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
-from invest_natcap.iui import modelui
+from natcap.invest.iui import modelui
+import natcap.invest.iui
 
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
@@ -68,12 +74,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         # Initialize application from preferences files and build UI
         self.load_or_create_application_settings_files()
-
-        # The following couullld be made programatic, based on a csv.
-        self.base_data_lulc_folder = os.path.join(self.base_data_folder, 'lulc')
-        self.base_data_hydrosheds_folder = os.path.join(self.base_data_folder, 'hydrosheds\\hydrobasins')
-        self.base_data_lulc_test_uri = os.path.join(self.base_data_lulc_folder, 'lulc_modis_2012.tif')
-        self.base_data_hydrosheds_test_uri = os.path.join(self.base_data_hydrosheds_folder, 'hybas_af_lev01-06_v1c\\hybas_af_lev03_v1c.shp')
 
         # build UI elements
         self.create_application_window()
@@ -434,21 +434,19 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         input_text = str(input_text)
 
         if ok:
-            # TODO Justin, check that unload_project works even on fresh install.
-            try:
-                self.unload_project()
-            except:
-                'ui wasnt created yet.'
-            if os.path.exists('../projects/' + input_text):
+            if os.path.exists(os.path.join('..', 'projects', input_text)):
                 QMessageBox.warning(
-                    self, 'Project Creation Error',
-                    unicode("Project of that name already exists."))
+                    self, 'Project Already Exists',
+                    "Project '%s' already exists. Specify a different name." % input_text)
             else:
+                # TODO Justin, check that unload_project works even on fresh install.
+                self.unload_project()
                 self.project_args = OrderedDict()
                 self.project_name = input_text
                 self.project_args.update({'project_name': input_text})
                 self.project_args['project_aoi'] = ''
-                self.project_folder = os.path.join('../projects/', self.project_args['project_name'])
+                self.project_folder = os.path.join(
+                    '..', 'projects', self.project_args['project_name'])
 
                 config.global_folder = self.project_folder
 
@@ -469,8 +467,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 self.create_default_model_elements_settings_files()
 
                 self.save_application_settings()
-
-        self.load_project_by_name(self.project_args['project_name'])
+                self.load_project_by_name(self.project_args['project_name'])
 
     def select_project_to_load(self):
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
@@ -571,18 +568,32 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     # TODO DOUG COMMENT 7 Implement a generalized version of this that verifies the base data is actually there and
     # installed.
+    # Doug says: I think the update below is sufficient for now.
+    # The sub directory list can be updated easily without creating a CSV
+    # file mapping out the data. File IO errors should be handled in a dialogue
     def is_base_data_valid(self):
-        required_files_set = set([self.base_data_lulc_test_uri, self.base_data_hydrosheds_test_uri])
-        recursive_file_set = set()
-        if os.path.exists(self.base_data_folder):
-            for dir_name, subdir_list, file_list in os.walk(self.base_data_folder):
-                [recursive_file_set.add(os.path.join(dir_name, file)) for file in file_list]
-            if required_files_set.issubset(recursive_file_set):
-                return True
+        """Verify Base Data folder is set up properly.
+
+        Check to make sure that the base data folder exists and that is has
+        major subfolders which are not empty
+
+        Returns:
+            True if setup, False otherwise
+        """
+
+        base_data_folder = self.base_data_folder
+        # Major sub directories that should be present and not empty
+        sub_directories = ['lulc', 'hydrosheds', 'models']
+
+        for sub_dir in sub_directories:
+            sub_dir_path = os.path.join(base_data_folder, sub_dir)
+            if os.path.isdir(sub_dir_path):
+                if not os.listdir(sub_dir_path):
+                    return False
             else:
                 return False
-        else:
-            return False
+        return True
+
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
     """
@@ -976,20 +987,20 @@ class ModelsWidget(ScrollWidget):
     default_element_args['checked'] = ''
 
     default_state = OrderedDict()
-    default_state['nutrient'] = default_element_args.copy()
-    default_state['nutrient']['name'] = 'nutrient'
-    default_state['nutrient']['long_name'] = 'Nutrient Retention'
-    default_state['nutrient']['model_type'] = 'InVEST Model'
+    default_state['ndr'] = default_element_args.copy()
+    default_state['ndr']['name'] = 'ndr'
+    default_state['ndr']['long_name'] = 'Nutrient Retention'
+    default_state['ndr']['model_type'] = 'InVEST Model'
 
     default_state['hydropower_water_yield'] = default_element_args.copy()
     default_state['hydropower_water_yield']['name'] = 'hydropower_water_yield'
     default_state['hydropower_water_yield']['long_name'] = 'Hydropower Water Yield'
     default_state['hydropower_water_yield']['model_type'] = 'InVEST Model'
 
-    default_state['carbon_combined'] = default_element_args.copy()
-    default_state['carbon_combined']['name'] = 'carbon_combined'
-    default_state['carbon_combined']['long_name'] = 'Carbon Storage'
-    default_state['carbon_combined']['model_type'] = 'InVEST Model'
+    default_state['carbon'] = default_element_args.copy()
+    default_state['carbon']['name'] = 'carbon'
+    default_state['carbon']['long_name'] = 'Carbon Storage'
+    default_state['carbon']['model_type'] = 'InVEST Model'
 
     default_state['pollination'] = default_element_args.copy()
     default_state['pollination']['name'] = 'pollination'
@@ -1154,55 +1165,120 @@ class ModelsWidget(ScrollWidget):
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
         self.sender = sender
-
-        if isinstance(self.sender, Scenario):
-            model_name = 'scenario_generator'
-        else:
-            model_name = self.sender.name
-
-        if model_name == 'carbon_combined':
-            iui_model_name = 'carbon'
-        elif model_name == 'scenario_generator':
-            iui_model_name = 'scenario-generator'
-        else:
-            iui_model_name = model_name
-        # TODO DOUG INVESTIGATE 8 Naming was inconsistent in InVEST source code, so determine a consistent way of dealing with the carbon vs carbon_conmined models
-        # TODO DOUG BROADER: Rich's criticism: too much was hardcoded. needs to be generalized.
-
-
-        json_file_name = iui_model_name + '.json'
-        input_mapping_uri = os.path.join('../settings/default_setup_files', model_name + '_input_mapping.csv')
+        model_name = self.sender.name
+        # Json file name with extension for InVEST model model.name
+        json_file_name = model_name + '.json'
+        # Path to CSV file for mapping MESH input data to the model model.name
+        input_mapping_uri = os.path.join(
+            '../settings/default_setup_files',
+            '%s_input_mapping.csv' % model_name)
+        # Read the input mapping CSV into a dictionary
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
-
-        existing_last_run_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model_name,
-                                             model_name + '_setup_file.json')
-        default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '_setup_file.json')
+        # Path where an InVEST setup run json file is saved. If the model
+        # has already been run and this file exists, use this as default.
+        existing_last_run_uri = os.path.join(
+            self.root_app.project_folder, 'output', 'model_setup_runs',
+            model_name, '%s_setup_file.json' % model_name)
+        # Path to the MESH default json parameters.
+        default_last_run_uri = os.path.join(
+            self.root_app.default_setup_files_folder,
+            '%s_setup_file.json' % model_name)
+        # Check to see if an existing json file exists from a previous
+        # setup run
         if os.path.exists(existing_last_run_uri):
-            override_args = utilities.file_to_python_object(existing_last_run_uri)
+            new_json_path = existing_last_run_uri
         else:
-            default_args = utilities.file_to_python_object(default_last_run_uri)
-            override_args = self.modify_args_to_match_project(default_args, model_name, input_mapping)
-        self.running_setup_uis.append(modelui.main(json_file_name, last_run_override=override_args))
+            # Read in MESH setup json to a dictionary
+            default_args = utilities.file_to_python_object(
+                default_last_run_uri)
+            # Get the location of the InVEST model json file, which is
+            # distributed with InVEST in IUI package
+            invest_model_json_path = os.path.join(
+                os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+            # Path to copy InVEST json file to
+            invest_json_copy = os.path.join(
+                self.root_app.project_folder, json_file_name)
+            shutil.copy(invest_model_json_path, invest_json_copy)
+            # Read in copied InVEST Json to dictionary
+            invest_json_dict = utilities.file_to_python_object(
+                invest_json_copy)
+            # Update the dictionary based on MESH setup json and input mapping
+            # files
+            new_json_args = self.modify_invest_args(
+                invest_json_dict, default_args, model_name, input_mapping)
+            # Write updated dictionary to new json file.
+            new_json_path = os.path.join(
+                self.root_app.project_folder, model_name + '_setup_file.json')
+            with open(new_json_path, 'w') as fp:
+                json.dump(new_json_args, fp)
+            # Don't need to keep arounnd copied InVEST Json file, delete.
+            os.remove(invest_json_copy)
 
-    def modify_args_to_match_project(self, args, model_name, input_mapping=None):
-        if args:
-            return_args = args.copy()
-        else:
-            return None
-        for key, value in args.items():
-            if isinstance(value, (str, unicode)):
-                if 'configure_based_on_project_input' in value:
+        self.running_setup_uis.append(modelui.main(new_json_path))
+
+    def modify_invest_args(self, args, vals, model_name, input_mapping=None):
+        """Walks a dictionary and updates the values.
+
+        Specifically copies the dictionary 'args', and walks the dictionary
+        looking for the key "args_id". This key is a specific InVEST key.
+        When found it updates the corresponding "defaultValue" from 'vals'
+        and / or 'input_mapping'.
+
+        Parameters:
+            args (dict) - a dictionary representing an InVEST UI json file.
+                This is the dictionary to walk and update.
+            vals (dict) - a single level dictionary with keys matching
+                'args' keys "args_id" values. 'vals' values determine
+                how 'args' should be updated.
+            model_name (string) - a string for the InVEST model name being
+                updated
+            input_mapping (dict) - a dictionary with keys matching
+                'args' keys "args_id" values. The values update 'args'.
+
+        Return:
+            A copied, modified dictionary of args
+        """
+        return_args = args.copy()
+
+        def recursive_update(args_copy, vals, model_name, input_mapping):
+            """Recursive function to walk dictionary."""
+            if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
+                key = args_copy["args_id"]
+                if vals[args_copy["args_id"]] == 'set_based_on_project_input':
                     if isinstance(self.sender, Scenario):
-                        return_args[key] = os.path.join(self.root_app.project_folder, 'input', 'Baseline',
-                                                        input_mapping[key]['save_location'])
+                        args_copy["defaultValue"] = os.path.join(
+                            self.root_app.project_folder, 'input', 'Baseline',
+                            input_mapping[key]['save_location'])
                     else:
-                        return_args[key] = os.path.join(self.root_app.project_folder,
-                                                        input_mapping[key]['save_location'])
-                elif 'set_based_on_model_setup_runs_folder' in value:  # I THINK this should only  be needed for setting the workspace.
-                    return_args[key] = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
-                                                    model_name)
-                elif 'set_based_on_scenario' in value:
-                    return_args[key] = os.path.join(self.root_app.project_folder, 'input', self.sender.name)
+                        args_copy["defaultValue"] = os.path.join(
+                            self.root_app.project_folder,
+                            input_mapping[key]['save_location'])
+                # I THINK this should only  be needed for setting the workspace.
+                elif vals[args_copy["args_id"]] == 'set_based_on_model_setup_runs_folder':
+                    args_copy["defaultValue"] = os.path.join(
+                        self.root_app.project_folder, 'output',
+                        'model_setup_runs', model_name)
+                elif vals[args_copy["args_id"]] == 'set_based_on_scenario':
+                        args_copy["defaultValue"] = os.path.join(
+                            self.root_app.project_folder, 'input',
+                            self.sender.name)
+                # Check to see if there's another list of dictionaries and
+                # if so, walk them.
+                if "elements" in args_copy:
+                    for sub_args in args_copy["elements"]:
+                        recursive_update(
+                            sub_args, vals, model_name, input_mapping)
+            elif "elements" in args_copy:
+                for sub_args in args_copy["elements"]:
+                    recursive_update(
+                        sub_args, vals, model_name, input_mapping)
+            else:
+                # It's possible that a dictionary doesn't have either
+                # 'args_id' or 'elements', in which case we don't care
+                pass
+
+        # Start recursive walk of dictionary
+        recursive_update(return_args, vals, model_name, input_mapping)
 
         return return_args
 
@@ -1246,9 +1322,6 @@ class ModelsWidget(ScrollWidget):
         returns 2 numbers, the number of models that hvae been validated and the number that have been checked. this is useful
         for updating the baseline scenario label.
         """
-        # TODO DOUG 9 This doesn't actually check anything besides the existence of a json setup file. Make mnore robust.
-        # Additionally, this is a key area where we can work with Jame's new UI elements.
-
         num_validated = 0
         checked_elements = self.get_checked_elements()
         num_checked = len(checked_elements)
@@ -1368,14 +1441,29 @@ class Model(MeshAbstractObject, QWidget):
                 to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
 
     def check_if_validated(self):
+        """Makes sure that a given InVEST setup run has completed successfully.
+
+        Success is determined by the log file from the InVEST run, if the
+        file has "Operations completed successfully", then it is validated.
+
+        Returns
+            True if a run for the associated model completed successfully,
+            False otherwise
         """
-        Validation is defined for InVEST models by whether or not a json file exists that describes the parameters used
-        to run the baseline. If this file exists, I asume that means the full MESH model can be run with that submodel
-        using the current data.
-        """
-        self.setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', self.name,
-                                           self.name + '_setup_file.json')
-        return os.path.exists(self.setup_file_uri)
+        # Get path for InVEST model logfile
+        log_file_dir = os.path.join(
+            self.root_app.project_folder, 'output', 'model_setup_runs',
+            self.name)
+        # String to match to verify a valid run of an InVEST model
+        success_string = "Operations completed successfully"
+
+        if os.path.isdir(log_file_dir):
+            for file in os.listdir(log_file_dir):
+                if file.endswith('.txt') and "log" in file:
+                    log_file_path = os.path.join(log_file_dir, file)
+                    if success_string in open(log_file_path).read():
+                        return True
+        return False
 
     def place_check_if_ready_button(self):
         self.clear_model_state()
@@ -1702,17 +1790,17 @@ class ModelRun(MeshAbstractObject, QWidget):
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
-                if model.name == 'carbon_combined':
+                if model.name == 'carbon':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'tot_c_cur.tif'))
                 if model.name == 'hydropower_water_yield':
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
-                if model.name == 'nutrient':
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'p_export_.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'p_retention_.tif'))
+                #if model.name == 'nutrient':
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_export_.tif'))
+                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_retention_.tif'))
                 if model.name == 'pollination':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
@@ -2149,7 +2237,7 @@ class Report(MeshAbstractObject, QFrame):
             for model in models_list:
                 st += '<h3>Model: ' + model.long_name + '</h3>'
                 model_output_folder = os.path.join(scenario_folder, model.name, 'output')
-                if model.name == 'carbon_combined':
+                if model.name == 'carbon':
                     output_uri = os.path.join(model_output_folder, 'tot_C_cur.tif')
                     if os.path.exists(output_uri):
                         value = str(utilities.get_raster_sum(output_uri))
@@ -2217,7 +2305,7 @@ class Report(MeshAbstractObject, QFrame):
         return table
 
     def get_value_from_scenario_model_pair(self, scenario, model, value_to_get=None):
-        if model.name == 'carbon_combined':
+        if model.name == 'carbon':
             return 'carbon_value'
         elif model.name == 'hydropower_water_yield':
             return 'hydropower'
@@ -3578,7 +3666,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         args['demand_table_uri'] = args['demand_table']
                         args['lulc_uri'] = args['land_use']
 
-                    if model.name == 'carbon_combined':
+                    if model.name == 'carbon':
                         args['do_biophysical'] = True
                         args['do_valuation'] = False
                         args['do_uncertainty'] = False
@@ -3731,7 +3819,6 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-
                 for key, value in input_mapping.items():
                     if utilities.convert_to_bool(value['required']):
                         self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
@@ -3779,12 +3866,15 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         self.show()
 
     def create_data_from_args(self, args):
-        save_location = os.path.join(self.root_app.project_folder, args['save_location'])
+        save_location = os.path.join(
+            self.root_app.project_folder, args['save_location'])
+        default_value = os.path.join(
+            self.root_app.base_data_folder, args['default_value'])
         # save_location = args['save_location']
         if args['load_method'] == 'copy_default':
-            data_creation.copy_from_base_data(args['default_value'], save_location)
+            data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, args['default_value'], save_location)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 
@@ -3984,12 +4074,15 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
 
 
     def create_data_from_args(self, args):
-        save_location = os.path.join(self.root_app.project_folder, args['save_location'])
+        save_location = os.path.join(
+            self.root_app.project_folder, args['save_location'])
+        default_value = os.path.join(
+            self.root_app.base_data_folder, args['default_value'])
         # save_location = args['save_location']
         if args['load_method'] == 'copy_default':
-            data_creation.copy_from_base_data(args['default_value'], save_location)
+            data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, args['default_value'], save_location)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 

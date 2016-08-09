@@ -1,0 +1,12 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+dem_path,raster,TRUE,TRUE,dem,Digital Elevation Model,sdr,clip_from_global,input/Baseline/dem.tif,models/sdr/dem.tif
+erosivity_path,raster,TRUE,TRUE,erosivity,Rainfall Erosivity Index,sdr,clip_from_global,input/Baseline/erosivity.tif,models/sdr/erosivity.tif
+erodibility_path,raster,TRUE,TRUE,erodibility,Soil Erodibility,sdr,clip_from_global,input/Baseline/erodibility.tif,models/sdr/erodibility.tif
+lulc_path,raster,TRUE,TRUE,lulc,Land-Use/Land-Cover,sdr,clip_from_global,input/Baseline/lulc.tif,lulc/lulc_modis_2012.tif
+watersheds_path,shapefile,TRUE,TRUE,watersheds,Watersheds,sdr,clip_from_global,input/Baseline/watersheds.shp,hydrobasin
+biophysical_table_path,table,TRUE,TRUE,biophysical_table,Biophysical Table,sdr,copy_default,input/Baseline/biophysical_table.csv,models/sdr/biophysical_table.csv
+threshold_flow_accumulation,parameter,TRUE,TRUE,threshold_flow_accumulation,Threshold Flow Accumulation,sdr,copy_default,,1000
+drainage_path,raster,FALSE,FALSE,drainage,Drainages,sdr,clip_from_global,input/Baseline/drainages.tif,models/sdr/drainages.tif
+k_param,parameter,TRUE,TRUE,k_param,Borselli k Parameter,sdr,copy_default,,2
+ic_0_param,parameter,TRUE,TRUE,ic_0_param,Borselli IC0 Parameter,sdr,copy_default,,0.5
+sdr_max,parameter,TRUE,TRUE,sdr_max,Max SDR Value,sdr,copy_default,,0.8
