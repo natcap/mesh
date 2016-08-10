@@ -210,13 +210,13 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         # Add Actions. Actions define BOTH toolbar items and menu items.
         self.new_project_qaction = self.create_action(
-            "New", self.create_new_project, "icons/document-new-3.png")
+            "New", self.create_new_project, "icons", "document-new-3.png")
         self.open_project_qaction = self.create_action(
-            "Open", self.select_project_to_load, "icons/document-open-7.png")
+            "Open", self.select_project_to_load, "icons", "document-open-7.png")
         self.save_project_qaction = self.create_action(
-            "Save", self.save_project, "icons/document-export.png")
+            "Save", self.save_project, "icons", "document-export.png")
         self.unload_project_qaction = self.create_action(
-            "Unload Project", self.unload_project, "icons/crab16.png")
+            "Unload Project", self.unload_project, "icons", "crab16.png")
         # By default, MESH assumes you have the base data set in ../base_data.
         # However, you can override that by manually setting it here.
         self.configure_base_data_folder_qaction = self.create_action(
@@ -297,9 +297,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.setCentralWidget(self.center_column_widget)
 
     def create_docks(self):
-        """Creates and adds 3 main docks to Main Window
-
-        """
+        """Creates and adds 3 main docks to Main Window."""
         # Create and add models dock to main window
         self.models_dock = ModelsDock(self)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.models_dock)
@@ -311,9 +309,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.map_widget = MapWidget(self, self)  # Note that you have to have this extra self here as an arg to __init__
         self.addDockWidget(Qt.RightDockWidgetArea, self.map_widget)
 
-        # self.tabifyDockWidget(self.models_dock, self.map_widget)
-
     def create_central_widgets(self):
+        """Initialize widgets to use in the central window."""
         self.new_project_widget = NewProjectWidget(self, self)
         self.new_project_widget.setVisible(False)
         self.main_layout.addWidget(self.new_project_widget)
@@ -331,47 +328,43 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.main_layout.addWidget(self.reports_widget)
 
     def create_baseline_generators_settings_file_from_default(self):
+        """Generate Baseline Settings args if file does not exist."""
         to_write = BaselinePopulatorDialog.default_state.copy()
-        utilities.python_object_to_csv(to_write, self.application_args['baseline_generators_settings_uri'])
+        utilities.python_object_to_csv(
+            to_write, self.application_args['baseline_generators_settings_uri'])
 
     def create_scenario_generators_settings_file_from_default(self):
+        """Generate Scenario Settings args if file does not exist."""
         to_write = ScenarioPopulatorDialog.default_state.copy()
-        utilities.python_object_to_csv(to_write, self.application_args['scenario_generators_settings_uri'])
+        utilities.python_object_to_csv(
+            to_write, self.application_args['scenario_generators_settings_uri'])
 
     def create_default_project_settings_file_for_name(self, name):
         self.project_args = OrderedDict()
         self.project_args.update({'project_name': name})
         self.project_args.update({'project_aoi': ''})
         self.project_args.update(
-            {'scenarios_settings_uri': os.path.join(self.project_folder, 'settings/scenarios.csv')})
-        self.project_args.update({'models_settings_uri': os.path.join(self.project_folder, 'settings/models.csv')})
-        self.project_args.update({'maps_settings_uri': os.path.join(self.project_folder, 'settings/maps.csv')})
+            {'scenarios_settings_uri': os.path.join(self.project_folder, 'settings', 'scenarios.csv')})
+        self.project_args.update({'models_settings_uri': os.path.join(self.project_folder, 'settings', 'models.csv')})
+        self.project_args.update({'maps_settings_uri': os.path.join(self.project_folder, 'settings', 'maps.csv')})
         self.project_args.update(
-            {'model_runs_settings_uri': os.path.join(self.project_folder, 'settings/model_runs.csv')})
-        self.project_args.update({'reports_settings_uri': os.path.join(self.project_folder, 'settings/reports.csv')})
-        utilities.python_object_to_csv(self.project_args,
-                                       os.path.join(self.project_folder, 'settings/project_settings.csv'))
+            {'model_runs_settings_uri': os.path.join(self.project_folder, 'settings', 'model_runs.csv')})
+        self.project_args.update({'reports_settings_uri': os.path.join(self.project_folder, 'settings', 'reports.csv')})
+        utilities.python_object_to_csv(
+            self.project_args, os.path.join(self.project_folder, 'settings', 'project_settings.csv'))
 
     def create_default_model_elements_settings_files(self, files_to_recreate='all'):
-        if files_to_recreate == 'all' or files_to_recreate == 'scenarios':
-            to_write = ScenariosWidget.default_state.copy()
-            utilities.python_object_to_csv(to_write, self.project_args['scenarios_settings_uri'])
+        """Create default model setting files for the particular project."""
+        file_str_list = ['scenarios', 'models', 'maps', 'model_runs', 'reports']
+        object_calls_list = [
+            ScenariosWidget, ModelsWidget, MapWidget,
+            ModelRunsWidget, ReportsWidget]
 
-        if files_to_recreate == 'all' or files_to_recreate == 'models':
-            to_write = ModelsWidget.default_state.copy()
-            utilities.python_object_to_csv(to_write, self.project_args['models_settings_uri'])
-
-        if files_to_recreate == 'all' or files_to_recreate == 'maps':
-            to_write = MapWidget.default_state.copy()
-            utilities.python_object_to_csv(to_write, self.project_args['maps_settings_uri'])
-
-        if files_to_recreate == 'all' or files_to_recreate == 'model_runs':
-            to_write = ModelRunsWidget.default_state.copy()
-            utilities.python_object_to_csv(to_write, self.project_args['model_runs_settings_uri'])
-
-        if files_to_recreate == 'all' or files_to_recreate == 'reports':
-            to_write = ReportsWidget.default_state.copy()
-            utilities.python_object_to_csv(to_write, self.project_args['reports_settings_uri'])
+        for file_str, obj_call in zip(file_str_list, object_calls_list):
+            if files_to_recreate == 'all' or files_to_recreate == file_str:
+                to_write = obj_call.default_state.copy()
+                utilities.python_object_to_csv(
+                    to_write, self.project_args['%s_settings_uri' % file_str])
 
     def set_project_args_from_name(self, project_name):
         self.project_name = project_name
