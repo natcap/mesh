@@ -3322,9 +3322,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
 
 class DataExplorerDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog for baseline generator.
-    """
+    """Dialog for baseline generator."""
     def __init__(self, root_app=None, parent=None):
         super(DataExplorerDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
@@ -3392,9 +3390,7 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
 
 
 class MapEditDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog that lets user modify how the map is displayed.
-    """
+    """Dialog that lets user modify how the map is displayed."""
 
     def __init__(self, root_app=None, parent=None):
         super(MapEditDialog, self).__init__(root_app, parent)
@@ -3695,9 +3691,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
 
 class InstallPluginsDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog (placeholder) for how plugins can be added.
-    """
+    """Dialog (placeholder) for how plugins can be added."""
     def __init__(self, root_app=None, parent=None):
         super(InstallPluginsDialog, self).__init__(root_app, parent)
         self.plugin_folder = None
@@ -3762,9 +3756,7 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
 
 
 class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog (placeholder) for how plugins can be added.
-    """
+    """Dialog (placeholder) for how plugins can be added."""
     # NEXT RELEASE I have a deep conceptual problem insofar as not all data that would have generators are baseline. How, for instance, would the Scenario generator know to create it's own transition_table.csv?
     def __init__(self, root_app=None, parent=None):
         super(CreateBaselineDataDialog, self).__init__(root_app, parent)
@@ -4004,11 +3996,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.clear_pathways_pb.clicked.connect(self.clear_pathways)
         self.use_these_pathways_hbox.addWidget(self.clear_pathways_pb)
 
-
-
-
-
-
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
@@ -4029,8 +4016,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
             self.root_app.decision_contexts[name] = tree_item
             self.root_app.external_drivers[name] = OrderedDict()
 
-
-
             tree_item.setText(0, QString(name))
             self.tree.addTopLevelItem(tree_item)
 
@@ -4043,7 +4028,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
                 tree_item.setText(0, QString(name))
                 self.root_app.external_drivers[decision_option_name][name] = tree_item
                 decision_option_item.addChild(tree_item)
-
 
     def add_assessment_time(self):
         input_text, ok = QInputDialog.getText(self, 'Add assessment time', 'Add assessment time moment')
