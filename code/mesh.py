@@ -97,34 +97,31 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         Returns:
             Nothing
         """
+        # Some below parameters are depending on initialization
+        # preferences being set up, so do that first
+        if not os.path.exists(self.initialization_preferences_uri):
+            self.create_initialization_preferences_from_default()
+        self.initialize_model_from_preferences(self.initialization_preferences_uri)
+
         # Paths for the different setting files to check
-        setting_paths = [self.initialization_preferences_uri,
-                         self.application_args['baseline_generators_settings_uri'],
+        setting_paths = [self.application_args['baseline_generators_settings_uri'],
                          self.application_args['scenario_generators_settings_uri']]
         # Default functions associated with above paths, if that path does
         # not exist
-        funcs = [self.create_initialization_preferences_from_default,
-                 self.create_baseline_generators_settings_file_from_default,
+        funcs = [self.create_baseline_generators_settings_file_from_default,
                  self.create_scenario_generators_settings_file_from_default]
         # Initiate variables to use below
         self.baseline_generators_settings = {}
         self.scenario_generators_settings = {}
-        # List that correlates to the different settings operations
-        # A function for initializiation prefs, dictionaries for others
-        setting_objs = [self.initialize_model_from_preferences,
-                        self.baseline_generators_settings,
+        setting_objs = [self.baseline_generators_settings,
                         self.scenario_generators_settings]
 
         for setting_path, func, setting_obj in zip(setting_paths, funcs, setting_objs):
             if not os.path.exists(setting_path):
                 # Setting file does not exist, create from defaults
                 func()
-            elif isinstance(setting_obj, dict):
-                # Want to set up a dictionary from settings
-                setting_obj = utilities.file_to_python_object(setting_path)
-            else:
-                # Call initialize model preferences
-                setting_obj(setting_path)
+            # Want to set up a dictionary from settings
+            setting_obj = utilities.file_to_python_object(setting_path)
 
     def create_initialization_preferences_from_default(self):
         """Creates initialization preferences from hard-coded defaults.
@@ -167,15 +164,15 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     def create_action(self, text, slot=None, icon_path=None, checkable=False,
                         parent=None):
-        """Create and return a QAction with optional properties
+        """Create and return a QAction with optional properties.
 
         Parameters:
-            self ():
+            self (MeshApplication): The PyQt application
             text (string): a name to assign to the QAction
-            slot ()
+            slot (function): function to attach to the action
             icon_path (string): path name for image file to be used as icon
-            checkable (boolean):
-            parent (QObject): QActionGroup to assing the QAction to
+            checkable (boolean): whether the parent is a checkbox
+            parent (QObject): QActionGroup to assign the QAction to
 
         Returns:
             QAction
@@ -193,6 +190,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         return action
 
     def create_application_window(self):
+        """Create the application window, including menus and toolbars.
+
+        Sets up the window with menus and toolbars and respective actions
+        """
         if 'window_size' in self.application_args:
             'NYI in updating the preferences csv, but could be done manually.'
             rectangle = QApplication.desktop().screenGeometry()
@@ -203,7 +204,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.setWindowTitle(
             'MESH Model: Mapping Ecosystem Services to Human well-being')
         self.mainWindowIcon = QIcon()
-        self.mainWindowIcon.addPixmap(QPixmap('icons/mesh_green.png'), QIcon.Normal, QIcon.Off)
+        self.mainWindowIcon.addPixmap(
+            QPixmap('icons/mesh_green.png'), QIcon.Normal, QIcon.Off)
         self.setWindowIcon(self.mainWindowIcon)
 
         # Add Actions. Actions define BOTH toolbar items and menu items.
