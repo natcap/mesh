@@ -147,8 +147,14 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         utilities.python_object_to_csv(initialization_preferences, self.initialization_preferences_uri)
 
     def initialize_model_from_preferences(self, initialization_preferences_uri):
-        """
-        The values saved in initialization_preferences_uri (in the root dir by default) initially populate user variables that are independent of which project is being worked on.
+        """Load parameters from initialization settings file.
+
+        The values saved in initialization_preferences_uri
+        (in the root dir by default) initially populate user variables that
+        are independent of which project is being worked on.
+
+        Returns:
+            Nothing
         """
         self.application_args = utilities.file_to_python_object(initialization_preferences_uri)
         if self.application_args['project_to_load_on_launch']:
@@ -156,10 +162,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = self.project_to_load_on_launch
             self.project_folder = os.path.join(self.application_args['project_folder_location'], self.project_name)
             config.global_folder = self.project_folder  # config provides a global set of variables shared across py files
-        # TODO JUSTIN Had to disable this due to fresh install problem.
-        # else: # No project was defined, so force the user to make a new one.
-        #     self.create_new_project()
-
 
         self.base_data_folder = self.application_args['base_data_folder']
 
