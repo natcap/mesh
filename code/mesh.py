@@ -231,10 +231,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             "Run MESH Model", self.place_model_runs_widget,
             checkable=True,  parent=self.qaction_state_actiongroup)
         self.map_viewer_qaction = self.create_action(
-            "View Maps", self.set_map_viewer_as_central_widget,
+            "View Maps", lambda: self.set_central_widget_from_string('map_viewer'),
             checkable=True, parent=self.qaction_state_actiongroup)
         self.create_report_qaction = self.create_action(
-            "View/Create Report", self.set_report_generator_as_central_widget,
+            "View/Create Report", lambda: self.set_central_widget_from_string('report_generator'),
             checkable=True, parent=self.qaction_state_actiongroup)
 
         # Create menubar and top-level menu items
@@ -382,13 +382,16 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_args = utilities.file_to_python_object(self.project_settings_file_uri)
 
     def load_project_by_name(self, project_name):
-        """
-        Based on the project_name, the project root folder is identified. In that folder is a project_args.csv file that
-        defines parameters to load specific to the project. project_args and application_args exist independent.
+        """Based on the project_name, the project root folder is identified.
+
+        In that folder is a project_settings.csv file that defines parameters to
+        load specific to the project. project_args and application_args
+        exist independent.
         """
         self.set_project_args_from_name(project_name)
 
-        # Check each of the model element settings files and recreate from default if they don't exist.
+        # Check each of the model element settings files and recreate from
+        # default if they don't exist.
         for key, value in self.project_args.items():
             if key == 'project_aoi':
                 self.project_aoi = value
@@ -397,7 +400,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                     type_of_file_to_recreate = os.path.splitext(os.path.split(value)[1])[0]
                     self.create_default_model_elements_settings_files(files_to_recreate=type_of_file_to_recreate)
 
-        # Once the parject args are set/created/loaded, then call UI-element specific project loader functions.
+        # Once the project args are set/created/loaded, then call UI-element
+        # specific project loader functions.
         self.models_dock.models_widget.load_from_disk()
         self.map_widget.load_from_disk()
         self.scenarios_dock.scenarios_widget.load_from_disk()
@@ -409,19 +413,12 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.update_ui()
 
     def set_project_aoi(self, aoi_uri):
+        """Set application project_aoi variable."""
         self.project_aoi = aoi_uri
         self.update_ui()
 
-    def set_model_runs_as_central_widget(self):
-        self.visible_central_widget_name = 'model_runs'
-        self.update_ui()
-
-    def set_report_generator_as_central_widget(self):
-        self.visible_central_widget_name = 'report_generator'
-        self.update_ui()
-
-    def set_map_viewer_as_central_widget(self):
-        self.visible_central_widget_name = 'map_viewer'
+    def set_central_widget_from_string(self, name):
+        self.visible_central_widget_name = name
         self.update_ui()
 
     def update_ui(self):
