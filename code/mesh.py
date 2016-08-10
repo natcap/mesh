@@ -488,8 +488,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 self.load_project_by_name(self.project_args['project_name'])
 
     def select_project_to_load(self):
+        """Load project designated by user."""
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
-        # The only requirement i have on something being a project is the folder exists and there is a settings subfolder. All other things, folders or files, will be recreated.
+        # The only requirement i have on something being a project is the
+        # folder exists and there is a settings subfolder. All other
+        # things, folders or files, will be recreated.
         if os.path.exists(project_uri) and os.path.exists(os.path.join(project_uri, 'settings')):
             self.unload_project()
             self.project_name = os.path.split(project_uri)[1]
