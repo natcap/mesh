@@ -905,10 +905,6 @@ class Scenario(MeshAbstractObject, QWidget):
 
     def create_populate_baseline_sources_dialog(self):
         self.create_baseline_data_dialog = BaselinePopulatorDialog(self.root_app, self)
-        # self.create_baseline_data_dialog = CreateBaselineDataDialog(self.root_app, self)
-
-        # OLD CODE: This was from before i had data-source specific generation methods.
-        # self.populate_baseline_dialog = BaselinePopulatorDialog(self.root_app, self)
 
     def create_populate_scenario_source_dialog(self):
         self.populate_scenario_dialog = ScenarioPopulatorDialog(self.root_app, self)
@@ -1164,11 +1160,11 @@ class ModelsWidget(ScrollWidget):
         utilities.python_object_to_csv(to_write, self.save_uri)
 
     def setup_invest_model(self, sender):
-        """
-        There are two basic ways a model might be run in MESH. The setup run, which in the case of invest models creates
-        the json file of model run parameters. Setup runs use the UI of invest, or a custom MESH dialog.
-        Next is the full run, which uses the json setup files and calls the selected models iteratively without bringing up the ui
-         and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
+        """Launches an InVEST user interface.
+
+        The setup run creates the json file of model run parameters.
+        Setup runs use the UI of invest. This method calls the
+        ProcessingThread class to handle calculations.
         """
         self.sender = sender
         model_name = self.sender.name
@@ -1289,15 +1285,17 @@ class ModelsWidget(ScrollWidget):
         return return_args
 
     def setup_mesh_model(self, model_name):
-        if os.path.exists(os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model_name,
-                                       model_name + '_setup_file.json')):
-            last_run_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs/', model_name,
-                                        model_name + '_setup_file.json')
-        else:
-            last_run_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '_setup_file.json')
+        project_setup_json = os.path.join(
+            self.root_app.project_folder, 'output', 'model_setup_runs',
+            model_name, '%s_setup_file.json' % model_name)):
+        default_setup_json = os.path.join(
+            self.root_app.default_setup_files_folder,
+            '%s_setup_file.json' % model_name)
 
-        if os.path.exists(last_run_uri):
-            override_args = utilities.file_to_python_object(last_run_uri)
+        if os.path.exists(project_setup_json):
+            override_args = utilities.file_to_python_object(project_setup_json)
+        elif os.path.exists(default_setup_json):
+            override_args = utilities.file_to_python_object(project_setup_json)
         else:
             override_args = None
 
@@ -1306,9 +1304,7 @@ class ModelsWidget(ScrollWidget):
                 nutrition_ui.NutritionModelDialog(self.root_app, self, last_run_override=override_args))
 
     def setup_waterworld_model(self, model_name):
-        """
-        run ww model
-        """
+        """run ww model"""
 
     def create_data(self):
         if self.root_app.is_base_data_valid():
