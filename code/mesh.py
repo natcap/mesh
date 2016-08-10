@@ -87,29 +87,53 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.new_project_widget.setVisible(True)
 
     def load_or_create_application_settings_files(self):
-        # Create project-independent settings
-        # Note that here an below I use a paradigm where I check for a CSV full of preferences, load it if it's present,
-        # or if it's not present, I create it from a hard-coded function that specifies exactly what the preferences might be.
-        if not os.path.exists(self.initialization_preferences_uri):
-            self.create_initialization_preferences_from_default()
-        self.initialize_model_from_preferences(self.initialization_preferences_uri)
+        """Create project-independent settings.
 
-        if not os.path.exists(self.application_args['baseline_generators_settings_uri']):
-            # TODO DOUG 6 check that THIS one is done exactly like the other CSV loading things, just generally
-            # debug this, try to get it to fail with deleting settings files, etc
-            self.create_baseline_generators_settings_file_from_default()
-        self.baseline_generators_settings = utilities.file_to_python_object(
-            self.application_args['baseline_generators_settings_uri'])
+        Note that here and below I use a paradigm where I check for a CSV
+        full of preferences, load it if it's present, or if it's not present,
+        I create it from a hard-coded function that specifies exactly what
+        the preferences might be.
 
-        if not os.path.exists(self.application_args['scenario_generators_settings_uri']):
-            self.create_scenario_generators_settings_file_from_default()
-        self.scenario_generators_settings = utilities.file_to_python_object(
-            self.application_args['scenario_generators_settings_uri'])
+        Returns:
+            Nothing
+        """
+        # Paths for the different setting files to check
+        setting_paths = [self.initialization_preferences_uri,
+                         self.application_args['baseline_generators_settings_uri'],
+                         self.application_args['scenario_generators_settings_uri']]
+        # Default functions associated with above paths, if that path does
+        # not exist
+        funcs = [self.create_initialization_preferences_from_default,
+                 self.create_baseline_generators_settings_file_from_default,
+                 self.create_scenario_generators_settings_file_from_default]
+        # Initiate variables to use below
+        self.baseline_generators_settings = {}
+        self.scenario_generators_settings = {}
+        # List that correlates to the different settings operations
+        # A function for initializiation prefs, dictionaries for others
+        setting_objs = [self.initialize_model_from_preferences,
+                        self.baseline_generators_settings,
+                        self.scenario_generators_settings]
+
+        for setting_path, func, setting_obj in zip(setting_paths, funcs, setting_objs):
+            if not os.path.exists(setting_path):
+                # Setting file does not exist, create from defaults
+                func()
+            elif isinstance(setting_obj, dict):
+                # Want to set up a dictionary from settings
+                setting_obj = utilities.file_to_python_object(setting_path)
+            else:
+                # Call initialize model preferences
+                setting_obj(setting_path)
 
     def create_initialization_preferences_from_default(self):
-        """
-        Creates default initialization preferences from hard-coded defaults. This should not be called unless the user
-        accidentally deletes the initialization_preferences.csv file
+        """Creates initialization preferences from hard-coded defaults.
+
+        This should not be called unless the user accidentally deletes the
+        initialization_preferences.csv file
+
+        Returns:
+            Nothing
         """
         initialization_preferences = OrderedDict()
         initialization_preferences.update({'project_to_load_on_launch': ''})
