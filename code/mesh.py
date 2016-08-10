@@ -1508,9 +1508,10 @@ class Model(MeshAbstractObject, QWidget):
 
 
 class ModelRunsWidget(MeshAbstractObject, QWidget):
-    """
-    Widget that can be displayed as the centraWidget of MeshApplication. Contains manyt Runs. Presents information on
-    results of the whole MESH model.
+    """Widget that can be displayed as the centraWidget of MeshApplication.
+
+    Contains many Runs. Presents information on results of the whole
+    MESH model.
     """
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -1524,7 +1525,9 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
 
     def __init__(self, root_app=None, parent=None):
         super(ModelRunsWidget, self).__init__(root_app, parent)
-        # Define the column headings that will go into the self.elements odict. Necessary to use as a default or writng a blank file.
+        # Define the column headings that will go into the
+        # self.elements odict. Necessary to use as a default or
+        # writng a blank file.
         self.default_state = ModelRunsWidget.default_state.copy()
 
         self.elements = OrderedDict()
@@ -1561,7 +1564,9 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.run_button_hbox.addWidget(self.run_mesh_model_pb)
         self.run_mesh_model_pb.clicked.connect(self.run_mesh_model)
 
-        # BUG possible. it creates a folder WITH a timestamp even if it names it one without if there is a folder that already exists of that name (even if not in project)
+        # BUG possible. it creates a folder WITH a timestamp even if it
+        # names it one without if there is a folder that already exists of
+        # that name (even if not in project)
         self.add_existing_run_pb = QPushButton('Add existing run')
         self.add_existing_run_icon = QIcon()
         self.add_existing_run_icon.addPixmap(QPixmap('icons/document-open.png'), QIcon.Normal, QIcon.Off)
@@ -1683,8 +1688,9 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
 
 
 class ModelRun(MeshAbstractObject, QWidget):
-    """
-    Contains the name and link to outputted results. Is displayed by the Runs_widget in the central column.
+    """Contains the name and link to outputted results.
+
+    Is displayed by the Runs_widget in the central column.
     """
     # class that dealt with I/O from args, and setting attributs
     def __init__(self, name, args, root_app=None, parent=None, load_existing=False):
@@ -1795,9 +1801,9 @@ class ModelRun(MeshAbstractObject, QWidget):
                 if model.name == 'carbon':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'tot_c_cur.tif'))
                 if model.name == 'hydropower_water_yield':
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output', 'per_pixel', 'aet.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output', 'per_pixel', 'fractp.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output', 'per_pixel', 'wyield.tif'))
                 #if model.name == 'nutrient':
                 #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
                 #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
@@ -1848,8 +1854,9 @@ class ModelRun(MeshAbstractObject, QWidget):
 
 
 class ReportsWidget(MeshAbstractObject, QWidget):
-    """
-    Central widget that shows the currently generated report and provides IO options.
+    """Shows the currently generated report and provides IO options.
+
+    Central widget placeholder for reports.
     """
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -2016,8 +2023,9 @@ class ReportsWidget(MeshAbstractObject, QWidget):
 
 
 class Report(MeshAbstractObject, QFrame):
-    """
-    Contains an assemblage of report-ready objects. The MESH Beta release does not fully implement reports, so this is
+    """Contains an assemblage of report-ready objects.
+
+    The MESH Beta release does not fully implement reports, so this is
     partially implemented.
     """
 
@@ -2399,9 +2407,7 @@ class Report(MeshAbstractObject, QFrame):
         doc.print_(printer)
 
 class MapWidget(MeshAbstractObject, QDockWidget):
-    """
-    Dock that holds the map viewer CONTROLS (not the actual map canvas)
-    """
+    """Dock that holds the map viewer CONTROLS (not the actual map canvas)."""
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
     default_element_args['source_uri'] = ''
@@ -2557,11 +2563,11 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
 
 class Map(MeshAbstractObject, QWidget):
-    """
-    A map displays a specific source or external spatial map. It does not remake the files but instead contains
+    """A map displays a specific source or external spatial map.
+
+    It does not remake the files but instead contains
     formatting parameters and buttons for manipulation.
     """
-
     def __init__(self, name, args, root_app=None, parent=None):
         super(Map, self).__init__(root_app, parent)
         self.name = name
@@ -2668,9 +2674,7 @@ class Map(MeshAbstractObject, QWidget):
 
 
 class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
-    """
-    Qt-enabled object ready to hold the MapCanvas.
-    """
+    """Qt-enabled object ready to hold the MapCanvas."""
 
     def __init__(self, root_app=None, parent=None):
         super(MapCanvasHolderWidget, self).__init__(root_app, parent)
@@ -2720,7 +2724,6 @@ class ShapefileViewerCanvas(FigureCanvas):
         # After removing basemap dependency, currenly unfinished function
         self.draw()
 
-
     def onclick(self, event):
         if event.button == 1:
             self.select_feature_by_point(event.xdata, event.ydata)
@@ -2734,20 +2737,27 @@ class ShapefileViewerCanvas(FigureCanvas):
             selected_id = feature.GetField("HYBAS_ID")
         self.parent.select_id(selected_id)
 
+  # Objects created from this class generate a FigureCanvas QTWidget
+  # that displays a MatPlotLib Figure. Benefits of MPL is that it allows
+  # easy navigation and formatting, but is quite slow at rendering.
+  # Good for final outputs that are static.
+class MapCanvas(FigureCanvas):
+    """Subclass to represent the FigureCanvas widget.
 
-class MapCanvas(FigureCanvas):  # Objects created from this class generate a FigureCanvas QTWidget that displays a MatPlotLib Figure. Benefits of MPL is that it allows easy navigation and formatting, but is quite slow at rendering. Good for final outputs that are static.
-    """
-    Subclass to represent the FigureCanvas widget. This gets added to the MapCanvasHolderWidget which connects it to the Nav
+    This gets added to the MapCanvasHolderWidget which connects it to the Nav
     and adds Qt controsl.
     """
-
     def __init__(self, root_app=None, parent=None):
         """
         Because FigureCanvas requires that a Figure is created first and passed to it on creation, and given the complexity of having the HolderWidget so that the NavBar connects
         to the Canvas, I had to make MapCanvas NOT inherit MeshAbstractObject. Thus, i manually set self.root_app and self.parent
         and call self.root_app to access the other parts of MeshAbstractObject.
         """
-        self.fig = Figure(figsize=(100, 100), dpi=75)  # Must be created before super is called becuase FigureCanvas needs it, figsize sets the maximium size but it will be scaled as a qwidget if smalller, dpi affects relatives sizes within the figure, esp font sizes relative to mapa.
+        # Must be created before super is called becuase FigureCanvas needs it,
+        # figsize sets the maximium size but it will be scaled as a qwidget if
+        # smalller, dpi affects relatives sizes within the figure, esp font
+        # sizes relative to mapa.
+        self.fig = Figure(figsize=(100, 100), dpi=75)
         super(MapCanvas, self).__init__(self.fig)
         self.root_app = root_app
         self.parent = parent
@@ -2818,8 +2828,9 @@ class WarningPopupWidget(QMessageBox):
         # self.message_box.exec_()
 
 class NewProjectWidget(MeshAbstractObject, QWidget):
-    """
-    Loads when there is no project set. Prompts user to create or load a project.
+    """Loads when there is no project set.
+
+    Prompts user to create or load a project.
     """
 
     def __init__(self, root_app=None, parent=None):
@@ -2863,10 +2874,7 @@ class NewProjectWidget(MeshAbstractObject, QWidget):
 
 
 class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog that prompts user on how to create a report.
-    """
-
+    """Dialog that prompts user on how to create a report."""
     def __init__(self, root_app=None, parent=None):
         super(ChooseReportTypeDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
@@ -2931,8 +2939,7 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
 
 
 class BaselinePopulatorDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog prompting user on how the Baseline scenario can be filled with data.
+    """Dialog prompting user on how the Baseline scenario can be filled with data.
     """
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -3200,9 +3207,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
 
 
 class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
-    """
-    Dialog for baseline generator.
-    """
+    """Dialog for baseline generator."""
     def __init__(self, root_app=None, parent=None):
         super(ClipFromHydroshedsWatershedDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
@@ -3288,33 +3293,14 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
 
-        if selected_continent == 'Africa':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Arctic':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Asia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Australia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Europe':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Greenland':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'North America':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'South America':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
-        if selected_continent == 'Siberia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
-                                     'hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
+        continents = {
+            'Africa': 'af', 'Arctic': 'ar', 'Asia': 'as', 'Australia': 'au',
+            'Europe': 'eu', 'Greenland': 'gr', 'North America': 'na',
+            'South America': 'sa', 'Siberia': 'si'}
+        hybas_uri = os.path.join(
+            self.root_app.base_data_hydrosheds_folder,
+            'hybas_%s_lev01-06_v1c' % continents[selected_continent],
+            'hybas_%s_lev0%s_v1c.shp' % (continents[selected_continent], selected_level))
 
         return hybas_uri
 
