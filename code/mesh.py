@@ -713,11 +713,13 @@ class ScenariosWidget(ScrollWidget):
     def create_default_element_args(self, name):
         args = ScenariosWidget.default_element_args.copy()
         args['long_name'] = name.replace('_', ' ')
-        args['folder'] = os.path.join(self.root_app.project_folder, 'input/', name)
+        args['folder'] = os.path.join(
+            self.root_app.project_folder, 'input', name)
         return args
 
     def create_element_from_name_dialog(self):
-        input_text, ok = QInputDialog.getText(self, 'Add scenario', 'Name of new or existing folder:')
+        input_text, ok = QInputDialog.getText(
+            self, 'Add scenario', 'Name of new or existing folder:')
         if ok:
             name = str(input_text)
             self.create_element(name)
@@ -778,9 +780,10 @@ class ScenariosWidget(ScrollWidget):
 
 
 class Scenario(MeshAbstractObject, QWidget):
-    """
-    Scenarios can be etierh baseline or scenario scenarios and are a reference to a folder and a set of inputs that
-    define the scenario.
+    """Class to handle a given Scenario.
+
+    Scenarios can be either baseline or scenario scenarios and are a reference
+    to a folder and a set of inputs that Sdefine the scenario.
     """
 
     def __init__(self, name, args, root_app=None, parent=None):
@@ -808,31 +811,12 @@ class Scenario(MeshAbstractObject, QWidget):
         self.elements_vbox.setContentsMargins(0, 0, 0, 0)
         self.main_layout.addLayout(self.elements_vbox)
 
-        # if self.name == 'Baseline':
-        #     self.baseline_validation_status_l = QLabel('--No data specified for Baseline--')
-        #     #self.num_sources_l = QLabel()
-        #     self.elements_vbox.addWidget(self.baseline_validation_status_l)
-
-        # if self.name != 'Baseline':
-        #     self.populate_scenario_source_pb = QPushButton()
-        #     self.add_icon = QIcon()
-        #     self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
-        #     self.populate_scenario_source_pb.setIcon(self.add_icon)
-        #     self.populate_scenario_source_pb.setMaximumWidth(32)
-        #     self.main_layout.addWidget(self.populate_scenario_source_pb)
-        #     self.populate_scenario_source_pb.clicked.connect(self.create_populate_scenario_source_dialog)
-
         self.populate_scenario_source_pb = QPushButton()
         self.add_icon = QIcon()
         self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.populate_scenario_source_pb.setIcon(self.add_icon)
         self.populate_scenario_source_pb.setMaximumWidth(32)
         self.main_layout.addWidget(self.populate_scenario_source_pb)
-
-        if self.name == 'Baseline':
-            self.populate_scenario_source_pb.clicked.connect(self.create_populate_baseline_sources_dialog)
-        else:
-            self.populate_scenario_source_pb.clicked.connect(self.create_populate_scenario_source_dialog)
 
         self.add_to_maps_pb = QPushButton()
         self.add_to_maps_icon = QIcon()
@@ -843,14 +827,15 @@ class Scenario(MeshAbstractObject, QWidget):
         self.delete_scenario_pb = QPushButton()
         self.delete_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
         self.delete_scenario_pb.setIcon(self.delete_icon)
+
         if self.name == 'Baseline':
+            self.populate_scenario_source_pb.clicked.connect(self.create_populate_baseline_sources_dialog)
             self.delete_scenario_pb.clicked.connect(self.unload_elements)
         else:
+            self.populate_scenario_source_pb.clicked.connect(self.create_populate_scenario_source_dialog)
             self.delete_scenario_pb.clicked.connect(self.remove_self)
-        self.main_layout.addWidget(self.delete_scenario_pb)
 
-        # if self.name == 'Baseline':
-        #     self.delete_scenario_pb.setEnabled(False)
+        self.main_layout.addWidget(self.delete_scenario_pb)
 
     def initialize_from_args(self):
         self.long_name = self.args['long_name']
