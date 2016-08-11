@@ -16,6 +16,8 @@ from collections import OrderedDict
 import warnings
 import shutil
 import json
+import re
+from datetime import datetime
 
 from markdown import markdown
 from osgeo import gdal, ogr
@@ -1189,7 +1191,16 @@ class ModelsWidget(ScrollWidget):
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
         self.sender = sender
-        model_name = self.sender.name
+
+        # Check if trying to create a differenct scenario with
+        # InVEST Scenario generator
+        if isinstance(self.sender, Scenario):
+            # If a call from Scenario the sender.name is going to be the name
+            # of the user labeled scenario and not the InVEST model name
+            model_name = 'scenario_generator'
+        else:
+            model_name = self.sender.name
+
         # Json file name with extension for InVEST model model.name
         json_file_name = model_name + '.json'
         # Path to CSV file for mapping MESH input data to the model model.name
@@ -1230,9 +1241,12 @@ class ModelsWidget(ScrollWidget):
             # files
             new_json_args = self.modify_invest_args(
                 invest_json_dict, default_args, model_name, input_mapping)
+            # Make the model directory, which will also be the InVEST workspace
+            # In order to place the json file in that location
+            if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
+                os.mkdir(os.path.dirname(existing_last_run_uri))
             # Write updated dictionary to new json file.
-            new_json_path = os.path.join(
-                self.root_app.project_folder, model_name + '_setup_file.json')
+            new_json_path = existing_last_run_uri
             with open(new_json_path, 'w') as fp:
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
@@ -1467,27 +1481,50 @@ class Model(MeshAbstractObject, QWidget):
     def check_if_validated(self):
         """Makes sure that a given InVEST setup run has completed successfully.
 
-        Success is determined by the log file from the InVEST run, if the
-        file has "Operations completed successfully", then it is validated.
+        Success is determined by two parts, the first being the log file
+        from the InVEST run. If the latest file has
+        "Operations completed successfully", then the first part is validated.
+        The second part to check is that the user saved a json archive of
+        the parameters that were used for the run. If that file exists in
+        the correct location the second part is validated.
 
         Returns
-            True if a run for the associated model completed successfully,
-            False otherwise
+            True if a run for the associated model completed successfully
+            and the json archive file exists, False otherwise
         """
-        # Get path for InVEST model logfile
+        # Get path for InVEST model logfile and archive
         log_file_dir = os.path.join(
             self.root_app.project_folder, 'output', 'model_setup_runs',
             self.name)
         # String to match to verify a valid run of an InVEST model
         success_string = "Operations completed successfully"
 
+        # Initialize validators to False
+        invest_run_valid = False
+        archive_params_valid = False
+
         if os.path.isdir(log_file_dir):
+            # Initialize variables to track latest log
+            date = ""
+            newest_log_path = ""
             for file in os.listdir(log_file_dir):
                 if file.endswith('.txt') and "log" in file:
                     log_file_path = os.path.join(log_file_dir, file)
-                    if success_string in open(log_file_path).read():
-                        return True
-        return False
+                    # Search for and capture the values comprising the date
+                    result = re.search("log-([0-9-_]*)", log_file_path)
+                    # Convert from string to Datetime object for comparisons
+                    new_date = datetime.strptime(
+                        result.group(1), "%Y-%m-%d--%H_%M_%S")
+                    if date == "" or new_date > date:
+                        # Either first log or the newest log
+                        date = new_date
+                        newest_log_path = log_file_path
+                elif file.endswith('.json') and "archive" in file:
+                    archive_params_valid = True
+            if success_string in open(newest_log_path).read():
+                invest_run_valid = True
+
+        return invest_run_valid and archive_params_valid
 
     def place_check_if_ready_button(self):
         self.clear_model_state()
@@ -3653,58 +3690,28 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.parent.create_element(name, args)
         self.root_app.args_queue = OrderedDict()
 
-        # NEXT RELEASE These manual corrections to the args dict arise because they are not used uniformly across InVEST code and the JSON exporter. Incorporate these changes into the data schema that defines the model.
         args = {}
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
                 if model.model_type == 'InVEST Model':
-                    setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model.name,
-                                                  model.name + '_setup_file.json')
-                    args = utilities.file_to_python_object(setup_file_uri)
-                    args['workspace_dir'] = os.path.join(self.parent.elements[name].run_folder, scenario.name,
-                                                         model.name)
+                    # Directory where archived json file is saved
+                    setup_file_dir = os.path.join(
+                        self.root_app.project_folder, 'output',
+                        'model_setup_runs', model.name)
 
-                    try:
-                        os.makedirs(args['workspace_dir'])
-                    except:
-                        print('already there')
+                    # Find the archive json file, load and grab arguments
+                    for file in os.listdir(setup_file_dir):
+                        if file.endswith('.json') and "archive" in file:
+                            json_archive = open(os.path.join(setup_file_dir, file)).read()
+                            archive_args = json.loads(json_archive)
+                            args = archive_args["arguments"]
+                            print args
+                            break
 
-                    if model.name == 'nutrient':  # I couldn't think of a better way to do this, so I just manually parse the model names.
-                        # There were a few key errors in the args dict, which I think might be from the export dict function in InVEST not working properly
-                        # I fix them here.
-                        args['eto_uri'] = args['potential_evapotranspiration']
-                        args['precipitation_uri'] = args['precipitation']
-                        args['depth_to_root_rest_layer_uri'] = args['soil_depth']
-                        args['pawc_uri'] = args['plant_available_water_fraction']
-                        args['lulc_uri'] = args['land_use']
-                        args['accum_threshold'] = args['threshold_flow_accumulation']
-                        args['valuation_enabled'] = 'True'
-
-                    if model.name == 'hydropower_water_yield':
-                        args['watersheds_uri'] = args['watersheds']
-                        args['eto_uri'] = args['potential_evapotranspiration']
-                        args['depth_to_root_rest_layer_uri'] = args['depth_to_root_rest_layer']
-                        args['precipitation_uri'] = args['precipitation']
-                        args['pawc_uri'] = args['plant_available_water_fraction']
-                        args['biophysical_table_uri'] = args['biophysical_table']
-                        args['demand_table_uri'] = args['demand_table']
-                        args['lulc_uri'] = args['land_use']
-
-                    if model.name == 'carbon':
-                        args['do_biophysical'] = True
-                        args['do_valuation'] = False
-                        args['do_uncertainty'] = False
-                        args['carbon_pools_uri'] = args['carbon_pools']
-                        args['lulc_cur_uri'] = args['cur_lulc_raster']
-                        args['carbon_pools_uri'] = args['carbon_pools']
-
-                    if model.name == 'pollination':
-                        args['do_valuation'] = False
-                        args['landuse_cur_uri'] = args['cur_lulc_raster']
-
-                        args['landuse_attributes_uri'] = args['landcover_attribute_table']
-                        args['guilds_uri'] = args['guilds']
-                        args['landuse_cur_uri'] = args['cur_lulc_raster']
+                    args['workspace_dir'] = os.path.join(
+                        self.parent.elements[name].run_folder, scenario.name, model.name)
+                    if not os.path.isdir(args['workspace_dir']):
+                        os.mkdirs(args['workspace_dir'])
 
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
