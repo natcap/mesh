@@ -1287,7 +1287,7 @@ class ModelsWidget(ScrollWidget):
     def setup_mesh_model(self, model_name):
         project_setup_json = os.path.join(
             self.root_app.project_folder, 'output', 'model_setup_runs',
-            model_name, '%s_setup_file.json' % model_name)):
+            model_name, '%s_setup_file.json' % model_name)
         default_setup_json = os.path.join(
             self.root_app.default_setup_files_folder,
             '%s_setup_file.json' % model_name)
