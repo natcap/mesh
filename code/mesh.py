@@ -37,7 +37,7 @@ from matplotlib import rcParams  # Used below to make Matplotlib automatically a
 from mesh_models.data_creation import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
-from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
+from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener, BaseWidget
 from natcap.invest.iui import modelui
 import natcap.invest.iui
 
@@ -402,11 +402,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         # Once the project args are set/created/loaded, then call UI-element
         # specific project loader functions.
-        self.models_dock.models_widget.load_from_disk()
-        self.map_widget.load_from_disk()
-        self.scenarios_dock.scenarios_widget.load_from_disk()
-        self.model_runs_widget.load_from_disk()
-        self.reports_widget.load_from_disk()
+        self.models_dock.models_widget.load_from_disk(self.project_args['models_settings_uri'], Model)
+        self.map_widget.load_from_disk(self.project_args['maps_settings_uri'], Map)
+        self.scenarios_dock.scenarios_widget.load_from_disk(self.project_args['scenarios_settings_uri'], Scenario)
+        self.model_runs_widget.load_from_disk(self.project_args['model_runs_settings_uri'], ModelRun)
+        self.reports_widget.load_from_disk(self.project_args['reports_settings_uri'], Report)
 
         self.visible_central_widget_name = 'model_runs'
 
@@ -633,7 +633,7 @@ class ScenariosDock(MeshAbstractObject, QDockWidget):
         self.setWidget(self.scenarios_widget)
 
 
-class ScenariosWidget(ScrollWidget):
+class ScenariosWidget(ScrollWidget, BaseWidget):
     """
     Specifies which scenarios should be run in the full model and lets the user define new scenarios
     """
@@ -692,7 +692,7 @@ class ScenariosWidget(ScrollWidget):
         # horizontal_line.setFrameStyle(QFrame.HLine)
         # self.elements_vbox.addWidget(horizontal_line)
         self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
-
+    """
     def load_element(self, name, args):
         if not name:
             LOGGER.warn('Asked to load an element with a blank name.')
@@ -702,6 +702,7 @@ class ScenariosWidget(ScrollWidget):
             element = Scenario(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
+    """
 
     def create_element(self, name, args=None):
         if not args:
@@ -723,7 +724,7 @@ class ScenariosWidget(ScrollWidget):
         if ok:
             name = str(input_text)
             self.create_element(name)
-
+    """
     def load_from_disk(self):
         self.unload_elements()
         self.save_uri = self.root_app.project_args['scenarios_settings_uri']
@@ -738,7 +739,7 @@ class ScenariosWidget(ScrollWidget):
                     if default_key not in args or not args[default_key]:
                         args[default_key] = default_value
                 self.load_element(name, args)
-
+    """
     def load_element_from_file_select_dialog(self):
         input_text = str(QFileDialog.getExistingDirectory(self, 'Select folder of maps', self.root_app.project_folder))
         if input_text:
@@ -977,7 +978,7 @@ class ModelsDock(MeshAbstractObject, QDockWidget):
         self.setWidget(self.models_widget)
 
 
-class ModelsWidget(ScrollWidget):
+class ModelsWidget(ScrollWidget, BaseWidget):
     """
     Widget to choose which models should run and set them up for the baseline.
     """
@@ -1116,28 +1117,28 @@ class ModelsWidget(ScrollWidget):
         self.scroll_layout.addWidget(self.add_plugins_pb)
         self.scroll_layout.addWidget(QLabel())
 
-    def load_from_disk(self):
-        self.unload_elements()
-        self.save_uri = self.root_app.project_args['models_settings_uri']
-        loaded_object = utilities.file_to_python_object(self.save_uri)
+    #def load_from_disk(self):
+    #    self.unload_elements()
+   #     self.save_uri = self.root_app.project_args['models_settings_uri']
+   #     loaded_object = utilities.file_to_python_object(self.save_uri)
+#
+   #     if isinstance(loaded_object, list):
+    #        self.elements = OrderedDict()
+   #     else:
+    #        for name, args in loaded_object.items():
+    #            default_args = self.create_default_element_args(name)
+    #            for default_key, default_value in default_args.items():
+    #                if default_key not in args or not args[default_key]:
+     #                   args[default_key] = default_value
+    #            self.load_element(name, args)
 
-        if isinstance(loaded_object, list):
-            self.elements = OrderedDict()
-        else:
-            for name, args in loaded_object.items():
-                default_args = self.create_default_element_args(name)
-                for default_key, default_value in default_args.items():
-                    if default_key not in args or not args[default_key]:
-                        args[default_key] = default_value
-                self.load_element(name, args)
-
-    def load_element(self, name, args):
-        if name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
-        else:
-            element = Model(name, args, self.root_app, self)
-            self.elements[name] = element
-            self.elements_vbox.addWidget(element)
+    #def load_element(self, name, args):
+    #    if name in self.elements:
+   #         LOGGER.warn('Attempted to add element that already exists.')
+    #    else:
+    #        element = Model(name, args, self.root_app, self)
+    #        self.elements[name] = element
+    #        self.elements_vbox.addWidget(element)
 
     def create_element(self, name, args=None):
         """NYI"""
@@ -1146,18 +1147,18 @@ class ModelsWidget(ScrollWidget):
         """NYI"""
         return OrderedDict()
 
-    def unload_elements(self):
-        for element in self.elements.values():
-            element.remove_self()
+    #def unload_elements(self):
+   #     for element in self.elements.values():
+    #        element.remove_self()
 
-    def save_to_disk(self):
-        if len(self.elements) == 0:
-            to_write = ','.join([name for name in self.default_state[''].keys()])
-        else:
-            to_write = OrderedDict()
-            for name, element in self.elements.items():
-                to_write.update({name: element.get_element_state_as_args()})
-        utilities.python_object_to_csv(to_write, self.save_uri)
+    #def save_to_disk(self):
+   #     if len(self.elements) == 0:
+    #        to_write = ','.join([name for name in self.default_state[''].keys()])
+   #     else:
+    #        to_write = OrderedDict()
+     #       for name, element in self.elements.items():
+      #          to_write.update({name: element.get_element_state_as_args()})
+       # utilities.python_object_to_csv(to_write, self.save_uri)
 
     def setup_invest_model(self, sender):
         """Launches an InVEST user interface.
@@ -1507,7 +1508,7 @@ class Model(MeshAbstractObject, QWidget):
         self.parent.setup_waterworld_model(self.name)
 
 
-class ModelRunsWidget(MeshAbstractObject, QWidget):
+class ModelRunsWidget(MeshAbstractObject, QWidget, BaseWidget):
     """Widget that can be displayed as the centraWidget of MeshApplication.
 
     Contains many Runs. Presents information on results of the whole
@@ -1608,7 +1609,7 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.logo_hbox.addWidget(self.faded_logo_l)
 
         self.main_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
-
+    """
     def load_from_disk(self):
         self.unload_elements()
         self.save_uri = self.root_app.project_args['model_runs_settings_uri']
@@ -1634,7 +1635,7 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
             element = ModelRun(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
-
+    """
     def create_element(self, name, args=None):
         if not args or not name:
             args = self.create_default_element_args(name)
@@ -1853,7 +1854,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         self.root_app.create_report_qaction.trigger()
 
 
-class ReportsWidget(MeshAbstractObject, QWidget):
+class ReportsWidget(MeshAbstractObject, QWidget, BaseWidget):
     """Shows the currently generated report and provides IO options.
 
     Central widget placeholder for reports.
@@ -1934,7 +1935,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.scroll_widget.scroll_layout.addWidget(self.no_reports_l)
 
         self.main_layout.addWidget(self.scroll_widget)  # Eventually holds the main report, loaded via functions below
-
+    """
     def load_from_disk(self):
         self.unload_elements()
         self.save_uri = self.root_app.project_args['reports_settings_uri']
@@ -1949,8 +1950,8 @@ class ReportsWidget(MeshAbstractObject, QWidget):
                     if default_key not in args or not args[default_key]:
                         args[default_key] = default_value
                 self.load_element(name, args)
-
-    def load_element(self, name, args):
+    """
+    def load_element(self, name, args, class_obj):
         if not name:
             LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
@@ -1959,7 +1960,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
             warnings.warn("Warning, run name not in loaded CSV.")
         else:
             model_run = self.root_app.model_runs_widget.elements[args['run_name']]
-            element = Report(name, args, self.root_app, model_run)
+            element = class_obj(name, args, self.root_app, model_run)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
 
@@ -2406,7 +2407,7 @@ class Report(MeshAbstractObject, QFrame):
 
         doc.print_(printer)
 
-class MapWidget(MeshAbstractObject, QDockWidget):
+class MapWidget(MeshAbstractObject, QDockWidget, BaseWidget):
     """Dock that holds the map viewer CONTROLS (not the actual map canvas)."""
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -2487,7 +2488,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.main_layout.addWidget(self.scroll_area)  # an area is a type of widget required for scroll areas
         self.main_widget.setLayout(self.main_layout)
         self.setWidget(self.main_widget)
-
+    """
     def load_from_disk(self):
         self.unload_elements()
         self.save_uri = self.root_app.project_args['maps_settings_uri']
@@ -2512,7 +2513,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
             element = Map(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
-
+    """
     def create_element(self, name, args=None):
         if not args:
             args = self.create_default_element_args(name)

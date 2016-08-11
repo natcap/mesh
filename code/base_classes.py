@@ -14,6 +14,7 @@ from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
 
+from mesh_utilities import utilities
 
 class ProcessingThread(QThread):
     """
@@ -240,5 +241,56 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         if ok:
             text = str(input_text)
             print('Text inputed: ' + text)
+
+
+class BaseWidget():
+    """Base Widget to hold shared functionality."""
+    def __init__(self, settings_path):
+        super(BaseWidget, self).__init__()
+
+    def load_from_disk(self, settings_path, class_obj):
+        self.unload_elements()
+        self.save_uri = settings_path
+        loaded_object = utilities.file_to_python_object(self.save_uri)
+
+        if isinstance(loaded_object, list):
+            self.elements = OrderedDict()
+        else:
+            for name, args in loaded_object.items():
+                default_args = self.create_default_element_args(name)
+                for default_key, default_value in default_args.items():
+                    if default_key not in args or not args[default_key]:
+                        args[default_key] = default_value
+                self.load_element(name, args, class_obj)
+        try:
+            self.update_runs_table()
+        except:
+            pass
+
+    def load_element(self, name, args, class_obj):
+        if not name:
+            LOGGER.warn('Asked to load an element with a blank name.')
+        elif name in self.elements:
+            LOGGER.warn('Attempted to add element that already exists.')
+        else:
+            element = class_obj(name, args, self.root_app, self)
+            self.elements[name] = element
+            self.elements_vbox.addWidget(element)
+
+    def save_to_disk(self):
+        if len(self.elements) == 0:
+            print('This code should not be run because the default always contains at least the Baseline scenario.')
+            to_write = ','.join([name for name in self.default_state[''].keys()])
+        else:
+            to_write = OrderedDict()
+            for name, element in self.elements.items():
+                to_write.update({name: element.get_element_state_as_args()})
+        utilities.python_object_to_csv(to_write, self.save_uri)
+
+    def unload_elements(self):
+        for element in self.elements.values():
+            element.remove_self()
+
+
 
 
