@@ -1277,7 +1277,7 @@ class ModelsWidget(ScrollWidget):
             A copied, modified dictionary of args
         """
         return_args = args.copy()
-
+        print vals
         def recursive_update(args_copy, vals, model_name, input_mapping):
             """Recursive function to walk dictionary."""
             if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
@@ -1300,6 +1300,15 @@ class ModelsWidget(ScrollWidget):
                         args_copy["defaultValue"] = os.path.join(
                             self.root_app.project_folder, 'input',
                             self.sender.name)
+                else:
+                    try:
+                        if '/' in vals[args_copy["args_id"]] or re.search('.[a-zA-Z]{3}$', vals[args_copy["args_id"]]):
+                            args_copy["defaultValue"] = os.path.join(
+                                self.root_app.base_data_folder, vals[args_copy["args_id"]])
+                        else:
+                            args_copy["defaultValue"] = vals[args_copy["args_id"]]
+                    except:
+                        args_copy["defaultValue"] = vals[args_copy["args_id"]]
                 # Check to see if there's another list of dictionaries and
                 # if so, walk them.
                 if "elements" in args_copy:
