@@ -6,3 +6,4 @@ invest_lcm,InVEST Land-Change Model,MESH_built_in,,False
 roi_maximizer,Return-on-Investment (ROI) maximizer,MESH_built_in,,False
 tradeoff_frontier_maximizer,Tradeoff frontier maximizer,MESH_built_in,,False
 market_change_simulator,Market change simulator,MESH_built_in,,False
+scenario_gen_proximity,InVEST Proximity Scenario Generator,MESH_built_in,,True
