@@ -64,9 +64,11 @@ class ProcessingThread(QThread):
                 execute_sdr_model(self.args)
                 self.update_run_log('Finished Sediment Delivery Ratio Model.')
 
-            # This one is different because it's not calling the python library bu tthe fulll modelui iui file.
+            # This one is different because it's not calling the python library but the full modelui iui file.
             if self.model_name == 'scenario_generator':
-                modelui.main(self.json_file_name, last_run_override=self.args)
+                modelui.main(self.json_file_name)
+            if self.model_name == 'scenario_gen_proximity':
+                modelui.main(self.json_file_name)
 
             self.emit_finished()
         except:
