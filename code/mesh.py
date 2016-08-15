@@ -1202,7 +1202,6 @@ class ModelsWidget(ScrollWidget):
             # If a call from Scenario the sender.name is going to be the name
             # of the user labeled scenario and not the InVEST model name
             model_name = self.sender.model_name
-            print model_name
         else:
             model_name = self.sender.name
 
@@ -3735,7 +3734,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
                             args = archive_args["arguments"]
-                            print args
                             break
 
                     args['workspace_dir'] = os.path.join(
