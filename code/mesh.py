@@ -683,11 +683,13 @@ class ScenariosWidget(ScrollWidget):
         self.new_scenario_pb.setIcon(self.new_scenario_icon)
         self.new_scenario_pb.clicked.connect(self.create_element_from_name_dialog)
         self.add_scenarios_hbox.addWidget(self.new_scenario_pb)
+
         self.load_scenario_pb = QPushButton('Load Scenario')
         self.load_scenario_icon = QIcon(QPixmap('icons/document-open.png'))
         self.load_scenario_pb.setIcon(self.load_scenario_icon)
         self.load_scenario_pb.clicked.connect(self.load_element_from_file_select_dialog)
         self.add_scenarios_hbox.addWidget(self.load_scenario_pb)
+
         self.validate_baseline_pb = QPushButton('Check if ready')
         self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.validate_baseline_pb.setIcon(self.unvalidated_icon)
@@ -792,6 +794,7 @@ class Scenario(MeshAbstractObject, QWidget):
         super(Scenario, self).__init__(root_app, parent)
         self.name = name
         self.args = args
+        self.model_name = ""
         self.initialize_from_args()
 
         self.create_ui()
@@ -965,6 +968,7 @@ class Scenario(MeshAbstractObject, QWidget):
         """
         output_args = input_args
         baseline_sources = self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].elements
+
         for name, element in self.elements.items():
             if element.name not in baseline_sources:
                 output_args['lulc_uri'] = element.uri
@@ -1197,7 +1201,8 @@ class ModelsWidget(ScrollWidget):
         if isinstance(self.sender, Scenario):
             # If a call from Scenario the sender.name is going to be the name
             # of the user labeled scenario and not the InVEST model name
-            model_name = 'scenario_generator'
+            model_name = self.sender.model_name
+            print model_name
         else:
             model_name = self.sender.name
 
@@ -1277,7 +1282,7 @@ class ModelsWidget(ScrollWidget):
             A copied, modified dictionary of args
         """
         return_args = args.copy()
-        print vals
+
         def recursive_update(args_copy, vals, model_name, input_mapping):
             """Recursive function to walk dictionary."""
             if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
@@ -3161,6 +3166,13 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_state['invest_scenario_generator']['model_args'] = ''
     default_state['invest_scenario_generator']['enabled'] = True
 
+    default_state['scenario_gen_proximity'] = default_element_args.copy()
+    default_state['scenario_gen_proximity']['name'] = 'scenario_gen_proximity'
+    default_state['scenario_gen_proximity']['long_name'] = 'InVEST Proximity Scenario Generator'
+    default_state['scenario_gen_proximity']['model_type'] = 'MESH_built_in'
+    default_state['scenario_gen_proximity']['model_args'] = ''
+    default_state['scenario_gen_proximity']['enabled'] = True
+
     default_state['climate_scenario'] = default_element_args.copy()
     default_state['climate_scenario']['name'] = 'climate_scenario'
     default_state['climate_scenario']['long_name'] = 'Climate scenario generator'
@@ -3217,6 +3229,10 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
                 self.pbs[scenario_generation_method['name']].setText(
                     str(self.pbs[scenario_generation_method['name']].text()) + ' *')
 
+            if scenario_generation_method['name'] == 'scenario_gen_proximity':
+                self.pbs[scenario_generation_method['name']].setText(
+                    str(self.pbs[scenario_generation_method['name']].text()) + ' *')
+
         self.asterisk_l = QLabel('\n\n* Click "User Defined Scenario" after running this model to add it.')
         self.main_layout.addWidget(self.asterisk_l)
 
@@ -3231,11 +3247,16 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
 
         self.pbs['user_defined_folder'].clicked.connect(self.populate_with_existing_file)
         self.pbs['invest_scenario_generator'].clicked.connect(self.setup_invest_model_signal_wrapper)
+        self.pbs['scenario_gen_proximity'].clicked.connect(self.setup_invest_model_signal_wrapper)
 
         self.show()
 
     def setup_invest_model_signal_wrapper(self):
         if self.sender() is self.pbs['invest_scenario_generator']:
+            self.parent.model_name = 'scenario_generator'
+            self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
+        if self.sender() is self.pbs['scenario_gen_proximity']:
+            self.parent.model_name = 'scenario_gen_proximity'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
 
     def populate_with_existing_file(self):
@@ -3720,7 +3741,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                     args['workspace_dir'] = os.path.join(
                         self.parent.elements[name].run_folder, scenario.name, model.name)
                     if not os.path.isdir(args['workspace_dir']):
-                        os.mkdirs(args['workspace_dir'])
+                        os.makedirs(args['workspace_dir'])
 
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
