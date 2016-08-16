@@ -200,22 +200,20 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
         got_it:
            nsisunz::UnzipToLog ${LocalFileName} "."
            Pop $0
-           StrCmp $0 "success" done download_unzip_fail
+           StrCmp $0 "success" done
+                MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
         failed:
            MessageBox MB_OK "Download failed: $R0 ${DownloadURL}. This might have happened because your Internet connection timed out, or our download server is experiencing problems. Please check your internet connection or use a local data zipfile. The installation will now cancel."
            Abort
-        download_unzip_fail:
-            MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
         done:
            Delete ${LocalFileName}
     ${Else}
         ; MessageBox MB_OK "${Path}"
         nsisunz::UnzipToLog "${Path}" "."
         Pop $0
-        StrCmp $0 "success" ok failed_unzip
+        StrCmp $0 "success" ok
+            MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
         ok:
             ; success on unzip
-        failed_unzip:
-            MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
     ${EndIf}
 !macroend
