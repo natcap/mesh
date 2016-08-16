@@ -206,10 +206,10 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
            Abort
         done:
             ; $0 contains the local file name
-            ; MessageBox MB_OK "$LocalFileName"
+            MessageBox MB_OK "${LocalFileName}"
             ;nsisunz::UnzipToLog "${LocalFileName}" "."
     ${Else}
-        MessageBox MB_OK "${Path}"
+        ; MessageBox MB_OK "${Path}"
         nsisunz::UnzipToLog ${Path} "."
     ${EndIf}
 !macroend
