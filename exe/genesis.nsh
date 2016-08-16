@@ -208,11 +208,15 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
     ${Else}
         ; MessageBox MB_OK "${Path}"
         nsisunz::UnzipToLog ${Path} "."
+        Pop $0
+        StrCmp $0 "success" done
+            MessageBox MB_OK "$0"
+            DetailPrint "$0"
         goto done
 
     done:
         ; $0 contains the local file name
-        MessageBox MB_OK "${LocalFileName}"
+        ; MessageBox MB_OK "${LocalFileName}"
         ;nsisunz::UnzipToLog "${LocalFileName}" "."
 
     ${EndIf}
