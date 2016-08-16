@@ -207,7 +207,7 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
 
     ${Else}
         ; MessageBox MB_OK "${Path}"
-        nsisunz::UnzipToLog ${Path} "."
+        nsisunz::UnzipToLog "${Path}" "."
         Pop $0
         StrCmp $0 "success" done
             MessageBox MB_OK "$0"
