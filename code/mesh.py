@@ -743,6 +743,22 @@ class ScenariosWidget(ScrollWidget):
                     if default_key not in args or not args[default_key]:
                         args[default_key] = default_value
                 self.load_element(name, args)
+        # Try and load Scenario updated invest args
+        self.load_invest_archive()
+
+    def load_invest_archive(self):
+        """Try and load updated InVEST args based on Scenario.
+
+        Attempts to load them to Scenario by name and to
+        Scenario.archive_args dictionary
+        """
+        base_dir = os.path.join(self.root_app.project_folder, 'settings')
+        archive_files = {}
+        for name, scenario in self.elements.items():
+            archive_path = os.path.join(base_dir, '%s_archive_args.json' % name)
+            if os.path.isfile(archive_path):
+                json_archive = open(archive_path).read()
+                scenario.archive_args = json.loads(json_archive)
 
     def load_element_from_file_select_dialog(self):
         input_text = str(QFileDialog.getExistingDirectory(self, 'Select folder of maps', self.root_app.project_folder))
@@ -764,6 +780,17 @@ class ScenariosWidget(ScrollWidget):
             for name, element in self.elements.items():
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
+        # Save Scenario.archive_args to json file for each scenario
+        self.save_invest_archive()
+
+    def save_invest_archive(self):
+        """Save each Scenario.archive_args to json file in project sttings."""
+        base_dir = os.path.join(self.root_app.project_folder, 'settings')
+        for name, scenario in self.elements.items():
+            if len(scenario.archive_args.keys()) > 0:
+                save_path = os.path.join(base_dir, '%s_archive_args.json' % name)
+                with open(save_path, 'w') as fp:
+                    json.dump(scenario.archive_args, fp)
 
     def get_checked_elements(self):
         checked_elements = []
@@ -2870,7 +2897,6 @@ class Source(MeshAbstractObject, QWidget):
     """
 
     def __init__(self, name, uri, root_app=None, parent=None):
-        print "SOURCE CLASS"
         super(Source, self).__init__(root_app, parent)
         self.name = name
         self.uri = uri
