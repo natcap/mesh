@@ -796,7 +796,8 @@ class Scenario(MeshAbstractObject, QWidget):
         self.args = args
         self.model_name = ""
         self.initialize_from_args()
-
+        # Special Param for updating InVEST args for Mesh Runs
+        self.archive_args = {}
         self.create_ui()
 
         try:
@@ -968,12 +969,27 @@ class Scenario(MeshAbstractObject, QWidget):
         """
         output_args = input_args
         baseline_sources = self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].elements
-
         for name, element in self.elements.items():
             if element.name not in baseline_sources:
                 output_args['lulc_uri'] = element.uri
                 output_args['cur_lulc_raster'] = element.uri
                 output_args['lulc_cur_uri'] = element.uri
+        return output_args
+
+    def update_invest_args_with_difference(self, model_name, input_args):
+        """Checks to see what about the (non-baseline) scenario is different."""
+        # Updated inputs dictionary if model name args have been updated
+        output_args = {}
+        if model_name in self.archive_args:
+            for key, val in input_args.iteritems():
+                # If the User has updated this input and it's not blank, update
+                if key in self.archive_args[model_name] and self.archive_args[model_name][key] != '':
+                    output_args[key] = self.archive_args[model_name][key]
+                else:
+                    output_args[key] = val
+        else:
+            return input_args
+
         return output_args
 
     def unload_elements(self):
@@ -2854,6 +2870,7 @@ class Source(MeshAbstractObject, QWidget):
     """
 
     def __init__(self, name, uri, root_app=None, parent=None):
+        print "SOURCE CLASS"
         super(Source, self).__init__(root_app, parent)
         self.name = name
         self.uri = uri
@@ -3158,6 +3175,14 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_state['user_defined_folder']['model_args'] = ''
     default_state['user_defined_folder']['enabled'] = True
 
+    default_state = OrderedDict()
+    default_state['update_invest_args'] = default_element_args.copy()
+    default_state['update_invest_args']['name'] = 'update_invest_args'
+    default_state['update_invest_args']['long_name'] = 'Update InVEST Parameters'
+    default_state['update_invest_args']['model_type'] = 'MESH_built_in'
+    default_state['update_invest_args']['model_args'] = ''
+    default_state['update_invest_args']['enabled'] = True
+
     default_state['invest_scenario_generator'] = default_element_args.copy()
     default_state['invest_scenario_generator']['name'] = 'invest_scenario_generator'
     default_state['invest_scenario_generator']['long_name'] = 'InVEST Scenario Generator'
@@ -3232,7 +3257,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
                 self.pbs[scenario_generation_method['name']].setText(
                     str(self.pbs[scenario_generation_method['name']].text()) + ' *')
 
-        self.asterisk_l = QLabel('\n\n* Click "User Defined Scenario" after running this model to add it.')
+        self.asterisk_l = QLabel('\n\n* Click "Update InVEST Parameters" after running this model to add it.')
         self.main_layout.addWidget(self.asterisk_l)
 
         self.additional_generators_l = QLabel(
@@ -3245,12 +3270,14 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.add_plugins_pb)
 
         self.pbs['user_defined_folder'].clicked.connect(self.populate_with_existing_file)
+        self.pbs['update_invest_args'].clicked.connect(lambda: UpdatedInputsDialog(self.root_app, self))
         self.pbs['invest_scenario_generator'].clicked.connect(self.setup_invest_model_signal_wrapper)
         self.pbs['scenario_gen_proximity'].clicked.connect(self.setup_invest_model_signal_wrapper)
 
         self.show()
 
     def setup_invest_model_signal_wrapper(self):
+        self.close()
         if self.sender() is self.pbs['invest_scenario_generator']:
             self.parent.model_name = 'scenario_generator'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
@@ -3285,6 +3312,227 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         scenario_generator_iui_json_file = 'scenario-generator.json'
         modelui.main(scenario_generator_iui_json_file, last_run_override=override_args)
         uri = os.path.join(save_folder, 'scenario_' + override_args['suffix'] + '.tif')
+
+
+class UpdatedInputsDialog(MeshAbstractObject, QDialog):
+    """Dialog for selecting Mesh Run inputs from Scenario outputs."""
+    def __init__(self, root_app=None, parent=None):
+        super(UpdatedInputsDialog, self).__init__(root_app, parent)
+        # Save the QWidget objects so we can get the string from them
+        self.elements = {}
+        # The parent here is ScenarioPopulatorDialog who's parent is
+        # the Scenario we are working from. This gets us access to the
+        # scenario name, archive_dict, and load_elements function
+        self.scenario = parent.parent
+        # Create the layout for the Dialog
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.setWindowTitle('Update Inputs For Scenario')
+        self.title_l = QLabel('Update Model Inputs')
+        self.title_l.setFont(config.heading_font)
+        self.main_layout.addWidget(self.title_l)
+
+        scroll_widget = ScrollWidget(self.root_app, self)
+        self.main_layout.addWidget(scroll_widget)
+        scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
+        scroll_widget.setMinimumSize(800, 700)
+        # Structure the layout in a 3 x N grid. With the following headers
+        # below.
+        grid = QGridLayout()
+        grid.setSpacing(10)
+        # Keep track of our current grid row
+        grid_row = 1
+        header_names = ["Input Description", "Baseline Value", "Scenario Value"]
+        for name, index in zip(header_names, [0, 1, 2]):
+            header = QLabel(name)
+            header.setFont(config.heading_font)
+            grid.addWidget(header, grid_row, index)
+
+        # Currently determining which models to iterate by looking at which
+        # ones are checked in the Models Dock
+        checked_models = self.root_app.models_dock.models_widget.get_checked_elements()
+        if checked_models and self.root_app.project_aoi:
+            for model in checked_models:
+                # For each model set up a dictionary to save Widgets
+                self.elements[model.name] = {}
+                model_label = QLabel(model.name.upper())
+                model_label.setFont(config.bold_font)
+                grid_row += 1
+                grid.addWidget(model_label, grid_row, 0)
+                # Directory where archived json file is saved
+                setup_file_dir = os.path.join(
+                    self.root_app.project_folder, 'output',
+                    'model_setup_runs', model.name)
+                # Find the archive json file, load and grab arguments
+                for file in os.listdir(setup_file_dir):
+                    if file.endswith('.json') and "archive" in file:
+                        json_archive = open(os.path.join(setup_file_dir, file)).read()
+                        archive_args = json.loads(json_archive)
+                        args = archive_args["arguments"]
+                        break
+                # We need the original json file for the InVEST model so we
+                # can print out readable labels
+                invest_json_copy = os.path.join(
+                    self.root_app.project_folder, 'invest-json-copies', model.name + '.json')
+                invest_json = json.loads(open(invest_json_copy).read())
+                invest_args = self.get_flat_arguments(invest_json)
+
+                for arg_id, arg_val in args.iteritems():
+                    grid_row += 1
+                    arg_label = QLabel(invest_args[arg_id]['label'])
+                    # Don't want to give the user the choice to update
+                    # workspace directory
+                    if arg_id == 'workspace_dir':
+                        continue
+                    grid.addWidget(arg_label, grid_row, 0)
+                    # Box Widget for the baseline used value
+                    arg_val_box = QLineEdit(str(arg_val))
+                    arg_val_box.setEnabled(False)
+                    grid.addWidget(arg_val_box, grid_row, 1)
+                    # Get type to determine how user interacts / updates input.
+                    arg_type = invest_args[arg_id]['type']
+                    if arg_type == 'file':
+                        # Add QLineEdit to put new path in
+                        txt_box = QLineEdit()
+                        grid.addWidget(txt_box, grid_row, 2)
+                        # Add File Button so user can nav to new file
+                        file_button = FileButton(self, 'Select File', txt_box)
+                        grid.addWidget(file_button, grid_row, 3)
+                        # Keep track of the LineEdit object so we can grab
+                        # the new path later
+                        self.elements[model.name][arg_id] = txt_box
+                    elif arg_type == 'text':
+                        txt_box = QLineEdit()
+                        grid.addWidget(txt_box, grid_row, 2)
+                        self.elements[model.name][arg_id] = txt_box
+                    elif arg_type == 'dropdown' or arg_type == 'container':
+                        # If a container or dropdown type, don't let the user
+                        # update input, but still who it to them.
+                        label_box = QLabel(str(arg_val))
+                        grid.addWidget(label_box, grid_row, 2)
+                    else:
+                        # Not sure if we could see a different "type" here,
+                        # adding print and pass for debug
+                        print "UPDATING InVEST SCENARIO ARG WITH TYPE:"
+                        print arg_type
+                        pass
+
+            # New layout to hold Submit / Cancel button
+            horizontal_layout = QHBoxLayout()
+            # Don't add padding to left of Submit button
+            horizontal_layout.addStretch(0)
+            submit_button = QPushButton("Submit")
+            submit_button.setStyleSheet('QPushButton {color: green; font-size: 11pt}')
+            submit_button.setFont(config.bold_font)
+            # Make button take up as little space as needed
+            submit_button.setSizePolicy(
+                QSizePolicy.Maximum, QSizePolicy.Maximum)
+            submit_button.clicked.connect(self.update_new_arguments)
+            horizontal_layout.addWidget(submit_button)
+            # Don't add padding to right of Submit button
+            horizontal_layout.addStretch(0)
+            cancel_button = QPushButton("Cancel")
+            cancel_button.setStyleSheet('QPushButton {color: red; font-size: 11pt}')
+            cancel_button.setFont(config.bold_font)
+            # Make button take up as little space as needed
+            cancel_button.setSizePolicy(
+                QSizePolicy.Maximum, QSizePolicy.Maximum)
+            cancel_button.clicked.connect(self.close)
+            horizontal_layout.addWidget(cancel_button)
+            # Fill padding to the right of the Cancel button
+            horizontal_layout.addStretch(1)
+            scroll_widget.scroll_layout.addLayout(grid)
+            scroll_widget.scroll_layout.addLayout(horizontal_layout)
+
+        self.show()
+
+    def update_new_arguments(self):
+        """On Submit update the Scenario 'archive_args'.
+
+        Each Scenario has an 'archive_args' parameter that will be updated
+        based on the baseline model runs here. Using the values the
+        user has entered into the QLineEdit boxes.
+        """
+        for model_name in self.elements.keys():
+            self.scenario.archive_args[model_name] = {}
+            for key, val in self.elements[model_name].iteritems():
+                self.scenario.archive_args[model_name][key] = str(val.text())
+
+        # Add this to the Scenario Widget for display update
+        self.scenario.load_element(
+            "Scenario Parameters Adjusted", "Scenario Parameters Adjusted")
+
+        self.close()
+
+    def get_flat_arguments(self, args):
+        """Build a dictionary with the label and type of the args_id.
+
+        Based on the args_id's / arguments the user ran the InVEST setup
+        model with, grab those fields 'type' and 'label' to use in displaying
+        for the dialog.
+        """
+        flatDict = {}
+        if isinstance(args, dict):
+            if 'args_id' in args:
+                flatDict[args['args_id']] = {}
+                for param in ['type', 'label']:
+                    if param in args:
+                        flatDict[args['args_id']][param] = args[param]
+            if 'elements' in args:
+                flatDict.update(self.get_flat_arguments(args['elements']))
+        elif isinstance(args, list):
+            for element in args:
+                flatDict.update(self.get_flat_arguments(element))
+
+        return flatDict
+
+
+class FileButton(QPushButton):
+    """This object is the button used in the FileEntry object that, when
+        pressed, will open a file dialog (QtGui.QFileDialog).  The string URI
+        returned by the QFileDialog will be set as the text of the provided
+        URIField.
+
+        Arguments:
+        text - the string text title of the popup window.
+        URIField - a QtGui.QLineEdit.  This object will receive the string URI
+            from the QFileDialog."""
+
+    def __init__(self, parent, text, URIfield, filetype='file', filter='all'):
+        super(FileButton, self).__init__()
+        self.text = text
+        self.setIcon(QIcon('icons/document-open.png'))
+        self.URIfield = URIfield
+        self.filetype = filetype
+        self.default_folder = os.path.join(parent.root_app.project_folder, 'input')
+
+        #connect the button (self) with the filename function.
+        self.clicked.connect(self.getFileName)
+
+    def getFileName(self, filetype='file'):
+        """Get the URI from the QFileDialog.
+
+            If the user presses OK in the QFileDialog, the dialog returns the
+            URI to the selected file.
+
+            If the user presses 'Cancel' in the QFileDialog, the dialog returns
+            ''.  As a result, we must first save the previous contents of the
+            QLineEdit before we open the dialog.  Then, if the user presses
+            'Cancel', we can restore the previous field contents."""
+
+        default_folder = self.default_folder
+
+        if self.filetype == 'folder':
+            filename = QFileDialog.getExistingDirectory(self, 'Select ' +
+                self.text, default_folder)
+        else:
+            file_dialog = QFileDialog()
+            filename, filter = file_dialog.getOpenFileNameAndFilter(self,
+                'Select ' + self.text, default_folder)
+
+        #Set the value of the URIfield.
+        self.URIfield.setText(filename)
 
 
 class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
@@ -3743,7 +3991,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
-                            scenario.name].update_args_with_difference(args)
+                            scenario.name].update_invest_args_with_difference(model.name, args)
 
                 if model.model_type == 'MESH Model':
                     setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model.name,
@@ -3754,7 +4002,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
-                            scenario.name].update_args_with_difference(args)
+                            scenario.name].update_args_with_difference(model.name, args)
                     self.root_app.args_queue.update({model.name + ' -- ' + scenario.name: args})
 
                 # Got lazy and used string manupulation for splitting models from scenarios
