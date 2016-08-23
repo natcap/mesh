@@ -17,7 +17,7 @@ LangString SELECT_ZIPFILE ${LANG_ENGLISH} "Select zipfile"
     !endif
     Pop ${output}
 !macroend
- 
+
 !macro Func_StrRep un
     Function ${un}StrRep
         Exch $R2 ;new
@@ -32,7 +32,7 @@ LangString SELECT_ZIPFILE ${LANG_ENGLISH} "Select zipfile"
         Push $R7
         Push $R8
         Push $R9
- 
+
         StrCpy $R3 0
         StrLen $R4 $R1
         StrLen $R6 $R0
@@ -52,7 +52,7 @@ LangString SELECT_ZIPFILE ${LANG_ENGLISH} "Select zipfile"
             IntOp $R3 $R3 + $R9 ;move offset by length of the replacement string
             Goto loop
         done:
- 
+
         Pop $R9
         Pop $R8
         Pop $R7
@@ -134,7 +134,7 @@ var DataLocal
     call CheckRadioButtonState  ; set the enabled state
 
     nsDialogs::Show
-!macroEnd        
+!macroEnd
 
 Function GetZipFile
     nsDialogs::SelectFileDialog "open" "" "Zipfiles *.zip"
@@ -172,7 +172,7 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
     ; If we need to validate the filename of the archive provided.
     ${NSD_GetState} $DataLocal $0
     ${If} $0 == 1
-        ${If} "${FileVar}" == "" 
+        ${If} "${FileVar}" == ""
             MessageBox MB_OK "$(MUST_PROVIDE_ZIPFILE)"
             Abort
         ${ElseIfNot} ${FileExists} ${FileVar}
@@ -198,17 +198,22 @@ LangString MUST_BE_ZIPFILE ${LANG_ENGLISH} "File must be a zipfile (*.zip)"
         Pop $R0 ;Get the status of the file downloaded
         StrCmp $R0 "success" got_it failed
         got_it:
-           nsisunz::UnzipToLog ${Filename} "."
-           Delete ${Filename}
-           goto done
+           nsisunz::UnzipToLog ${LocalFileName} "."
+           Pop $0
+           StrCmp $0 "success" done
+                MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
         failed:
            MessageBox MB_OK "Download failed: $R0 ${DownloadURL}. This might have happened because your Internet connection timed out, or our download server is experiencing problems. Please check your internet connection or use a local data zipfile. The installation will now cancel."
            Abort
         done:
-            ; $0 contains the local file name
-            ; MessageBox MB_OK "$LocalFileName"
-            nsisunz::UnzipToLog "${LocalFileName}" "."
+           Delete ${LocalFileName}
     ${Else}
-        nsisunz::UnzipToLog ${Path} "."
+        ; MessageBox MB_OK "${Path}"
+        nsisunz::UnzipToLog "${Path}" "."
+        Pop $0
+        StrCmp $0 "success" ok
+            MessageBox MB_OK "Failed unzipping the file to installation directory. Error Message: $0 "
+        ok:
+            ; success on unzip
     ${EndIf}
 !macroend
