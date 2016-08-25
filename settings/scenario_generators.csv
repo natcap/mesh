@@ -1,6 +1,8 @@
 name,long_name,model_type,model_args,enabled
 user_defined_folder,User Defined Folder,MESH_built_in,,True
+update_invest_args,Update InVEST Parameters,MESH_built_in,,True
 invest_scenario_generator,InVEST Scenario Generator,MESH_built_in,,True
+scenario_gen_proximity,InVEST Proximity Scenario Generator,MESH_built_in,,True
 climate_scenario,Climate scenario generator,MESH_built_in,,True
 invest_lcm,InVEST Land-Change Model,MESH_built_in,,False
 roi_maximizer,Return-on-Investment (ROI) maximizer,MESH_built_in,,False
