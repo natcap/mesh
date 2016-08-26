@@ -46,6 +46,8 @@ from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, Nam
 from natcap.invest.iui import modelui
 import natcap.invest.iui
 
+from model_plugin import InvestPluginButton
+
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
 LOGGER.setLevel(logging.WARN)
@@ -584,7 +586,9 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.reports_widget.setVisible(True)
 
     def create_load_plugin_dialog(self):
-        self.load_plugin_dialog = InstallPluginsDialog(self, self)
+        #self.load_plugin_dialog = InstallPluginsDialog(self, self)
+        self.models_dock.models_widget
+        self.load_plugin_dialog = DisplyPluginChoices(self, self)
 
     def create_configure_base_data_dialog(self):
         self.configure_base_data_dialog = ConfigureBaseDataDialog(self, self)
@@ -1013,30 +1017,10 @@ class ModelsWidget(ScrollWidget):
     default_element_args['checked'] = ''
 
     default_state = OrderedDict()
-    default_state['ndr'] = default_element_args.copy()
-    default_state['ndr']['name'] = 'ndr'
-    default_state['ndr']['long_name'] = 'Nutrient Retention'
-    default_state['ndr']['model_type'] = 'InVEST Model'
-
-    default_state['hydropower_water_yield'] = default_element_args.copy()
-    default_state['hydropower_water_yield']['name'] = 'hydropower_water_yield'
-    default_state['hydropower_water_yield']['long_name'] = 'Hydropower Water Yield'
-    default_state['hydropower_water_yield']['model_type'] = 'InVEST Model'
-
-    default_state['carbon'] = default_element_args.copy()
-    default_state['carbon']['name'] = 'carbon'
-    default_state['carbon']['long_name'] = 'Carbon Storage'
-    default_state['carbon']['model_type'] = 'InVEST Model'
-
     default_state['pollination'] = default_element_args.copy()
     default_state['pollination']['name'] = 'pollination'
     default_state['pollination']['long_name'] = 'Pollination'
     default_state['pollination']['model_type'] = 'InVEST Model'
-
-    default_state['sdr'] = default_element_args.copy()
-    default_state['sdr']['name'] = 'sdr'
-    default_state['sdr']['long_name'] = 'Sediment Delivery'
-    default_state['sdr']['model_type'] = 'InVEST Model'
 
     def __init__(self, root_app=None, parent=None):
         super(ModelsWidget, self).__init__(root_app, parent)
@@ -1163,6 +1147,15 @@ class ModelsWidget(ScrollWidget):
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
 
+    def load_plugin_element(self, name, args, new_model):
+        if name in self.elements:
+            LOGGER.warn('Attempted to add element that already exists.')
+        else:
+            element = Model(name, args, self.root_app, self, new_model)
+            self.elements[name] = element
+            self.elements_vbox.addWidget(element)
+
+
     def create_element(self, name, args=None):
         """NYI"""
 
@@ -1182,143 +1175,6 @@ class ModelsWidget(ScrollWidget):
             for name, element in self.elements.items():
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
-
-    def setup_invest_model(self, sender):
-        """
-        There are two basic ways a model might be run in MESH. The setup run, which in the case of invest models creates
-        the json file of model run parameters. Setup runs use the UI of invest, or a custom MESH dialog.
-        Next is the full run, which uses the json setup files and calls the selected models iteratively without bringing up the ui
-         and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
-        """
-        self.sender = sender
-
-        # Check if trying to create a differenct scenario with
-        # InVEST Scenario generator
-        if isinstance(self.sender, Scenario):
-            # If a call from Scenario the sender.name is going to be the name
-            # of the user labeled scenario and not the InVEST model name
-            model_name = 'scenario_generator'
-        else:
-            model_name = self.sender.name
-
-        # Json file name with extension for InVEST model model.name
-        json_file_name = model_name + '.json'
-        # Path to CSV file for mapping MESH input data to the model model.name
-        input_mapping_uri = os.path.join(
-            '../settings/default_setup_files',
-            '%s_input_mapping.csv' % model_name)
-        # Read the input mapping CSV into a dictionary
-        input_mapping = utilities.file_to_python_object(input_mapping_uri)
-        # Path where an InVEST setup run json file is saved. If the model
-        # has already been run and this file exists, use this as default.
-        existing_last_run_uri = os.path.join(
-            self.root_app.project_folder, 'output', 'model_setup_runs',
-            model_name, '%s_setup_file.json' % model_name)
-        # Path to the MESH default json parameters.
-        default_last_run_uri = os.path.join(
-            self.root_app.default_setup_files_folder,
-            '%s_setup_file.json' % model_name)
-        # Check to see if an existing json file exists from a previous
-        # setup run
-        if os.path.exists(existing_last_run_uri):
-            new_json_path = existing_last_run_uri
-        else:
-            # Read in MESH setup json to a dictionary
-            default_args = utilities.file_to_python_object(
-                default_last_run_uri)
-            # Get the location of the InVEST model json file, which is
-            # distributed with InVEST in IUI package
-            invest_model_json_path = os.path.join(
-                os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
-            # Path to copy InVEST json file to
-            invest_json_copy = os.path.join(
-                self.root_app.project_folder, json_file_name)
-            shutil.copy(invest_model_json_path, invest_json_copy)
-            # Read in copied InVEST Json to dictionary
-            invest_json_dict = utilities.file_to_python_object(
-                invest_json_copy)
-            # Update the dictionary based on MESH setup json and input mapping
-            # files
-            new_json_args = self.modify_invest_args(
-                invest_json_dict, default_args, model_name, input_mapping)
-            # Make the model directory, which will also be the InVEST workspace
-            # In order to place the json file in that location
-            if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
-                os.mkdir(os.path.dirname(existing_last_run_uri))
-            # Write updated dictionary to new json file.
-            new_json_path = existing_last_run_uri
-            with open(new_json_path, 'w') as fp:
-                json.dump(new_json_args, fp)
-            # Don't need to keep arounnd copied InVEST Json file, delete.
-            os.remove(invest_json_copy)
-
-        self.running_setup_uis.append(modelui.main(new_json_path))
-
-    def modify_invest_args(self, args, vals, model_name, input_mapping=None):
-        """Walks a dictionary and updates the values.
-
-        Specifically copies the dictionary 'args', and walks the dictionary
-        looking for the key "args_id". This key is a specific InVEST key.
-        When found it updates the corresponding "defaultValue" from 'vals'
-        and / or 'input_mapping'.
-
-        Parameters:
-            args (dict) - a dictionary representing an InVEST UI json file.
-                This is the dictionary to walk and update.
-            vals (dict) - a single level dictionary with keys matching
-                'args' keys "args_id" values. 'vals' values determine
-                how 'args' should be updated.
-            model_name (string) - a string for the InVEST model name being
-                updated
-            input_mapping (dict) - a dictionary with keys matching
-                'args' keys "args_id" values. The values update 'args'.
-
-        Return:
-            A copied, modified dictionary of args
-        """
-        return_args = args.copy()
-
-        def recursive_update(args_copy, vals, model_name, input_mapping):
-            """Recursive function to walk dictionary."""
-            if ("args_id" in args_copy) and (args_copy["args_id"] in vals):
-                key = args_copy["args_id"]
-                if vals[args_copy["args_id"]] == 'set_based_on_project_input':
-                    if isinstance(self.sender, Scenario):
-                        args_copy["defaultValue"] = os.path.join(
-                            self.root_app.project_folder, 'input', 'Baseline',
-                            input_mapping[key]['save_location'])
-                    else:
-                        args_copy["defaultValue"] = os.path.join(
-                            self.root_app.project_folder,
-                            input_mapping[key]['save_location'])
-                # I THINK this should only  be needed for setting the workspace.
-                elif vals[args_copy["args_id"]] == 'set_based_on_model_setup_runs_folder':
-                    args_copy["defaultValue"] = os.path.join(
-                        self.root_app.project_folder, 'output',
-                        'model_setup_runs', model_name)
-                elif vals[args_copy["args_id"]] == 'set_based_on_scenario':
-                        args_copy["defaultValue"] = os.path.join(
-                            self.root_app.project_folder, 'input',
-                            self.sender.name)
-                # Check to see if there's another list of dictionaries and
-                # if so, walk them.
-                if "elements" in args_copy:
-                    for sub_args in args_copy["elements"]:
-                        recursive_update(
-                            sub_args, vals, model_name, input_mapping)
-            elif "elements" in args_copy:
-                for sub_args in args_copy["elements"]:
-                    recursive_update(
-                        sub_args, vals, model_name, input_mapping)
-            else:
-                # It's possible that a dictionary doesn't have either
-                # 'args_id' or 'elements', in which case we don't care
-                pass
-
-        # Start recursive walk of dictionary
-        recursive_update(return_args, vals, model_name, input_mapping)
-
-        return return_args
 
     def setup_mesh_model(self, model_name):
         if os.path.exists(os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model_name,
@@ -1377,10 +1233,14 @@ class Model(MeshAbstractObject, QWidget):
     models outside MESH's model framework (such asexisting InVEST ui based models
     """
 
-    def __init__(self, name, args, root_app=None, parent=None):
+    def __init__(self, name, args, root_app=None, parent=None, new_model=None):
         super(Model, self).__init__(root_app, parent)
         self.name = name
         self.args = args
+
+        if new_model:
+            self.new_model = new_model
+
         self.initialize_from_args()
 
         self.create_ui()
@@ -1521,7 +1381,7 @@ class Model(MeshAbstractObject, QWidget):
                         newest_log_path = log_file_path
                 elif file.endswith('.json') and "archive" in file:
                     archive_params_valid = True
-            if success_string in open(newest_log_path).read():
+            if newest_log_path != "" and success_string in open(newest_log_path).read():
                 invest_run_valid = True
 
         return invest_run_valid and archive_params_valid
@@ -1535,7 +1395,10 @@ class Model(MeshAbstractObject, QWidget):
         self.draw_model_state()
 
     def draw_model_state(self):
-        is_validated = self.check_if_validated()
+        if not self.new_model:
+            is_validated = self.check_if_validated()
+        else:
+            is_validated = self.new_model.check_if_validated()
         self.model_status_l.setVisible(True)
         self.model_status_image_l.setVisible(True)
         if is_validated:
@@ -1555,7 +1418,7 @@ class Model(MeshAbstractObject, QWidget):
 
     def setup_invest_model_signal_wrapper(self):
         self.place_check_if_ready_button()
-        self.parent.setup_invest_model(self)  # NOTE This is a second self.
+        self.new_model.setup_invest_model(self)  # NOTE This is a second self.
 
     def setup_mesh_model_signal_wrapper(self):
         self.place_check_if_ready_button()
@@ -3735,6 +3598,37 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
     def cancel(self):
         self.close()
+
+
+class DisplyPluginChoices(MeshAbstractObject, QDialog):
+    """ """
+
+    def __init__(self, root_app=None, parent=None):
+        super(DisplyPluginChoices, self).__init__(root_app, parent)
+
+        # Create the layout for the Dialog
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.setWindowTitle('Available Plugins')
+        self.title_l = QLabel('Select from the following model choices')
+        self.title_l.setFont(config.heading_font)
+        self.main_layout.addWidget(self.title_l)
+
+        scroll_widget = ScrollWidget(self.root_app, self)
+        self.main_layout.addWidget(scroll_widget)
+        scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
+        scroll_widget.setMinimumSize(400, 500)
+
+        # New layout to hold Submit / Cancel button
+        horizontal_layout = QHBoxLayout()
+        # Don't add padding to left of Submit button
+        #horizontal_layout.addStretch(0)
+        invest_button = InvestPluginButton(root_app)
+        horizontal_layout.addWidget(invest_button)
+        scroll_widget.scroll_layout.addLayout(horizontal_layout)
+
+        self.show()
 
 
 class InstallPluginsDialog(MeshAbstractObject, QDialog):
