@@ -164,18 +164,18 @@ class InvestModel(QtGui.QWidget):
         # the module name needs to be extracted differently if it's a python
         # module or if it's a file on disk.  While we're at it, we can also
         # locate the model to be loaded.
-        try:
-            if os.path.isfile(module):
-                model = importlib.import_module(
-                    imp.load_source('model', module))
-            else:
-                model = importlib.import_module(module)
-                LOGGER.debug('Loading %s in frozen environment', model)
-        except ImportError as exception:
-            LOGGER.error('ImportError found when locating %s', module)
-            self.printTraceback()
-            self.setThreadFailed(True, exception)
-            return
+        #try:
+        #    if os.path.isfile(module):
+        #        model = importlib.import_module(
+        #            imp.load_source('model', module))
+        #    else:
+        #        model = importlib.import_module(module)
+        #        LOGGER.debug('Loading %s in frozen environment', model)
+        #except ImportError as exception:
+        #    LOGGER.error('ImportError found when locating %s', module)
+        #    self.printTraceback()
+        #    self.setThreadFailed(True, exception)
+        #    return
 
 
         return args

@@ -1285,8 +1285,10 @@ class Model(MeshAbstractObject, QWidget):
         self.name = name
         self.args = args
 
-        if new_model:
-            self.new_model = new_model
+        self.new_model = new_model
+        if self.new_model:
+            import inspect
+            print inspect.getfile(self.new_model.__class__)
 
         self.initialize_from_args()
 
