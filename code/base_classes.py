@@ -229,7 +229,7 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb = QPushButton()
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
-        plus_icon_path = os.path.join('icons', 'plus.ico')
+        plus_icon_path = os.path.join('icons', 'plus.png')
         plus_icon_path_rel = os.path.join('..', 'icons', 'plus.ico')
         plus_icon_path_abs = os.path.join(os.path.dirname(os.path.abspath(__file__)), plus_icon_path)
 
