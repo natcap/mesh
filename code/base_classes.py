@@ -233,7 +233,9 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         plus_icon_path_rel = os.path.join('..', 'icons', 'plus.ico')
         plus_icon_path_abs = os.path.join(os.path.dirname(os.path.abspath(__file__)), plus_icon_path)
 
-        if os.path.isfile(plus_icon_path):
+        if os.path.isfile('icons/plus.ico'):
+            print "def a file"
+        elif os.path.isfile(plus_icon_path):
             print "is a file"
         elif os.path.isfile(plus_icon_path_rel):
             print "rel is a file"
@@ -242,7 +244,7 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         else:
             print "no hope"
 
-        self.specify_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
         self.specify_pb.setIcon(self.specify_icon)
         #self.specify_pb.setMaximumWidth(32)
         self.specify_pb.connect(self.specify_pb, SIGNAL("clicked()"), self.process_click)
