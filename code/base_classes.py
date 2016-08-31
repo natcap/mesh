@@ -231,6 +231,7 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
         plus_icon_path = os.path.join(MESH_DIR, 'icons', 'plus.ico')
+        print plus_icon_path
         self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
         self.specify_pb.setIcon(self.specify_icon)
         #self.specify_pb.setMaximumWidth(32)
