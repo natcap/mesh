@@ -3,6 +3,7 @@
 import sys
 import time
 from collections import OrderedDict
+import os
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -14,6 +15,7 @@ from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
 
+MESH_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class ProcessingThread(QThread):
     """
@@ -228,7 +230,8 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb = QPushButton()
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
-        self.specify_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        plus_icon_path = os.path.join(MESH_DIR, 'icons', 'plus.ico')
+        self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
         self.specify_pb.setIcon(self.specify_icon)
         #self.specify_pb.setMaximumWidth(32)
         self.specify_pb.connect(self.specify_pb, SIGNAL("clicked()"), self.process_click)
