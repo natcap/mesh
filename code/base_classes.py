@@ -16,7 +16,6 @@ from natcap.invest.pollination.pollination import execute as execute_pollination
 from natcap.invest.sdr import execute as execute_sdr_model
 
 
-
 class ProcessingThread(QThread):
     """
     CPU intensive operations are called as separate processing threads to not lock
@@ -230,11 +229,20 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb = QPushButton()
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
-        print os.path.abspath(__file__)
-        MESH_DIR = os.path.dirname(os.path.abspath(__file__))
-        plus_icon_path = os.path.join(MESH_DIR, 'icons', 'plus.ico')
-        print plus_icon_path
-        self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
+        plus_icon_path = os.path.join('icons', 'plus.ico')
+        plus_icon_path_rel = os.path.join('..', 'icons', 'plus.ico')
+        plus_icon_path_abs = os.path.join(os.path.dirname(os.path.abspath(__file__)), plus_icon_path)
+
+        if os.path.isfile(plus_icon_path):
+            print "is a file"
+        elif os.path.isfile(plus_icon_path_rel):
+            print "rel is a file"
+        elif os.path.isfile(plus_icon_path_abs):
+            print "abs is a file"
+        else:
+            print "no hope"
+
+        self.specify_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
         self.specify_pb.setIcon(self.specify_icon)
         #self.specify_pb.setMaximumWidth(32)
         self.specify_pb.connect(self.specify_pb, SIGNAL("clicked()"), self.process_click)
