@@ -15,7 +15,7 @@ from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
 
-MESH_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class ProcessingThread(QThread):
     """
@@ -230,6 +230,8 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb = QPushButton()
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
+        print os.path.abspath(__file__)
+        MESH_DIR = os.path.dirname(os.path.abspath(__file__))
         plus_icon_path = os.path.join(MESH_DIR, 'icons', 'plus.ico')
         print plus_icon_path
         self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
