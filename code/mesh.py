@@ -3705,7 +3705,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
                             args = archive_args["arguments"]
-                            print args
                             break
 
                     args['workspace_dir'] = os.path.join(
