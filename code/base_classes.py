@@ -3,6 +3,7 @@
 import sys
 import time
 from collections import OrderedDict
+import os
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -64,9 +65,11 @@ class ProcessingThread(QThread):
                 execute_sdr_model(self.args)
                 self.update_run_log('Finished Sediment Delivery Ratio Model.')
 
-            # This one is different because it's not calling the python library bu tthe fulll modelui iui file.
-            if self.model_name == 'scenario_generator':
-                modelui.main(self.json_file_name, last_run_override=self.args)
+            # This one is different because it's not calling the python library but the full modelui iui file.
+            #if self.model_name == 'scenario_generator':
+            #    modelui.main(self.json_file_name)
+            #if self.model_name == 'scenario_gen_proximity':
+            #    modelui.main(self.json_file_name)
 
             self.emit_finished()
         except:
@@ -226,7 +229,8 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         self.specify_pb = QPushButton()
         self.specify_pb.setObjectName(self.name)
         self.specify_icon = QIcon()
-        self.specify_icon.addPixmap(QPixmap('icons/plus.ico'), QIcon.Normal, QIcon.Off)
+        plus_icon_path = os.path.join('icons', 'plus.png')
+        self.specify_icon.addPixmap(QPixmap(plus_icon_path), QIcon.Normal, QIcon.Off)
         self.specify_pb.setIcon(self.specify_icon)
         #self.specify_pb.setMaximumWidth(32)
         self.specify_pb.connect(self.specify_pb, SIGNAL("clicked()"), self.process_click)
