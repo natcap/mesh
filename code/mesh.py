@@ -70,6 +70,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.threads = []  # Processing threads get added here.
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
+        # TODO Implement shapefile viewer/selector without using basemaps.
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
 
         # Project state variables
@@ -1298,7 +1299,8 @@ class ModelsWidget(ScrollWidget):
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
-
+        #TODO START HERE update the creation of tehse files to be auto-generated, not version controlled.
+        print('new_json_path', new_json_path)
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -3173,7 +3175,7 @@ class ChooseSetAOIMethodDialog(MeshAbstractObject, QDialog):
                 self.warning = WarningPopupWidget('Invalid file selected. Must be a .shp file.')
 
     def set_as_hydrosheds_watershed(self):
-        if not os.path.exists(self.root_app.base_data_hydrosheds_folder):
+        if not os.path.exists(self.root_app.base_data_folder):
             self.root_app.create_configure_base_data_dialog()
         else:
             self.root_app.clip_from_hydrosheds_watershed_dialog = ClipFromHydroshedsWatershedDialog(self.root_app, self)
@@ -3440,8 +3442,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                     else:
                         # Not sure if we could see a different "type" here,
                         # adding print and pass for debug
-                        print "UPDATING InVEST SCENARIO ARG WITH TYPE:"
-                        print arg_type
+                        print("UPDATING InVEST SCENARIO ARG WITH TYPE:")
+                        print(arg_type)
                         pass
 
             # New layout to hold Submit / Cancel button
@@ -3641,6 +3643,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
 
+        # TODO Implement basemaps removal here.
         # Commenting out this line becasue the function being called is
         # unfinished after removing dependency on basemap
         #self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
@@ -3651,31 +3654,31 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_level = str(self.hybas_level_combobox.currentText())
 
         if selected_continent == 'Africa':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Arctic':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Asia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Australia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Europe':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Greenland':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'North America':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'South America':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Siberia':
-            hybas_uri = os.path.join(self.root_app.base_data_hydrosheds_folder,
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
                                      'hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
 
         return hybas_uri
