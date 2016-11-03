@@ -1,0 +1,4 @@
+syntax: glob
+projects/
+*.pyc
+.idea/
