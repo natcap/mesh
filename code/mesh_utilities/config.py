@@ -55,3 +55,7 @@ padding: 6px;
 size_policy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 size_policy.setHorizontalStretch(1)
 size_policy.setVerticalStretch(1)
+
+size_policy_minimum = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+size_policy_minimum.setHorizontalStretch(1)
+size_policy_minimum.setVerticalStretch(1)

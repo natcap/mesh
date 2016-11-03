@@ -629,8 +629,6 @@ class ScenariosDock(MeshAbstractObject, QDockWidget):
         super(ScenariosDock, self).__init__(root_app, parent)
 
         # Create dock window
-        self.setMinimumSize(QSize(450, 250))
-        self.setMaximumSize(QSize(2600, 10500))
         self.setSizePolicy(config.size_policy)
         self.setWindowTitle('Scenarios')
         self.scenarios_widget = ScenariosWidget(self.root_app)
@@ -1038,8 +1036,6 @@ class ModelsDock(MeshAbstractObject, QDockWidget):
         super(ModelsDock, self).__init__(root_app, parent)
 
         # Create dock window
-        self.setMinimumSize(QSize(450, 250))
-        self.setMaximumSize(QSize(2600, 10500))
         self.setWindowTitle('Models')
         self.models_widget = ModelsWidget(self.root_app, parent)
         self.setWidget(self.models_widget)
@@ -1693,7 +1689,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.runs_table_hbox.addLayout(self.runs_table_vbox)
 
         self.runs_scrollbox = ScrollWidget(self, self)
-        self.runs_scrollbox.setMinimumSize(550, 450)
 
         self.elements_vbox = QVBoxLayout()
         self.runs_scrollbox.scroll_layout.addLayout(self.elements_vbox)
@@ -2462,7 +2457,6 @@ class Report(MeshAbstractObject, QFrame):
 
     def view_or_edit_report(self):
         self.editor = QTextEdit()
-        self.editor.setMinimumSize(QSize(500, 600))
         self.editor.setHtml('\n'.join(self.html))
         self.editor.show()
 
@@ -2531,8 +2525,6 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
     def create_ui(self):
         # Create dock window
-        self.setMinimumSize(QSize(100, 50))
-        self.setMaximumSize(QSize(1200, 10500))
         self.setSizePolicy(config.size_policy)
         dock_name = "Map Viewer"
         # self.setToolTip(dock_name)
@@ -2543,11 +2535,21 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.main_layout = QVBoxLayout()
         self.main_layout.setMargin(0)
 
+        # Scroll area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+
+        self.scroll_widget = QWidget()
+        self.elements_vbox = QVBoxLayout()
+        self.elements_vbox.setAlignment(Qt.AlignTop)
+
+        self.radio_buttons_group = QButtonGroup()
+
         # Top area
         self.top_widget = QWidget()
         self.top_layout = QVBoxLayout()
         self.top_widget.setLayout(self.top_layout)
-        self.main_layout.addWidget(self.top_widget)
+        self.elements_vbox.addWidget(self.top_widget)
 
         self.top_l = QLabel('Display Maps from Scenarios')
         self.top_l.setFont(config.heading_font)
@@ -2569,16 +2571,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.clear_maps_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
         self.clear_maps_pb.setIcon(self.clear_maps_icon)
 
-        # Scroll area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setMinimumSize(QSize(160, 50))
 
-        self.scroll_widget = QWidget()
-        self.elements_vbox = QVBoxLayout()
-        self.elements_vbox.setAlignment(Qt.AlignTop)
-
-        self.radio_buttons_group = QButtonGroup()
 
         self.scroll_widget.setLayout(self.elements_vbox)
         self.scroll_area.setWidget(self.scroll_widget)
@@ -2781,8 +2774,6 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
 
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
-
-        # self.setMaximumSize(222, 222)
 
         self.title_l = QLabel()
         self.title_l.setText('View Input and Output Maps')
@@ -3349,7 +3340,6 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
         scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(scroll_widget)
         scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        scroll_widget.setMinimumSize(800, 700)
         # Structure the layout in a 3 x N grid. With the following headers
         # below.
         grid = QGridLayout()
@@ -3595,7 +3585,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
@@ -3727,7 +3716,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
 
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
 
         for model in self.models_in_run:
@@ -3877,7 +3865,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         super(RunMeshModelDialog, self).__init__(root_app, parent)
 
         self.main_layout = QVBoxLayout()
-        self.setMinimumSize(400, 500)
         self.setLayout(self.main_layout)
         self.setWindowTitle('Run MESH Model')
         self.title_l = QLabel('Run MESH Model for the following scenario-model pairs\n')
@@ -4071,7 +4058,6 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         for plugin in self.root_app.models_dock.models_widget.elements:
             self.scroll_widget.scroll_layout.addWidget(QLabel(plugin))
@@ -4115,7 +4101,6 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         self.root_app.project_aoi
         checked_models = self.root_app.models_dock.models_widget.get_checked_elements()
@@ -4333,7 +4318,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         self.tree = QTreeWidget()
         self.tree.setColumnCount(1)
