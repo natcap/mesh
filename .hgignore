@@ -2,3 +2,4 @@ syntax: glob
 projects/
 *.pyc
 .idea/
+base_data/
