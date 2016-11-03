@@ -1,7 +1,7 @@
 This tool has an open license. All people are invited to use the tool
 under the following conditions and terms:
 
-Copyright (c) 2015, Justin Andrew Johnson
+Copyright (c) 2016, Justin Andrew Johnson
 
 All rights reserved.
 

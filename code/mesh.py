@@ -146,12 +146,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.base_data_folder = self.application_args['base_data_folder']
 
     def create_application_window(self):
-        if 'window_size' in self.application_args:
-            'NYI in updating the preferences csv, but could be done manually.'
-            rectangle = QApplication.desktop().screenGeometry()
-            self.resize(rectangle.width(), rectangle.height())
-        else:
-            self.resize(1550, 850)
+        # IDEA: Use preferences csv to save window size ...  if 'window_size' in self.application_args:
+        rectangle = QApplication.desktop().screenGeometry()
+        self.resize(int(rectangle.width()*.75), int(rectangle.height()*.75))
+
 
         self.setWindowTitle(
             'MESH Model: Mapping Ecosystem Services to Human well-being')
@@ -855,7 +853,6 @@ class Scenario(MeshAbstractObject, QWidget):
         #     self.add_icon = QIcon()
         #     self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         #     self.populate_scenario_source_pb.setIcon(self.add_icon)
-        #     self.populate_scenario_source_pb.setMaximumWidth(32)
         #     self.main_layout.addWidget(self.populate_scenario_source_pb)
         #     self.populate_scenario_source_pb.clicked.connect(self.create_populate_scenario_source_dialog)
 
@@ -863,7 +860,6 @@ class Scenario(MeshAbstractObject, QWidget):
         self.add_icon = QIcon()
         self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.populate_scenario_source_pb.setIcon(self.add_icon)
-        self.populate_scenario_source_pb.setMaximumWidth(32)
         self.main_layout.addWidget(self.populate_scenario_source_pb)
 
         if self.name == 'Baseline':
@@ -1674,7 +1670,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.run_mesh_model_icon = QIcon()
         self.run_mesh_model_icon.addPixmap(QPixmap('icons/system-run-3.png'), QIcon.Normal, QIcon.Off)
         self.run_mesh_model_pb.setIcon(self.run_mesh_model_icon)
-        self.run_mesh_model_pb.setMaximumWidth(180)
         self.run_button_hbox.addWidget(self.run_mesh_model_pb)
         self.run_mesh_model_pb.clicked.connect(self.run_mesh_model)
 
@@ -1683,7 +1678,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.add_existing_run_icon = QIcon()
         self.add_existing_run_icon.addPixmap(QPixmap('icons/document-open.png'), QIcon.Normal, QIcon.Off)
         self.add_existing_run_pb.setIcon(self.add_existing_run_icon)
-        self.add_existing_run_pb.setMaximumWidth(200)
         self.run_button_hbox.addWidget(self.add_existing_run_pb)
         self.add_existing_run_pb.clicked.connect(self.create_element_from_folder_select_dialog)
 
@@ -2012,7 +2006,6 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.create_report_icon = QIcon()
         self.create_report_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.create_report_pb.setIcon(self.create_report_icon)
-        # self.create_report_pb.setMaximumWidth(180)
         self.create_or_load_hbox.addWidget(self.create_report_pb)
         self.create_report_pb.clicked.connect(self.create_choose_report_type_dialog)
 
@@ -2023,7 +2016,6 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.load_existing_report_icon = QIcon()
         self.load_existing_report_icon.addPixmap(QPixmap('icons/document-open.png'), QIcon.Normal, QIcon.Off)
         self.load_existing_report_pb.setIcon(self.load_existing_report_icon)
-        # self.load_existing_report_pb.setMaximumWidth(200)
         self.create_or_load_hbox.addWidget(self.load_existing_report_pb)
         self.load_existing_report_pb.clicked.connect(self.load_existing_report_from_file_dialog)
 
@@ -2197,7 +2189,6 @@ class Report(MeshAbstractObject, QFrame):
         self.view_or_edit_report_icon = QIcon()
         self.view_or_edit_report_icon.addPixmap(QPixmap('icons/configure-2.png'), QIcon.Normal, QIcon.Off)
         self.view_or_edit_report_pb.setIcon(self.view_or_edit_report_icon)
-        self.view_or_edit_report_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.view_or_edit_report_pb)
         self.view_or_edit_report_pb.clicked.connect(self.view_or_edit_report)
 
@@ -2206,7 +2197,6 @@ class Report(MeshAbstractObject, QFrame):
         self.save_report_as_html_icon = QIcon()
         self.save_report_as_html_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.save_report_as_html_pb.setIcon(self.save_report_as_html_icon)
-        self.save_report_as_html_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.save_report_as_html_pb)
         self.save_report_as_html_pb.clicked.connect(self.save_report_as_html)
 
@@ -2215,7 +2205,6 @@ class Report(MeshAbstractObject, QFrame):
         # self.save_report_as_text_document_icon = QIcon()
         # self.save_report_as_text_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         # self.save_report_as_text_document_pb.setIcon(self.save_report_as_text_document_icon)
-        # self.save_report_as_text_document_pb.setMaximumWidth(260)
         # self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
         # self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
         #
@@ -2223,7 +2212,6 @@ class Report(MeshAbstractObject, QFrame):
         self.save_report_as_pdf_icon = QIcon()
         self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
         self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
-        self.save_report_as_pdf_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
         self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
 
@@ -2231,7 +2219,6 @@ class Report(MeshAbstractObject, QFrame):
         self.clear_pb.clicked.connect(self.remove_self)
         self.report_actions_hbox.addWidget(self.clear_pb)
         self.clear_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
-        self.clear_pb.setFixedWidth(32)
         self.clear_pb.setIcon(self.clear_icon)
 
     def update_ui(self):
@@ -2930,8 +2917,6 @@ class WarningPopupWidget(QMessageBox):
         QMessageBox.__init__(self)
         self.widget = QWidget()
         self.warning(self.widget, 'Warning', message_text)
-        self.setMinimumHeight(400)
-        self.setMinimumWidth(600)
         # self.message_box.exec_()
 
 class NewProjectWidget(MeshAbstractObject, QWidget):
@@ -3599,7 +3584,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.display_hybas_shapefile_pb = QPushButton('Display')
         self.search_for_hybas_hbox.addWidget(self.display_hybas_shapefile_pb)
         self.display_hybas_shapefile_pb.clicked.connect(self.show_map)
-        self.display_hybas_shapefile_pb.setMaximumWidth(160)
 
         self.main_layout.addWidget(QLabel())
 
@@ -3628,7 +3612,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.select_pb = QPushButton('Select ID')
         self.select_hbox.addWidget(self.select_pb)
         self.select_pb.clicked.connect(self.select_id)
-        self.select_pb.setMaximumWidth(100)
 
         self.show()
 
@@ -3721,7 +3704,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
         self.models_in_run_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.models_in_run_hbox)
         self.models_in_run_header_l = QLabel('Models in run:')
-        self.models_in_run_header_l.setMaximumWidth(160)
         self.models_in_run_header_l.setFont(config.italic_font)
         self.models_in_run_hbox.addWidget(self.models_in_run_header_l)
         self.models_in_run_l = QLabel()
@@ -3733,7 +3715,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
         self.scenarios_in_run_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.scenarios_in_run_hbox)
         self.scenarios_in_run_header_l = QLabel('Scenarios in run:')
-        self.scenarios_in_run_header_l.setMaximumWidth(160)
         self.scenarios_in_run_header_l.setFont(config.italic_font)
         self.scenarios_in_run_hbox.addWidget(self.scenarios_in_run_header_l)
         self.scenarios_in_run_l = QLabel()
@@ -4073,7 +4054,6 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         self.add_plugin_hbox.addWidget(self.plugin_path_le)
 
         self.select_folder_pb = QPushButton()
-        #self.select_folder_pb.setMaximumWidth(32)
         self.select_folder_icon = QIcon(QPixmap('icons/document-open-7.png'))
         self.select_folder_pb.setIcon(self.select_folder_icon)
         self.add_plugin_hbox.addWidget(self.select_folder_pb)
@@ -4224,8 +4204,6 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
-        self.setMinimumWidth(650)
-
         self.setWindowTitle('Configure Base Data')
         self.title_l = QLabel('You need to obtain or configure your base data')
         self.title_l.setFont(config.heading_font)
@@ -4301,7 +4279,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.add_decision_option_pb = QPushButton('Add decision option')
         self.add_decision_option_icon = QIcon(QPixmap('icons/document-properties.png'))
         self.add_decision_option_pb.setIcon(self.add_decision_option_icon)
-        self.add_decision_option_pb.setMaximumWidth(250)
         self.add_decision_option_pb.clicked.connect(self.add_decision_option)
         self.add_decision_option_hbox.addWidget(self.add_decision_option_pb)
         self.add_decision_option_description_l = QLabel('Choose a name for one of the decisions being considered, e.g. reforestation, business-as-usual, agricultural expansion.')
@@ -4314,7 +4291,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.define_external_driver_pb = QPushButton('Define external driver')
         self.define_external_driver_icon = QIcon(QPixmap('icons/office-chart-area.png'))
         self.define_external_driver_pb.setIcon(self.define_external_driver_icon)
-        self.define_external_driver_pb.setMaximumWidth(250)
         self.define_external_driver_pb.clicked.connect(self.define_external_driver)
         self.define_external_driver_hbox.addWidget(self.define_external_driver_pb)
         self.define_external_driver_description_l = QLabel('Define any external drivers that might affect your decision, e.g. climate change, price changes.')
@@ -4327,7 +4303,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.add_assessment_time_pb = QPushButton('Add assessment time')
         self.add_assessment_time_icon = QIcon(QPixmap('icons/edit-clear-history-3.png'))
         self.add_assessment_time_pb.setIcon(self.add_assessment_time_icon)
-        self.add_assessment_time_pb.setMaximumWidth(250)
         self.add_assessment_time_pb.clicked.connect(self.add_assessment_time)
         self.add_assessment_time_hbox.addWidget(self.add_assessment_time_pb)
         self.add_assessment_time_description_l = QLabel('Specify which moments in time you want to assess the outcomes of your decision, e.g. 2010, 2015, 2020.')
@@ -4341,14 +4316,12 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.use_these_pathways_pb = QPushButton('Use these pathways')
         self.use_these_pathways_icon = QIcon(QPixmap('icons/crab16.png'))
         self.use_these_pathways_pb.setIcon(self.use_these_pathways_icon)
-        self.use_these_pathways_pb.setMaximumWidth(250)
         self.use_these_pathways_pb.clicked.connect(self.use_these_pathways)
         self.use_these_pathways_hbox.addWidget(self.use_these_pathways_pb)
 
         self.clear_pathways_pb = QPushButton('Clear pathways')
         self.clear_pathways_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.clear_pathways_pb.setIcon(self.clear_pathways_icon)
-        self.clear_pathways_pb.setMaximumWidth(250)
         self.clear_pathways_pb.clicked.connect(self.clear_pathways)
         self.use_these_pathways_hbox.addWidget(self.clear_pathways_pb)
 
