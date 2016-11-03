@@ -2809,9 +2809,12 @@ class ShapefileViewerCanvas(FigureCanvas):
         self.n_layers = self.ds.GetLayerCount()
         self.layer = self.ds.GetLayer(0)
         self.extent = self.layer.GetExtent()
+
+        print('self.extent', self.extent)
         self.x_center = (self.extent[3] - self.extent[2]) / 2.0
         self.y_center = (self.extent[1] - self.extent[0]) / 2.0
 
+        print('ds', self.ds)
         # After removing basemap dependency, currenly unfinished function
         self.draw()
 
@@ -3607,6 +3610,8 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
     def show_map(self):
         selected_shapefile_uri = self.get_selected_hybas_uri()
 
+        print('selected_shapefile_uri', selected_shapefile_uri)
+
         self.shapefile_viewer_canvas.close()
         self.shapefile_viewer_nav.close()
         self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
@@ -3618,39 +3623,40 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         # TODO Implement basemaps removal here.
         # Commenting out this line becasue the function being called is
         # unfinished after removing dependency on basemap
-        #self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
+        self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
 
 
     def get_selected_hybas_uri(self):
+        hybas_uri = None
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
 
         if selected_continent == 'Africa':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Arctic':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Asia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Australia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Europe':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Greenland':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'North America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'South America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Siberia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
 
         return hybas_uri
