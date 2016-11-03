@@ -30,6 +30,11 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
+import geopandas as gp
+import shapely
+import fiona
+import descartes
+
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
@@ -770,7 +775,7 @@ class ScenariosWidget(ScrollWidget):
 
     def save_to_disk(self):
         if len(self.elements) == 0:
-            print('This code should not be run because the default always contains at least the Baseline scenario.')
+            print ('This code should not be run because the default always contains at least the Baseline scenario.')
             to_write = ','.join([name for name in self.default_state[''].keys()])
         else:
             to_write = OrderedDict()
@@ -1292,7 +1297,7 @@ class ModelsWidget(ScrollWidget):
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
         #TODO START HERE update the creation of tehse files to be auto-generated, not version controlled.
-        print('new_json_path', new_json_path)
+        print ('new_json_path', new_json_path)
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -1516,7 +1521,7 @@ class Model(MeshAbstractObject, QWidget):
             self.root_app.scenarios_dock
             scenarios_ready = True
         except:
-            print("Exception hit on: self.root_app.scenarios_dock")
+            print ("Exception hit on: self.root_app.scenarios_dock")
             raise
 
         if scenarios_ready:
@@ -2757,7 +2762,7 @@ class Map(MeshAbstractObject, QWidget):
 
     def use(self):
         """NYI"""
-        print('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
+        print ('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
 
     def remove_self(self):
         del self.parent.elements[self.name]
@@ -2805,16 +2810,45 @@ class ShapefileViewerCanvas(FigureCanvas):
         """Function currently unimplemented after removing dependency on
             mpl_toolkits.basemap
         """
+        # gp_shapefile = gp.GeoDataFrame.from_file(shapefile_uri)
+        # gp_shapefile.head()
+
+        # mp = shapely.geometry.MultiPolygon(
+        #     [shapely.geometry.shape(pol['geometry']) for pol in fiona.open(shapefile_uri)])
+        #
+        # print('len', len(mp))
+        #
+        # patches = []
+        # for idx, p in enumerate(mp):
+        #     patches.append(descartes.PolygonPatch(p, fc='#eeeeee', ec='#555555', alpha=0.7, zorder=1))
+        #
+        # print('patches', len(patches))
+        #
+        # self.ax.add_collection(matplotlib.collections.PatchCollection(patches, match_original=True)) #, match_original=True makes it not change colors
+
+        with fiona.open(shapefile_uri, "r") as shapefile:
+            features = [feature["geometry"] for feature in shapefile]
+
+        print(features)
+        patches = [descartes.PolygonPatch(feature) for feature in features]
+        self.ax.add_collection(matplotlib.collections.PatchCollection(patches))
+
         self.ds = ogr.Open(shapefile_uri)
         self.n_layers = self.ds.GetLayerCount()
         self.layer = self.ds.GetLayer(0)
         self.extent = self.layer.GetExtent()
 
-        print('self.extent', self.extent)
-        self.x_center = (self.extent[3] - self.extent[2]) / 2.0
-        self.y_center = (self.extent[1] - self.extent[0]) / 2.0
 
-        print('ds', self.ds)
+
+        # self.x_center = (self.extent[3] - self.extent[2]) / 2.0
+        # self.y_center = (self.extent[1] - self.extent[0]) / 2.0
+
+        self.x_center = -5
+        self.y_center = 10
+
+        self.ax.set_ylim([self.extent[0], self.extent[1]])
+        self.ax.set_xlim([self.extent[2], self.extent[3]])
+
         # After removing basemap dependency, currenly unfinished function
         self.draw()
 
@@ -2828,6 +2862,7 @@ class ShapefileViewerCanvas(FigureCanvas):
 
         # In a clever turn of events, turns out you can select a specific polygon by filtering on a point wkt.
         self.layer.SetSpatialFilter(ogr.CreateGeometryFromWkt(wkt))
+        selected_id = None
         for feature in self.layer:
             selected_id = feature.GetField("HYBAS_ID")
         self.parent.select_id(selected_id)
@@ -3420,8 +3455,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                     else:
                         # Not sure if we could see a different "type" here,
                         # adding print and pass for debug
-                        print("UPDATING InVEST SCENARIO ARG WITH TYPE:")
-                        print(arg_type)
+                        print ("UPDATING InVEST SCENARIO ARG WITH TYPE:")
+                        print (arg_type)
                         pass
 
             # New layout to hold Submit / Cancel button
@@ -3609,8 +3644,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
     def show_map(self):
         selected_shapefile_uri = self.get_selected_hybas_uri()
-
-        print('selected_shapefile_uri', selected_shapefile_uri)
 
         self.shapefile_viewer_canvas.close()
         self.shapefile_viewer_nav.close()
