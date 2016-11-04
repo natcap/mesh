@@ -154,7 +154,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_application_window(self):
         # IDEA: Use preferences csv to save window size ...  if 'window_size' in self.application_args:
         rectangle = QApplication.desktop().screenGeometry()
-        self.resize(int(rectangle.width()*.75), int(rectangle.height()*.75))
+        self.application_window_starting_size = (int(rectangle.width()*.75), int(rectangle.height()*.75))
+        self.resize(self.application_window_starting_size[0], self.application_window_starting_size[1])
 
 
         self.setWindowTitle(
@@ -1556,6 +1557,19 @@ class Model(MeshAbstractObject, QWidget):
                         newest_log_path = log_file_path
                 elif file.endswith('.json') and "archive" in file:
                     archive_params_valid = True
+
+            # TODO Throws the following error here but not sure when, but i think it's when youi launch an invest model but dont run it. this creates a json file but not the right type.:
+            """
+            Traceback (most recent call last):
+                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1496, in toggle_model
+                    self.draw_model_state()
+                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1574, in draw_model_state
+                    is_validated = self.check_if_validated()
+                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1560, in check_if_validated
+                    if success_string in open(newest_log_path).read():
+                IOError: [Errno 22] invalid mode ('r') or filename: ''
+
+            """
             if success_string in open(newest_log_path).read():
                 invest_run_valid = True
 
@@ -3132,6 +3146,8 @@ class BaselinePopulatorDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(BaselinePopulatorDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
         self.setLayout(self.main_layout)
         self.setWindowTitle('Data for Baseline')
         self.description = QLabel('Define or create data for the baseline scenario')
@@ -3625,6 +3641,10 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(ClipFromHydroshedsWatershedDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .8), int(self.root_app.application_window_starting_size[1] * .8))
+        self.resize(default_size[0], default_size[1])
+
         self.setLayout(self.main_layout)
         self.setWindowTitle('Create baseline data for selected models using HydroBASINS ID')
         self.title_l = QLabel('Create baseline data for selected models using HydroBASINS ID')
@@ -3759,6 +3779,10 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(DataExplorerDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Data explorer for run ' + self.parent.name)
@@ -3827,6 +3851,9 @@ class MapEditDialog(MeshAbstractObject, QDialog):
 
     def __init__(self, root_app=None, parent=None):
         super(MapEditDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .4), int(self.root_app.application_window_starting_size[1] * .4))
+        self.resize(default_size[0], default_size[1])
 
         self.color_schemes = []
         self.color_schemes.extend(
@@ -3944,6 +3971,9 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
     def __init__(self, root_app=None, parent=None):
         super(RunMeshModelDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
 
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
@@ -4099,6 +4129,9 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         super(InstallPluginsDialog, self).__init__(root_app, parent)
         self.plugin_folder = None
 
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Add plugins to MESH')
@@ -4163,6 +4196,10 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
     # NEXT RELEASE I have a deep conceptual problem insofar as not all data that would have generators are baseline. How, for instance, would the Scenario generator know to create it's own transition_table.csv?
     def __init__(self, root_app=None, parent=None):
         super(CreateBaselineDataDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
@@ -4267,6 +4304,10 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(ConfigureBaseDataDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1][0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
@@ -4330,6 +4371,9 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(DefineDecisionContextDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
 
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
