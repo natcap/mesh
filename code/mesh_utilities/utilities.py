@@ -6,7 +6,7 @@ import datetime
 import json
 import csv
 
-from osgeo import gdal
+from osgeo import gdal, ogr
 from PyQt4.QtGui import *
 import xlrd
 import pygeoprocessing.geoprocessing
@@ -14,6 +14,12 @@ import numpy
 
 # OR IS IT from mesh_utilities import config
 import config
+
+
+
+
+
+
 
 # TODO read_txt_file_as_serialized_headers is HORRIBLE. ELIMINATE. I literally did this on the plane.
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):

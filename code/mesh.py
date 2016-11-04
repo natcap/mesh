@@ -40,6 +40,7 @@ import descartes
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
+from mpl_toolkits.basemap import Basemap
 #from matplotlib.patches import Polygon
 #from matplotlib.collections import PatchCollection
 #from matplotlib.patches import PathPatch
@@ -2793,6 +2794,58 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
         self.main_layout.addWidget(self.map_viewer_nav)
 
 
+
+
+
+class ShapefileViewerCanvasBasemaps(FigureCanvas):
+    # TODO DOUG 2 Make better. Work with bigger files without crashing.
+    def __init__(self, root_app=None, parent=None):
+        self.fig = Figure(figsize=(100, 100), dpi=75)
+        super(ShapefileViewerCanvasBasemaps, self).__init__(self.fig)
+        self.root_app = root_app
+        self.parent = parent
+
+        self.ax = self.fig.add_subplot(111)
+        self.shapefile = None
+
+        cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+
+    def draw_shapefile(self, shapefile_uri):
+        self.ds = ogr.Open(shapefile_uri)
+        self.n_layers = self.ds.GetLayerCount()
+        self.layer = self.ds.GetLayer(0)
+        self.extent = self.layer.GetExtent()
+        self.x_center = (self.extent[3] - self.extent[2]) / 2.0
+        self.y_center = (self.extent[1] - self.extent[0]) / 2.0
+
+        self.basemap = Basemap(llcrnrlon=self.extent[0],llcrnrlat=self.extent[2],urcrnrlon=self.extent[1],urcrnrlat=self.extent[3],
+                     resolution='c', projection='cyl', lat_0 = self.y_center, lon_0 = self.x_center, ax=self.ax) #cyl tmerc merc
+        self.basemap.drawmapboundary(fill_color='aqua')
+        self.basemap.fillcontinents(color='#ddaa66',lake_color='aqua')
+        #self.basemap.drawcoastlines()
+        self.basemap.drawparallels(range(-90,90,45))
+        self.basemap.drawmeridians(range(-180,180,45))
+
+        self.shapefile = self.basemap.readshapefile(os.path.splitext(shapefile_uri)[0], os.path.split(shapefile_uri)[1], ax=self.ax) # NOTE: basemap calls exclude the shp extension
+        self.draw()
+
+
+    def onclick(self, event):
+        if event.button == 1:
+            self.select_feature_by_point(event.xdata, event.ydata)
+
+    def select_feature_by_point(self, x, y):
+        wkt = 'POINT (' + str(x) + ' ' + str(y) + ')'
+
+        # In a clever turn of events, turns out you can select a specific polygon by filtering on a point wkt.
+        self.layer.SetSpatialFilter(ogr.CreateGeometryFromWkt(wkt))
+        for feature in self.layer:
+            selected_id = feature.GetField("HYBAS_ID")
+        self.parent.select_id(selected_id)
+
+
+
+
 class ShapefileViewerCanvas(FigureCanvas):
     # TODO DOUG 2 Make better. Work with bigger files without crashing.
     def __init__(self, root_app=None, parent=None):
@@ -2825,32 +2878,42 @@ class ShapefileViewerCanvas(FigureCanvas):
         # print('patches', len(patches))
         #
         # self.ax.add_collection(matplotlib.collections.PatchCollection(patches, match_original=True)) #, match_original=True makes it not change colors
-
-        with fiona.open(shapefile_uri, "r") as shapefile:
-            features = [feature["geometry"] for feature in shapefile]
-
-        print(features)
-        patches = [descartes.PolygonPatch(feature) for feature in features]
-        self.ax.add_collection(matplotlib.collections.PatchCollection(patches))
-
-        self.ds = ogr.Open(shapefile_uri)
-        self.n_layers = self.ds.GetLayerCount()
-        self.layer = self.ds.GetLayer(0)
-        self.extent = self.layer.GetExtent()
-
-
-
-        # self.x_center = (self.extent[3] - self.extent[2]) / 2.0
-        # self.y_center = (self.extent[1] - self.extent[0]) / 2.0
-
-        self.x_center = -5
-        self.y_center = 10
-
-        self.ax.set_ylim([self.extent[0], self.extent[1]])
-        self.ax.set_xlim([self.extent[2], self.extent[3]])
-
-        # After removing basemap dependency, currenly unfinished function
-        self.draw()
+        # features = []
+        # with fiona.open(shapefile_uri, "r") as shapefile:
+        #     for feature in shapefile:
+        #         for geometry in feature:
+        #             print(geometry[0])
+        #             # print('key, value', key, value)
+        #             # if value['type'] == 'Polygon':
+        #             #     print('polygon')
+        #             # elif value['type'] == 'MultiPolygon':
+        #             #     print('MultiPolygon')
+        #             # else:
+        #             #     print('unexpected type')
+        #         features.append(feature)
+        #     #features = [feature["geometry"] for feature in shapefile]
+        #
+        # patches = [descartes.PolygonPatch(feature) for feature in features]
+        # self.ax.add_collection(matplotlib.collections.PatchCollection(patches))
+        #
+        # self.ds = ogr.Open(shapefile_uri)
+        # self.n_layers = self.ds.GetLayerCount()
+        # self.layer = self.ds.GetLayer(0)
+        # self.extent = self.layer.GetExtent()
+        #
+        #
+        #
+        # # self.x_center = (self.extent[3] - self.extent[2]) / 2.0
+        # # self.y_center = (self.extent[1] - self.extent[0]) / 2.0
+        #
+        # self.x_center = -5
+        # self.y_center = 10
+        #
+        # self.ax.set_ylim([self.extent[0], self.extent[1]])
+        # self.ax.set_xlim([self.extent[2], self.extent[3]])
+        #
+        # # After removing basemap dependency, currenly unfinished function
+        # self.draw()
 
 
     def onclick(self, event):
@@ -3624,7 +3687,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
 
-        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.shapefile_viewer_canvas = ShapefileViewerCanvasBasemaps(self.root_app, self)
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
 
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
@@ -3647,7 +3710,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.shapefile_viewer_canvas.close()
         self.shapefile_viewer_nav.close()
-        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.shapefile_viewer_canvas = ShapefileViewerCanvasBasemaps(self.root_app, self)
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
 
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
