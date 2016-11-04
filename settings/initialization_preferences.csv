@@ -1,4 +1,4 @@
-project_to_load_on_launch,p3
+project_to_load_on_launch,p7
 project_folder_location,../projects/
 base_data_folder,../base_data/
 scenario_generators_settings_uri,../settings/scenario_generators.csv

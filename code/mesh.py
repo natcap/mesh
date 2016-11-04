@@ -458,47 +458,26 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
                 config.global_folder = self.project_folder
 
-                # Make the  directories
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'input/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/reports'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/model_setup_runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'settings/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
+                self.make_default_project_folders_at_uri(self.project_folder)
 
                 self.create_default_project_settings_file_for_name(input_text)
                 self.create_default_model_elements_settings_files()
 
                 self.save_application_settings()
                 self.load_project_by_name(self.project_args['project_name'])
+
+    def make_default_project_folders_at_uri(self, input_uri):
+        """Iterate through hardcoded set of folders to create relative to project folder."""
+
+        subdirectories_to_create = ['', 'input', 'output', 'output/runs', 'output/reports', 'output/model_setup_runs',
+                                    'output/images', 'settings', 'output',]
+        for subdirectory in subdirectories_to_create:
+            relative_path = os.path.join(input_uri, subdirectory)
+            try:
+                os.makedirs(relative_path)
+            except:
+                LOGGER.debug('Couldn\'t make directory ' + relative_path + '. Does it already exist?')
+
 
     def select_project_to_load(self):
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
