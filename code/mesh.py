@@ -665,6 +665,8 @@ class ScenariosWidget(ScrollWidget):
         self.load_scenario_pb.clicked.connect(self.load_element_from_file_select_dialog)
         self.add_scenarios_hbox.addWidget(self.load_scenario_pb)
 
+        # NOTE, this is separate from the validation of invest setup runs.
+        # pearhaps i should get rid of it or use it with the archive_args
         self.validate_baseline_pb = QPushButton('Check if ready')
         self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.validate_baseline_pb.setIcon(self.unvalidated_icon)
@@ -748,7 +750,7 @@ class ScenariosWidget(ScrollWidget):
 
     def save_to_disk(self):
         if len(self.elements) == 0:
-            print ('This code should not be run because the default always contains at least the Baseline scenario.')
+            LOGGER.critical('This code should not be run because the default always contains at least the Baseline scenario.')
             to_write = ','.join([name for name in self.default_state[''].keys()])
         else:
             to_write = OrderedDict()
@@ -775,7 +777,9 @@ class ScenariosWidget(ScrollWidget):
                 checked_elements.append(element)
         return checked_elements
 
+    # As note above, this is NYI in lieu of setup_run_validation.
     def validate_baseline(self):
+        # Superficial check based on status of UI. Not robust.
         validates = True
         for model in self.root_app.models_dock.models_widget.elements.values():
             if model.cb.isChecked():
@@ -868,6 +872,8 @@ class Scenario(MeshAbstractObject, QWidget):
         self.elements = OrderedDict()
         self.is_baseline = utilities.convert_to_bool(self.args['is_baseline'])
         self.needs_validation = utilities.convert_to_bool(self.args['needs_validation'])
+
+        # Is this needed?
         self.validated = utilities.convert_to_bool(self.args['validated'])
 
     def set_state_from_args(self):
@@ -951,6 +957,7 @@ class Scenario(MeshAbstractObject, QWidget):
         qp.drawRect(0, 0, 100000, 100000)  # set large so that expands when widget expands
         qp.end()
 
+    # NOTE, NYI, but reimplement. Note that this is the MESH-run is ready, not the setup_run is ready validation.
     def validate_baseline(self):
         """I think i made this unneeded but check"""
         validates = True
@@ -1271,8 +1278,6 @@ class ModelsWidget(ScrollWidget):
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
-        #TODO START HERE update the creation of tehse files to be auto-generated, not version controlled.
-        print ('new_json_path', new_json_path)
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -1385,6 +1390,7 @@ class ModelsWidget(ScrollWidget):
                 checked_elements.append(element)
         return checked_elements
 
+    # NOTE, this only checks for MESH run readyness, not setup_run readynes.
     def get_elements_validated_and_checked(self):
         """
         returns 2 numbers, the number of models that hvae been validated and the number that have been checked. this is useful
@@ -1496,17 +1502,18 @@ class Model(MeshAbstractObject, QWidget):
             self.root_app.scenarios_dock
             scenarios_ready = True
         except:
-            print ("Exception hit on: self.root_app.scenarios_dock")
+            LOGGER.critical("Exception hit on: self.root_app.scenarios_dock")
             raise
 
-        if scenarios_ready:
-            num_validated, num_checked = self.parent.get_elements_validated_and_checked()
-            if num_checked == 0:
-                to_update = '--Select models to run in the Models window--'
-            elif num_validated == num_checked:
-                to_update = 'Ready!'
-            else:
-                to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
+        # NOTE, previously i updated the state of MESH readyness whenever a model was toggled.
+        # if scenarios_ready:
+        #     num_validated, num_checked = self.parent.get_elements_validated_and_checked()
+        #     if num_checked == 0:
+        #         to_update = '--Select models to run in the Models window--'
+        #     elif num_validated == num_checked:
+        #         to_update = 'Ready!'
+        #     else:
+        #         to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
 
     def check_if_validated(self):
         """Makes sure that a given InVEST setup run has completed successfully.
@@ -1549,7 +1556,7 @@ class Model(MeshAbstractObject, QWidget):
                         # Either first log or the newest log
                         date = new_date
                         newest_log_path = log_file_path
-                elif file.endswith('.json') and "archive" in file:
+                elif file.endswith('.json') and "archive" in file: # Doug added therequirement that archive_args were added separately. Check where else this is used.
                     archive_params_valid = True
 
             if success_string in open(newest_log_path).read():
@@ -2738,7 +2745,7 @@ class Map(MeshAbstractObject, QWidget):
 
     def use(self):
         """NYI"""
-        print ('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
+        LOGGER.critical('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
 
     def remove_self(self):
         del self.parent.elements[self.name]
@@ -3357,11 +3364,9 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 setup_file_dir = os.path.join(
                     self.root_app.project_folder, 'output',
                     'model_setup_runs', model.name)
+
                 # Find the archive json file, load and grab arguments
-
-                # START HERE, ithink i have a non-instantiatedstartingcondition and thenit devolves into a loop. Figure out a
-                # a way to savethe archive_argsbearlier,orbetter yet, rethinkthis aproach.
-
+                # NOTE that creation of this archive file is done manually by the user in the invest UI.
                 for file in os.listdir(setup_file_dir):
                     if file.endswith('.json') and "archive" in file: #
                         json_archive = open(os.path.join(setup_file_dir, file)).read()
@@ -3369,7 +3374,7 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                         args = archive_args["arguments"]
                         break
                 # We need the original json file for the InVEST model so we
-                # can print out readable labels
+                # can get out readable labels
                 invest_json_copy = os.path.join(
                     self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
                 invest_json = json.loads(open(invest_json_copy).read())
@@ -3410,9 +3415,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                         grid.addWidget(label_box, grid_row, 2)
                     else:
                         # Not sure if we could see a different "type" here,
-                        # adding print and pass for debug
-                        print ("UPDATING InVEST SCENARIO ARG WITH TYPE:")
-                        print (arg_type)
+                        # adding pass for debug
+                        LOGGER.critical('Unexpected type received in UpdatedInputsDialog')
                         pass
 
             # New layout to hold Submit / Cancel button
@@ -3898,7 +3902,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
-
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
         self.root_app.threads.append(runner)
@@ -3980,14 +3983,13 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         self.root_app.project_folder, 'output',
                         'model_setup_runs', model.name)
 
-
-
                     # Find the archive json file, load and grab arguments
+                    # NOTE that creation of this archive file is done manually by the user in the invest UI.
                     for file in os.listdir(setup_file_dir):
                         if file.endswith('.json') and "archive" in file: # Doug added  and "archive" in file but not sure why. that wasn't in the json file causing it not to load.
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
-                            args = archive_args
+                            args = archive_args["arguments"]
                             break
 
                     args['workspace_dir'] = os.path.join(
