@@ -76,7 +76,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.threads = []  # Processing threads get added here.
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
-        # TODO Implement shapefile viewer/selector without using basemaps.
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
 
         # Project state variables
@@ -107,8 +106,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialize_model_from_preferences(self.initialization_preferences_uri)
 
         if not os.path.exists(self.application_args['baseline_generators_settings_uri']):
-            # TODO DOUG 6 check that THIS one is done exactly like the other CSV loading things, just generally
-            # debug this, try to get it to fail with deleting settings files, etc
             self.create_baseline_generators_settings_file_from_default()
         self.baseline_generators_settings = utilities.file_to_python_object(
             self.application_args['baseline_generators_settings_uri'])
@@ -144,7 +141,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = self.project_to_load_on_launch
             self.project_folder = os.path.join(self.application_args['project_folder_location'], self.project_name)
             config.global_folder = self.project_folder  # config provides a global set of variables shared across py files
-        # TODO JUSTIN Had to disable this due to fresh install problem.
+        # Had to disable this due to fresh install problem.
         # else: # No project was defined, so force the user to make a new one.
         #     self.create_new_project()
 
@@ -447,7 +444,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                     self, 'Project Already Exists',
                     "Project '%s' already exists. Specify a different name." % input_text)
             else:
-                # TODO Justin, check that unload_project works even on fresh install.
                 self.unload_project()
 
                 self.project_args = OrderedDict()
@@ -536,7 +532,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         if size > 5000000:
             max_side_length = 2048
-            # TODO JUSTIN I did not write a memory robust plotting method. However, I've implemented this elsewhere so it can be added easily.
+            # NOTE: did not write a memory robust plotting method. However, I've implemented this elsewhere so
+            # it can be added easily in the next release.
             LOGGER.critical(
                 'Attempting to load very large array. May not display correctly or fail. Array set to the top left 2048 by 2048 cells.')
             self.visible_matrix = band.ReadAsArray(0, 0, max_side_length, max_side_length)
@@ -577,11 +574,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_define_decision_context_dialog(self):
         self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
-    # TODO DOUG COMMENT 7 Implement a generalized version of this that verifies the base data is actually there and
-    # installed.
-    # Doug says: I think the update below is sufficient for now.
-    # The sub directory list can be updated easily without creating a CSV
-    # file mapping out the data. File IO errors should be handled in a dialogue
     def is_base_data_valid(self):
         """Verify Base Data folder is set up properly.
 
@@ -912,7 +904,8 @@ class Scenario(MeshAbstractObject, QWidget):
     def remove_self(self):
         del self.parent.elements[self.name]
         self.setParent(None)
-        # TODO JUSTIN Implement a good way to safely remove files from OS safely. Currently, many files are created with ramndom names rather than temp files.
+        # NOTE: This coud benefit from implementation of a good way to safely remove files from OS safely.
+        # Currently, many files are created with ramndom names rather than temp files.
 
     def load_element(self, name, uri):
         if not name:
@@ -1559,18 +1552,6 @@ class Model(MeshAbstractObject, QWidget):
                 elif file.endswith('.json') and "archive" in file:
                     archive_params_valid = True
 
-            # TODO Throws the following error here but not sure when, but i think it's when youi launch an invest model but dont run it. this creates a json file but not the right type.:
-            """
-            Traceback (most recent call last):
-                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1496, in toggle_model
-                    self.draw_model_state()
-                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1574, in draw_model_state
-                    is_validated = self.check_if_validated()
-                  File "C:/OneDrive/Projects/mesh_0.8.5/code/mesh.py", line 1560, in check_if_validated
-                    if success_string in open(newest_log_path).read():
-                IOError: [Errno 22] invalid mode ('r') or filename: ''
-
-            """
             if success_string in open(newest_log_path).read():
                 invest_run_valid = True
 
@@ -1894,7 +1875,7 @@ class ModelRun(MeshAbstractObject, QWidget):
     def add_run_to_map_viewer_signal_wrapper(self):
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
-                # TODO JUSTIN SHORTCUT I manually decided which reports are actually interesting outputs. Have this be programatic.
+                # NOTE: I manually decided which reports are actually interesting outputs. Have this be programatic.
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
@@ -1930,11 +1911,11 @@ class ModelRun(MeshAbstractObject, QWidget):
                     args['source_uri'] = uri
                     self.root_app.map_widget.create_element(name_of_map_to_add, args)
 
-    # TODO JUSTIN. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
+    # NOTE for next release. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
     # Instead I just used some placeholder, hardcoded BS for time-sake.
     def use_run_to_load_choose_report_dialog(self):
         self.choose_report_type_dialog = ChooseReportTypeDialog(self.root_app, self)
-        # NEXT RELEASE add in the report generator code from next release
+        # NOTE for next release add in the report generator code from next release
 
     def data_explorer_signal_wrapper(self):
         self.data_explorer_dialog = DataExplorerDialog(self.root_app, self)
@@ -2078,7 +2059,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         for element in self.elements.values():
             element.remove_self()
 
-    # TODO DOUG COMMENT 5 For consistency, rename/combine update_ui here with the set_state_to_args in other widgets?
+    # Questions Should I for consistency rename/combine update_ui here with the set_state_to_args in other widgets?
     def update_ui(self):
         if not len(self.elements):
             self.no_reports_l.setVisible(True)
@@ -2426,10 +2407,10 @@ class Report(MeshAbstractObject, QFrame):
         return args
 
     def add_report_list(self, uri):
-        # TODO JUSTIN SHORTCUT make this per project.
-        reports_folder = os.path.join(self.root_app.project_folder, '../volta_demo/output/reports')
+        reports_folder = os.path.join(self.root_app.project_folder, 'output/reports')
 
-        # TODO JUSTIN SHORTCUT Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
+        # TODO Add robust reporting feature.
+        # Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
         # Ultimatly this should draw from XML or JSON files that define a report type and the images should be based on the
         # define_report_ready_object() from upcoming release.
         qt_objects = utilities.read_txt_file_as_serialized_headers(uri)
@@ -2644,7 +2625,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         utilities.python_object_to_csv(to_write, self.save_uri)
 
     def map_cb_toggle(self, state):
-        # TODO DOUG 1 BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
+        # TODO BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
         # is a probability of a concurrency error. Fix this by making the canvas be preloaded?
         toggled_signal = str(self.sender().text())
         if state:
@@ -2871,7 +2852,7 @@ class MapCanvas(FigureCanvas):  # Objects created from this class generate a Fig
         self.ax.set_title(self.root_app.visible_map.title)
         self.cbar.set_label(self.root_app.visible_map.cbar_label)
         self.cax.set_cmap(self.root_app.visible_map.color_scheme)
-        # TODO JUSTIN Incorporate auto-interpolation.
+        # NOTE I should Incorporate auto-interpolation here.
         self.draw()
 
 
@@ -2899,7 +2880,7 @@ class Source(MeshAbstractObject, QWidget):
         self.main_hbox = QHBoxLayout()
         self.main_hbox.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.main_hbox)
-        # TODO JUSTIN CONSIDER I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
+        # NOTE I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
         shortened_name = os.path.split(self.name)[1]
         self.source_l = QLabel(shortened_name)
         self.source_l.setContentsMargins(0, 0, 2, 0)  # L T R B. Because sources are itallic, this doesn't work without a tiny bit of padding.
@@ -2981,8 +2962,9 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
 
         self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
                              'Full Technical Report']
-        # TODO JUSTIN SHORTCUT I didn't follow the approach i used for the other things, like scenario generators, of having this be an external file, though, i am not sure that was the best choice anyhow.
-        # TODO JUSTIN SHORTCUT I also didn't follow the OrderedDict.name, .longname notation
+        # NOTE FLAW: This should use the approach i used for the other things, like scenario generators,
+        # of having this be an external file, though, i am not sure that was the best choice anyhow.
+        # I also didn't follow the OrderedDict.name, .longname notation
 
         self.pbs = OrderedDict()
         for report_type in self.report_types:
@@ -3631,9 +3613,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
 
-        # TODO Implement basemaps removal here.
-        # Commenting out this line becasue the function being called is
-        # unfinished after removing dependency on basemap
         self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
 
 
@@ -4104,7 +4083,7 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
 
 
     def install_plugin(self):
-        # TODO JUSTIN NYI
+        # NOTE 'NYI'
         self.scroll_widget.scroll_layout.addWidget(QLabel('Not yet implemented.'))
 
 

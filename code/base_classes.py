@@ -35,15 +35,11 @@ class ProcessingThread(QThread):
 
     def run(self):
         try:
-            # TODO DOUG SHORTCUT I only instantiated this subset of models and i did it non-programatically with horrible horrible hard-coding..
-
-            # TODO DOUG BUG Critical. If you run InVEST as a setup model, and then without closing MESH, run the full model, the tmpfile module
-            # in InVEST throws an Errno2. This may be a threading issue?
-
-            if self.model_name == 'nutrition':
-                self.update_run_log('Starting Food Security and Nutrition Model.')
-                nutrition.execute(self.args, self)
-                self.update_run_log('Finished Food Security and Nutrition Model.')
+            ## Example of custom MESH model not from InVEST
+            # if self.model_name == 'nutrition':
+            #     self.update_run_log('Starting Food Security and Nutrition Model.')
+            #     nutrition.execute(self.args, self)
+            #     self.update_run_log('Finished Food Security and Nutrition Model.')
             if self.model_name == 'ndr':
                 self.update_run_log('Starting Delivery Ratio Model.')
                 execute_nutrient_model(self.args)
@@ -54,8 +50,6 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Water Yield Model.')
             if self.model_name == 'carbon':
                 self.update_run_log('Starting Carbon Model.')
-
-                print('self.args', self.args)
                 execute_carbon_model(self.args)
                 self.update_run_log('Finished Carbon Model.')
             if self.model_name == 'pollination':
