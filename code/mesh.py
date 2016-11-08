@@ -2792,7 +2792,6 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
 
 
 class ShapefileViewerCanvasBasemaps(FigureCanvas):
-    # TODO DOUG 2 Make better. Work with bigger files without crashing.
     def __init__(self, root_app=None, parent=None):
         self.fig = Figure(figsize=(100, 100), dpi=75)
         super(ShapefileViewerCanvasBasemaps, self).__init__(self.fig)
@@ -2841,7 +2840,6 @@ class ShapefileViewerCanvasBasemaps(FigureCanvas):
 
 
 class ShapefileViewerCanvas(FigureCanvas):
-    # TODO DOUG 2 Make better. Work with bigger files without crashing.
     def __init__(self, root_app=None, parent=None):
         self.fig = Figure(figsize=(100, 100), dpi=75)
         super(ShapefileViewerCanvas, self).__init__(self.fig)
