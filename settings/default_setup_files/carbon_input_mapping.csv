@@ -14,5 +14,5 @@ lulc_cur_year,parameter,FALSE,FALSE,cur_lulc_year,cur_lulc_year,carbon,copy_defa
 c,paremeter,FALSE,FALSE,rate_change,rate_change,carbon,copy_default,,0
 carbon_price_units,parameter,FALSE,FALSE,carbon_price_units,carbon_price_units,carbon,copy_default,,0
 V,parameter,FALSE,FALSE,value,value,carbon,copy_default,,43
-carbon_pools_uncertain_uri,table,FALSE,FALSE,carbon_pools_uncertain,carbon_pools_uncertain,carbon,copy_default,input/Baseline/carbon_uncertainty_biophysical_table.csv,models/carbon/carbon_uncertainty_biophysical_table.csv
+carbon_pools_uncertain_uri,table,TRUE,TRUE,carbon_pools_uncertain,carbon_pools_uncertain,carbon,copy_default,input/Baseline/carbon_uncertainty_biophysical_table.csv,models/carbon/carbon_uncertainty_biophysical_table.csv
 lulc_fut_uri,raster,FALSE,FALSE,fut_lulc_raster,fut_lulc_raster,carbon,copy_default,input/Baseline/lulc_future.tif,models/carbon/lulc_future.tif

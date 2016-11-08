@@ -769,6 +769,7 @@ class ScenariosWidget(ScrollWidget):
     def save_invest_archive(self):
         """Save each Scenario.archive_args to json file in project sttings."""
         base_dir = os.path.join(self.root_app.project_folder, 'settings')
+
         for name, scenario in self.elements.items():
             if len(scenario.archive_args.keys()) > 0:
                 save_path = os.path.join(base_dir, '%s_archive_args.json' % name)
@@ -2862,27 +2863,20 @@ class ShapefileViewerCanvas(FigureCanvas):
         # mp = shapely.geometry.MultiPolygon(
         #     [shapely.geometry.shape(pol['geometry']) for pol in fiona.open(shapefile_uri)])
         #
-        # print('len', len(mp))
         #
         # patches = []
         # for idx, p in enumerate(mp):
         #     patches.append(descartes.PolygonPatch(p, fc='#eeeeee', ec='#555555', alpha=0.7, zorder=1))
         #
-        # print('patches', len(patches))
         #
         # self.ax.add_collection(matplotlib.collections.PatchCollection(patches, match_original=True)) #, match_original=True makes it not change colors
         # features = []
         # with fiona.open(shapefile_uri, "r") as shapefile:
         #     for feature in shapefile:
         #         for geometry in feature:
-        #             print(geometry[0])
-        #             # print('key, value', key, value)
         #             # if value['type'] == 'Polygon':
-        #             #     print('polygon')
         #             # elif value['type'] == 'MultiPolygon':
-        #             #     print('MultiPolygon')
         #             # else:
-        #             #     print('unexpected type')
         #         features.append(feature)
         #     #features = [feature["geometry"] for feature in shapefile]
         #
@@ -3275,7 +3269,6 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_state['user_defined_folder']['model_args'] = ''
     default_state['user_defined_folder']['enabled'] = True
 
-    default_state = OrderedDict()
     default_state['update_invest_args'] = default_element_args.copy()
     default_state['update_invest_args']['name'] = 'update_invest_args'
     default_state['update_invest_args']['long_name'] = 'Update InVEST Parameters'
@@ -3464,8 +3457,12 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                     self.root_app.project_folder, 'output',
                     'model_setup_runs', model.name)
                 # Find the archive json file, load and grab arguments
+
+                # START HERE, ithink i have a non-instantiatedstartingcondition and thenit devolves into a loop. Figure out a
+                # a way to savethe archive_argsbearlier,orbetter yet, rethinkthis aproach.
+
                 for file in os.listdir(setup_file_dir):
-                    if file.endswith('.json') and "archive" in file:
+                    if file.endswith('.json') and "archive" in file: #
                         json_archive = open(os.path.join(setup_file_dir, file)).read()
                         archive_args = json.loads(json_archive)
                         args = archive_args["arguments"]
@@ -3473,7 +3470,7 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 # We need the original json file for the InVEST model so we
                 # can print out readable labels
                 invest_json_copy = os.path.join(
-                    self.root_app.project_folder, 'invest-json-copies', model.name + '.json')
+                    self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
                 invest_json = json.loads(open(invest_json_copy).read())
                 invest_args = self.get_flat_arguments(invest_json)
 
@@ -4003,6 +4000,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
+
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
         self.root_app.threads.append(runner)
@@ -4084,12 +4082,14 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         self.root_app.project_folder, 'output',
                         'model_setup_runs', model.name)
 
+
+
                     # Find the archive json file, load and grab arguments
                     for file in os.listdir(setup_file_dir):
-                        if file.endswith('.json') and "archive" in file:
+                        if file.endswith('.json') and "archive" in file: # Doug added  and "archive" in file but not sure why. that wasn't in the json file causing it not to load.
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
-                            args = archive_args["arguments"]
+                            args = archive_args
                             break
 
                     args['workspace_dir'] = os.path.join(
