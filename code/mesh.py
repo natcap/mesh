@@ -287,8 +287,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.main_layout.addWidget(self.model_runs_widget)
 
         self.map_canvas_holder_widget = MapCanvasHolderWidget(self, self)
-        self.map_canvas_holder_widget.setVisible(False)
+        self.map_canvas_holder_widget.setVisible(True) # Must make visible first so that the canvas is created before first usage.
         self.main_layout.addWidget(self.map_canvas_holder_widget)
+
+        self.map_canvas_holder_widget.setVisible(False) # After its created, set it invisible so that the program launches to the launch page.
 
         self.reports_widget = ReportsWidget(self, self)
         self.reports_widget.setVisible(False)
@@ -3572,7 +3574,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.search_for_hybas_hbox.addWidget(self.continents_combobox)
         #        self.continents_combobox.setCurrentIndex(self.continents.index('--select--'))
 
-        self.hybas_levels = ['1', '2', '3', '4', '5', '6']
+        self.hybas_levels = ['1', '2', '3', '4', '5']
         self.hybas_level_combobox = QComboBox()
         self.hybas_level_combobox.addItems(self.hybas_levels)
         self.search_for_hybas_hbox.addWidget(self.hybas_level_combobox)
@@ -3915,16 +3917,17 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
 
+        # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
+        # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
+        # probably wrong with folder creation.
+
         # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
         setup_file_dir = os.path.join(
             self.root_app.project_folder, 'output',
             'model_setup_runs', current_model_name)
         tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
-        os.makedirs(tmp_file_dir)
-
-        # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
-        # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
-        # probably wrong with folder creation.
+        if not os.path.exists(tmp_file_dir):
+            os.makedirs(tmp_file_dir)
 
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
@@ -4170,31 +4173,32 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                                                           parent=self)
                         self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
 
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.optional_l = QLabel('Optional Inputs')
-            self.optional_l.setFont(config.minor_heading_font)
-            self.scroll_widget.scroll_layout.addWidget(self.optional_l)
-
-            self.optional_model_headers = OrderedDict()
-            self.optional_specify_buttons = OrderedDict()
-            for model in checked_models:
-                self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-                self.optional_model_headers[model.name] = QLabel(model.long_name)
-                self.optional_model_headers[model.name].setFont(config.bold_font)
-                self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
-
-                self.input_mapping_uri = os.path.join('../settings/default_setup_files',
-                                                      model.name + '_input_mapping.csv')
-                input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-
-                for key, value in input_mapping.items():
-                    if not utilities.convert_to_bool(value['required']):
-                        self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
-                                                                                          specify_function=self.create_data_from_args,
-                                                                                          root_app=self.root_app,
-                                                                                          parent=self)
-                        self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+            ## Deactivated display of optional data input creation.
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.optional_l = QLabel('Optional Inputs')
+            # self.optional_l.setFont(config.minor_heading_font)
+            # self.scroll_widget.scroll_layout.addWidget(self.optional_l)
+            #
+            # self.optional_model_headers = OrderedDict()
+            # self.optional_specify_buttons = OrderedDict()
+            # for model in checked_models:
+            #     self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            #     self.optional_model_headers[model.name] = QLabel(model.long_name)
+            #     self.optional_model_headers[model.name].setFont(config.bold_font)
+            #     self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
+            #
+            #     self.input_mapping_uri = os.path.join('../settings/default_setup_files',
+            #                                           model.name + '_input_mapping.csv')
+            #     input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+            #
+            #     for key, value in input_mapping.items():
+            #         if not utilities.convert_to_bool(value['required']):
+            #             self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
+            #                                                                               specify_function=self.create_data_from_args,
+            #                                                                               root_app=self.root_app,
+            #                                                                               parent=self)
+            #             self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')
@@ -4307,6 +4311,12 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.title_l.setFont(config.heading_font)
         self.main_layout.addWidget(self.title_l)
         self.main_layout.addWidget(QLabel())
+
+        self.beta_update_l = QLabel('This feature is not fully implemented but can be useful for assisting in the '
+                                    'creation of scenarios.\nClicking \"Use these pathways\" will add scecnarios to the\n'
+                                    'Scenarios window, ready for you to add details to the new scenarios.')
+        self.beta_update_l.setFont(config.small_font)
+        self.main_layout.addWidget(beta_update_l)
 
         self.add_decision_option_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.add_decision_option_hbox)
