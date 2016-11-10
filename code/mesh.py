@@ -30,10 +30,10 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
-import geopandas as gp
-import shapely
-import fiona
-import descartes
+# import geopandas as gp
+# import shapely
+# import fiona
+# import descartes
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
