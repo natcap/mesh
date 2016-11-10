@@ -1247,7 +1247,10 @@ class ModelsWidget(ScrollWidget):
             '%s_setup_file.json' % model_name)
         # Check to see if an existing json file exists from a previous
         # setup run
+
         if os.path.exists(existing_last_run_uri):
+            dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
+            shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
         else:
             # Read in MESH setup json to a dictionary
@@ -1274,10 +1277,13 @@ class ModelsWidget(ScrollWidget):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
             # Write updated dictionary to new json file.
             new_json_path = existing_last_run_uri
+
             with open(new_json_path, 'w') as fp:
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
+
+        print('new_json_path', new_json_path)
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -3881,6 +3887,11 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
 
+        self.relaunch_mesh_note_l = QLabel('*MESH sometimes freezes on the first run of a new project. To fix this, save your project and relaunch MESH.\n\n')
+        self.relaunch_mesh_note_l.setFont(config.small_font)
+        self.main_layout.addWidget(self.relaunch_mesh_note_l)
+
+
         self.draw_scenario_model_pairs_gridlayout()
 
         self.run_cancel_hbox = QHBoxLayout()
@@ -3897,11 +3908,20 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
         self.exec_()
 
+        # TODO IDEA INCORPORATE CROP PRODUCTION MODEL
+
     def run_next_in_queue(self):
         current_args = self.root_app.args_queue.items()[0][1]
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
+
+        # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
+        # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
+        # probably wrong with folder creation.
+
+        print('current_args', current_args)
+
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
         self.root_app.threads.append(runner)
