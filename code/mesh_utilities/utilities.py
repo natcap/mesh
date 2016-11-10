@@ -6,16 +6,14 @@ import datetime
 import json
 import csv
 
-from osgeo import gdal
+from osgeo import gdal, ogr
 from PyQt4.QtGui import *
 import xlrd
 import pygeoprocessing.geoprocessing
 import numpy
-
-# OR IS IT from mesh_utilities import config
 import config
 
-# TODO read_txt_file_as_serialized_headers is HORRIBLE. ELIMINATE. I literally did this on the plane.
+
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):
     """Read a txt file where the number of blank lines before a line indicates what level in the title-heirarchy it is. Top level
     level denotes how many blank lines define the highest level heading, otherwise it determinesw the highest level by the number
@@ -173,11 +171,12 @@ def python_object_to_csv(input_iterable, output_uri, csv_type=None, verbose=Fals
                 raise NameError('Protected character found in the string-ed version of the iterable.')
             to_write += str(key) + ',' + str(value) + '\n'
     elif data_type == '2d_odict_list':
-        raise
+        raise NameError('NYI')
     elif data_type == '2d_odict':
         if isinstance(input_iterable, list):
+            # TODO Fix the odict-reading methods to be more robust and specific to mesh.
             # The only way you can get here is it was manually declared to be this type and the list implies that it was empty (1 row).
-            # TODO Currently, I do not deal with indexed data_types consistently, nor do I account for empty data (as in here) the same on IO operations.
+            # Currently, I do not deal with indexed data_types consistently, nor do I account for empty data (as in here) the same on IO operations.
             to_write += ','.join(input_iterable)
         else:
             for key, value in input_iterable.items():
@@ -455,7 +454,7 @@ def determine_data_type_and_dimensions_for_read(file_uri):
     row_headers = []
     col_headers = []
     index_synonyms = ['', 'name', 'names', 'unique_name', 'unique_names', 'index', 'indices', 'id', 'ids', 'var_name', 'var_names']
-    declare_type = None # TODO eliminate
+    declare_type = None
     data = None
     blank_ul = False
     ul_index = None
@@ -516,7 +515,7 @@ def determine_data_type_and_dimensions_for_read(file_uri):
                             data_type = '3d_odict_odict_list'
                             num_cols -= 1
                         elif ul_index in index_synonyms:
-                            data_type = '3d_odict_odict_list' # TODO Differentiate between indexed_3d_odict_odict_list and 3d_odict_odict_list
+                            data_type = '3d_odict_odict_list' # NOTE I don't Differentiate between indexed_3d_odict_odict_list and 3d_odict_odict_list
                         else:
                             if declare_type in ['odict_list']:
                                 data_type = '3d_odict_list_list'

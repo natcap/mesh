@@ -35,15 +35,11 @@ class ProcessingThread(QThread):
 
     def run(self):
         try:
-            # TODO DOUG SHORTCUT I only instantiated this subset of models and i did it non-programatically with horrible horrible hard-coding..
-
-            # TODO DOUG BUG Critical. If you run InVEST as a setup model, and then without closing MESH, run the full model, the tmpfile module
-            # in InVEST throws an Errno2. This may be a threading issue?
-
-            if self.model_name == 'nutrition':
-                self.update_run_log('Starting Food Security and Nutrition Model.')
-                nutrition.execute(self.args, self)
-                self.update_run_log('Finished Food Security and Nutrition Model.')
+            ## Example of custom MESH model not from InVEST
+            # if self.model_name == 'nutrition':
+            #     self.update_run_log('Starting Food Security and Nutrition Model.')
+            #     nutrition.execute(self.args, self)
+            #     self.update_run_log('Finished Food Security and Nutrition Model.')
             if self.model_name == 'ndr':
                 self.update_run_log('Starting Delivery Ratio Model.')
                 execute_nutrient_model(self.args)
@@ -182,7 +178,7 @@ class InputSelector(MeshAbstractObject, QWidget):
         elif self.input_type == 'folder':
             file_uri = str(QFileDialog.getExistingDirectory(self, 'Select folder', self.root_app.project_folder))
         else:
-            raise
+            raise NameError('Unexpected outcome of InputSelector')
 
         self.le.setText(file_uri)
 
@@ -243,6 +239,5 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         input_text, ok = QInputDialog.getText(self, 'Specify text', 'Text:')
         if ok:
             text = str(input_text)
-            print('Text inputed: ' + text)
 
 

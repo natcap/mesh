@@ -30,11 +30,17 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
 
+import geopandas as gp
+import shapely
+import fiona
+import descartes
+
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
+from mpl_toolkits.basemap import Basemap
 #from matplotlib.patches import Polygon
 #from matplotlib.collections import PatchCollection
 #from matplotlib.patches import PathPatch
@@ -70,7 +76,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.threads = []  # Processing threads get added here.
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
-        # TODO Implement shapefile viewer/selector without using basemaps.
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
 
         # Project state variables
@@ -101,8 +106,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialize_model_from_preferences(self.initialization_preferences_uri)
 
         if not os.path.exists(self.application_args['baseline_generators_settings_uri']):
-            # TODO DOUG 6 check that THIS one is done exactly like the other CSV loading things, just generally
-            # debug this, try to get it to fail with deleting settings files, etc
             self.create_baseline_generators_settings_file_from_default()
         self.baseline_generators_settings = utilities.file_to_python_object(
             self.application_args['baseline_generators_settings_uri'])
@@ -138,7 +141,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = self.project_to_load_on_launch
             self.project_folder = os.path.join(self.application_args['project_folder_location'], self.project_name)
             config.global_folder = self.project_folder  # config provides a global set of variables shared across py files
-        # TODO JUSTIN Had to disable this due to fresh install problem.
+        # Had to disable this due to fresh install problem.
         # else: # No project was defined, so force the user to make a new one.
         #     self.create_new_project()
 
@@ -146,12 +149,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.base_data_folder = self.application_args['base_data_folder']
 
     def create_application_window(self):
-        if 'window_size' in self.application_args:
-            'NYI in updating the preferences csv, but could be done manually.'
-            rectangle = QApplication.desktop().screenGeometry()
-            self.resize(rectangle.width(), rectangle.height())
-        else:
-            self.resize(1550, 850)
+        # IDEA: Use preferences csv to save window size ...  if 'window_size' in self.application_args:
+        rectangle = QApplication.desktop().screenGeometry()
+        self.application_window_starting_size = (int(rectangle.width()*.75), int(rectangle.height()*.75))
+        self.resize(self.application_window_starting_size[0], self.application_window_starting_size[1])
+
 
         self.setWindowTitle(
             'MESH Model: Mapping Ecosystem Services to Human well-being')
@@ -285,8 +287,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.main_layout.addWidget(self.model_runs_widget)
 
         self.map_canvas_holder_widget = MapCanvasHolderWidget(self, self)
-        self.map_canvas_holder_widget.setVisible(False)
+        self.map_canvas_holder_widget.setVisible(True) # Must make visible first so that the canvas is created before first usage.
         self.main_layout.addWidget(self.map_canvas_holder_widget)
+
+        self.map_canvas_holder_widget.setVisible(False) # After its created, set it invisible so that the program launches to the launch page.
 
         self.reports_widget = ReportsWidget(self, self)
         self.reports_widget.setVisible(False)
@@ -442,7 +446,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                     self, 'Project Already Exists',
                     "Project '%s' already exists. Specify a different name." % input_text)
             else:
-                # TODO Justin, check that unload_project works even on fresh install.
                 self.unload_project()
 
                 self.project_args = OrderedDict()
@@ -454,47 +457,26 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
                 config.global_folder = self.project_folder
 
-                # Make the  directories
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'input/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/reports'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'output/model_setup_runs'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
-
-                try:
-                    os.makedirs(os.path.join('../projects/', input_text, 'settings/'))
-                except:
-                    LOGGER.debug('Couldn\'t make directory. Does it already exist?')
+                self.make_default_project_folders_at_uri(self.project_folder)
 
                 self.create_default_project_settings_file_for_name(input_text)
                 self.create_default_model_elements_settings_files()
 
                 self.save_application_settings()
                 self.load_project_by_name(self.project_args['project_name'])
+
+    def make_default_project_folders_at_uri(self, input_uri):
+        """Iterate through hardcoded set of folders to create relative to project folder."""
+
+        subdirectories_to_create = ['', 'input', 'output', 'output/runs', 'output/reports', 'output/model_setup_runs',
+                                    'output/images', 'settings', 'output',]
+        for subdirectory in subdirectories_to_create:
+            relative_path = os.path.join(input_uri, subdirectory)
+            try:
+                os.makedirs(relative_path)
+            except:
+                LOGGER.debug('Couldn\'t make directory ' + relative_path + '. Does it already exist?')
+
 
     def select_project_to_load(self):
         project_uri = str(QFileDialog.getExistingDirectory(self, 'Select Project Directory', '../projects'))
@@ -552,7 +534,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         if size > 5000000:
             max_side_length = 2048
-            # TODO JUSTIN I did not write a memory robust plotting method. However, I've implemented this elsewhere so it can be added easily.
+            # NOTE: did not write a memory robust plotting method. However, I've implemented this elsewhere so
+            # it can be added easily in the next release.
             LOGGER.critical(
                 'Attempting to load very large array. May not display correctly or fail. Array set to the top left 2048 by 2048 cells.')
             self.visible_matrix = band.ReadAsArray(0, 0, max_side_length, max_side_length)
@@ -593,11 +576,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def create_define_decision_context_dialog(self):
         self.define_decision_context_dialog = DefineDecisionContextDialog(self, self)
 
-    # TODO DOUG COMMENT 7 Implement a generalized version of this that verifies the base data is actually there and
-    # installed.
-    # Doug says: I think the update below is sufficient for now.
-    # The sub directory list can be updated easily without creating a CSV
-    # file mapping out the data. File IO errors should be handled in a dialogue
     def is_base_data_valid(self):
         """Verify Base Data folder is set up properly.
 
@@ -631,8 +609,6 @@ class ScenariosDock(MeshAbstractObject, QDockWidget):
         super(ScenariosDock, self).__init__(root_app, parent)
 
         # Create dock window
-        self.setMinimumSize(QSize(450, 250))
-        self.setMaximumSize(QSize(2600, 10500))
         self.setSizePolicy(config.size_policy)
         self.setWindowTitle('Scenarios')
         self.scenarios_widget = ScenariosWidget(self.root_app)
@@ -691,6 +667,8 @@ class ScenariosWidget(ScrollWidget):
         self.load_scenario_pb.clicked.connect(self.load_element_from_file_select_dialog)
         self.add_scenarios_hbox.addWidget(self.load_scenario_pb)
 
+        # NOTE, this is separate from the validation of invest setup runs.
+        # pearhaps i should get rid of it or use it with the archive_args
         self.validate_baseline_pb = QPushButton('Check if ready')
         self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.validate_baseline_pb.setIcon(self.unvalidated_icon)
@@ -774,7 +752,7 @@ class ScenariosWidget(ScrollWidget):
 
     def save_to_disk(self):
         if len(self.elements) == 0:
-            print('This code should not be run because the default always contains at least the Baseline scenario.')
+            LOGGER.critical('This code should not be run because the default always contains at least the Baseline scenario.')
             to_write = ','.join([name for name in self.default_state[''].keys()])
         else:
             to_write = OrderedDict()
@@ -787,6 +765,7 @@ class ScenariosWidget(ScrollWidget):
     def save_invest_archive(self):
         """Save each Scenario.archive_args to json file in project sttings."""
         base_dir = os.path.join(self.root_app.project_folder, 'settings')
+
         for name, scenario in self.elements.items():
             if len(scenario.archive_args.keys()) > 0:
                 save_path = os.path.join(base_dir, '%s_archive_args.json' % name)
@@ -800,7 +779,9 @@ class ScenariosWidget(ScrollWidget):
                 checked_elements.append(element)
         return checked_elements
 
+    # As note above, this is NYI in lieu of setup_run_validation.
     def validate_baseline(self):
+        # Superficial check based on status of UI. Not robust.
         validates = True
         for model in self.root_app.models_dock.models_widget.elements.values():
             if model.cb.isChecked():
@@ -855,7 +836,6 @@ class Scenario(MeshAbstractObject, QWidget):
         #     self.add_icon = QIcon()
         #     self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         #     self.populate_scenario_source_pb.setIcon(self.add_icon)
-        #     self.populate_scenario_source_pb.setMaximumWidth(32)
         #     self.main_layout.addWidget(self.populate_scenario_source_pb)
         #     self.populate_scenario_source_pb.clicked.connect(self.create_populate_scenario_source_dialog)
 
@@ -863,7 +843,6 @@ class Scenario(MeshAbstractObject, QWidget):
         self.add_icon = QIcon()
         self.add_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.populate_scenario_source_pb.setIcon(self.add_icon)
-        self.populate_scenario_source_pb.setMaximumWidth(32)
         self.main_layout.addWidget(self.populate_scenario_source_pb)
 
         if self.name == 'Baseline':
@@ -895,6 +874,8 @@ class Scenario(MeshAbstractObject, QWidget):
         self.elements = OrderedDict()
         self.is_baseline = utilities.convert_to_bool(self.args['is_baseline'])
         self.needs_validation = utilities.convert_to_bool(self.args['needs_validation'])
+
+        # Is this needed?
         self.validated = utilities.convert_to_bool(self.args['validated'])
 
     def set_state_from_args(self):
@@ -931,7 +912,8 @@ class Scenario(MeshAbstractObject, QWidget):
     def remove_self(self):
         del self.parent.elements[self.name]
         self.setParent(None)
-        # TODO JUSTIN Implement a good way to safely remove files from OS safely. Currently, many files are created with ramndom names rather than temp files.
+        # NOTE: This coud benefit from implementation of a good way to safely remove files from OS safely.
+        # Currently, many files are created with ramndom names rather than temp files.
 
     def load_element(self, name, uri):
         if not name:
@@ -977,6 +959,7 @@ class Scenario(MeshAbstractObject, QWidget):
         qp.drawRect(0, 0, 100000, 100000)  # set large so that expands when widget expands
         qp.end()
 
+    # NOTE, NYI, but reimplement. Note that this is the MESH-run is ready, not the setup_run is ready validation.
     def validate_baseline(self):
         """I think i made this unneeded but check"""
         validates = True
@@ -1042,8 +1025,6 @@ class ModelsDock(MeshAbstractObject, QDockWidget):
         super(ModelsDock, self).__init__(root_app, parent)
 
         # Create dock window
-        self.setMinimumSize(QSize(450, 250))
-        self.setMaximumSize(QSize(2600, 10500))
         self.setWindowTitle('Models')
         self.models_widget = ModelsWidget(self.root_app, parent)
         self.setWidget(self.models_widget)
@@ -1268,7 +1249,10 @@ class ModelsWidget(ScrollWidget):
             '%s_setup_file.json' % model_name)
         # Check to see if an existing json file exists from a previous
         # setup run
+
         if os.path.exists(existing_last_run_uri):
+            dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
+            shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
         else:
             # Read in MESH setup json to a dictionary
@@ -1295,12 +1279,12 @@ class ModelsWidget(ScrollWidget):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
             # Write updated dictionary to new json file.
             new_json_path = existing_last_run_uri
+
             with open(new_json_path, 'w') as fp:
                 json.dump(new_json_args, fp)
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
-        #TODO START HERE update the creation of tehse files to be auto-generated, not version controlled.
-        print('new_json_path', new_json_path)
+
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -1413,6 +1397,7 @@ class ModelsWidget(ScrollWidget):
                 checked_elements.append(element)
         return checked_elements
 
+    # NOTE, this only checks for MESH run readyness, not setup_run readynes.
     def get_elements_validated_and_checked(self):
         """
         returns 2 numbers, the number of models that hvae been validated and the number that have been checked. this is useful
@@ -1524,17 +1509,18 @@ class Model(MeshAbstractObject, QWidget):
             self.root_app.scenarios_dock
             scenarios_ready = True
         except:
-            print("Exception hit on: self.root_app.scenarios_dock")
+            LOGGER.critical("Exception hit on: self.root_app.scenarios_dock")
             raise
 
-        if scenarios_ready:
-            num_validated, num_checked = self.parent.get_elements_validated_and_checked()
-            if num_checked == 0:
-                to_update = '--Select models to run in the Models window--'
-            elif num_validated == num_checked:
-                to_update = 'Ready!'
-            else:
-                to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
+        # NOTE, previously i updated the state of MESH readyness whenever a model was toggled.
+        # if scenarios_ready:
+        #     num_validated, num_checked = self.parent.get_elements_validated_and_checked()
+        #     if num_checked == 0:
+        #         to_update = '--Select models to run in the Models window--'
+        #     elif num_validated == num_checked:
+        #         to_update = 'Ready!'
+        #     else:
+        #         to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
 
     def check_if_validated(self):
         """Makes sure that a given InVEST setup run has completed successfully.
@@ -1577,8 +1563,9 @@ class Model(MeshAbstractObject, QWidget):
                         # Either first log or the newest log
                         date = new_date
                         newest_log_path = log_file_path
-                elif file.endswith('.json') and "archive" in file:
+                elif file.endswith('.json') and "archive" in file: # Doug added therequirement that archive_args were added separately. Check where else this is used.
                     archive_params_valid = True
+
             if success_string in open(newest_log_path).read():
                 invest_run_valid = True
 
@@ -1674,7 +1661,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.run_mesh_model_icon = QIcon()
         self.run_mesh_model_icon.addPixmap(QPixmap('icons/system-run-3.png'), QIcon.Normal, QIcon.Off)
         self.run_mesh_model_pb.setIcon(self.run_mesh_model_icon)
-        self.run_mesh_model_pb.setMaximumWidth(180)
         self.run_button_hbox.addWidget(self.run_mesh_model_pb)
         self.run_mesh_model_pb.clicked.connect(self.run_mesh_model)
 
@@ -1683,7 +1669,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.add_existing_run_icon = QIcon()
         self.add_existing_run_icon.addPixmap(QPixmap('icons/document-open.png'), QIcon.Normal, QIcon.Off)
         self.add_existing_run_pb.setIcon(self.add_existing_run_icon)
-        self.add_existing_run_pb.setMaximumWidth(200)
         self.run_button_hbox.addWidget(self.add_existing_run_pb)
         self.add_existing_run_pb.clicked.connect(self.create_element_from_folder_select_dialog)
 
@@ -1699,7 +1684,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         self.runs_table_hbox.addLayout(self.runs_table_vbox)
 
         self.runs_scrollbox = ScrollWidget(self, self)
-        self.runs_scrollbox.setMinimumSize(550, 450)
 
         self.elements_vbox = QVBoxLayout()
         self.runs_scrollbox.scroll_layout.addLayout(self.elements_vbox)
@@ -1905,7 +1889,7 @@ class ModelRun(MeshAbstractObject, QWidget):
     def add_run_to_map_viewer_signal_wrapper(self):
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
-                # TODO JUSTIN SHORTCUT I manually decided which reports are actually interesting outputs. Have this be programatic.
+                # NOTE: I manually decided which reports are actually interesting outputs. Have this be programatic.
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
@@ -1941,11 +1925,11 @@ class ModelRun(MeshAbstractObject, QWidget):
                     args['source_uri'] = uri
                     self.root_app.map_widget.create_element(name_of_map_to_add, args)
 
-    # TODO JUSTIN. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
+    # NOTE for next release. This beta release does not include the full report_generator tool and it's integration in the generate_report_ready_object()
     # Instead I just used some placeholder, hardcoded BS for time-sake.
     def use_run_to_load_choose_report_dialog(self):
         self.choose_report_type_dialog = ChooseReportTypeDialog(self.root_app, self)
-        # NEXT RELEASE add in the report generator code from next release
+        # NOTE for next release add in the report generator code from next release
 
     def data_explorer_signal_wrapper(self):
         self.data_explorer_dialog = DataExplorerDialog(self.root_app, self)
@@ -2012,7 +1996,6 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.create_report_icon = QIcon()
         self.create_report_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.create_report_pb.setIcon(self.create_report_icon)
-        # self.create_report_pb.setMaximumWidth(180)
         self.create_or_load_hbox.addWidget(self.create_report_pb)
         self.create_report_pb.clicked.connect(self.create_choose_report_type_dialog)
 
@@ -2023,7 +2006,6 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.load_existing_report_icon = QIcon()
         self.load_existing_report_icon.addPixmap(QPixmap('icons/document-open.png'), QIcon.Normal, QIcon.Off)
         self.load_existing_report_pb.setIcon(self.load_existing_report_icon)
-        # self.load_existing_report_pb.setMaximumWidth(200)
         self.create_or_load_hbox.addWidget(self.load_existing_report_pb)
         self.load_existing_report_pb.clicked.connect(self.load_existing_report_from_file_dialog)
 
@@ -2091,7 +2073,7 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         for element in self.elements.values():
             element.remove_self()
 
-    # TODO DOUG COMMENT 5 For consistency, rename/combine update_ui here with the set_state_to_args in other widgets?
+    # Questions Should I for consistency rename/combine update_ui here with the set_state_to_args in other widgets?
     def update_ui(self):
         if not len(self.elements):
             self.no_reports_l.setVisible(True)
@@ -2197,7 +2179,6 @@ class Report(MeshAbstractObject, QFrame):
         self.view_or_edit_report_icon = QIcon()
         self.view_or_edit_report_icon.addPixmap(QPixmap('icons/configure-2.png'), QIcon.Normal, QIcon.Off)
         self.view_or_edit_report_pb.setIcon(self.view_or_edit_report_icon)
-        self.view_or_edit_report_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.view_or_edit_report_pb)
         self.view_or_edit_report_pb.clicked.connect(self.view_or_edit_report)
 
@@ -2206,7 +2187,6 @@ class Report(MeshAbstractObject, QFrame):
         self.save_report_as_html_icon = QIcon()
         self.save_report_as_html_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.save_report_as_html_pb.setIcon(self.save_report_as_html_icon)
-        self.save_report_as_html_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.save_report_as_html_pb)
         self.save_report_as_html_pb.clicked.connect(self.save_report_as_html)
 
@@ -2215,7 +2195,6 @@ class Report(MeshAbstractObject, QFrame):
         # self.save_report_as_text_document_icon = QIcon()
         # self.save_report_as_text_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         # self.save_report_as_text_document_pb.setIcon(self.save_report_as_text_document_icon)
-        # self.save_report_as_text_document_pb.setMaximumWidth(260)
         # self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
         # self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
         #
@@ -2223,7 +2202,6 @@ class Report(MeshAbstractObject, QFrame):
         self.save_report_as_pdf_icon = QIcon()
         self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
         self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
-        self.save_report_as_pdf_pb.setMaximumWidth(260)
         self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
         self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
 
@@ -2231,7 +2209,6 @@ class Report(MeshAbstractObject, QFrame):
         self.clear_pb.clicked.connect(self.remove_self)
         self.report_actions_hbox.addWidget(self.clear_pb)
         self.clear_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
-        self.clear_pb.setFixedWidth(32)
         self.clear_pb.setIcon(self.clear_icon)
 
     def update_ui(self):
@@ -2444,10 +2421,10 @@ class Report(MeshAbstractObject, QFrame):
         return args
 
     def add_report_list(self, uri):
-        # TODO JUSTIN SHORTCUT make this per project.
-        reports_folder = os.path.join(self.root_app.project_folder, '../volta_demo/output/reports')
+        reports_folder = os.path.join(self.root_app.project_folder, 'output/reports')
 
-        # TODO JUSTIN SHORTCUT Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
+        # TODO Add robust reporting feature.
+        # Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
         # Ultimatly this should draw from XML or JSON files that define a report type and the images should be based on the
         # define_report_ready_object() from upcoming release.
         qt_objects = utilities.read_txt_file_as_serialized_headers(uri)
@@ -2475,7 +2452,6 @@ class Report(MeshAbstractObject, QFrame):
 
     def view_or_edit_report(self):
         self.editor = QTextEdit()
-        self.editor.setMinimumSize(QSize(500, 600))
         self.editor.setHtml('\n'.join(self.html))
         self.editor.show()
 
@@ -2544,8 +2520,6 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
     def create_ui(self):
         # Create dock window
-        self.setMinimumSize(QSize(100, 50))
-        self.setMaximumSize(QSize(1200, 10500))
         self.setSizePolicy(config.size_policy)
         dock_name = "Map Viewer"
         # self.setToolTip(dock_name)
@@ -2556,11 +2530,21 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.main_layout = QVBoxLayout()
         self.main_layout.setMargin(0)
 
+        # Scroll area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+
+        self.scroll_widget = QWidget()
+        self.elements_vbox = QVBoxLayout()
+        self.elements_vbox.setAlignment(Qt.AlignTop)
+
+        self.radio_buttons_group = QButtonGroup()
+
         # Top area
         self.top_widget = QWidget()
         self.top_layout = QVBoxLayout()
         self.top_widget.setLayout(self.top_layout)
-        self.main_layout.addWidget(self.top_widget)
+        self.elements_vbox.addWidget(self.top_widget)
 
         self.top_l = QLabel('Display Maps from Scenarios')
         self.top_l.setFont(config.heading_font)
@@ -2582,16 +2566,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.clear_maps_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
         self.clear_maps_pb.setIcon(self.clear_maps_icon)
 
-        # Scroll area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setMinimumSize(QSize(160, 50))
 
-        self.scroll_widget = QWidget()
-        self.elements_vbox = QVBoxLayout()
-        self.elements_vbox.setAlignment(Qt.AlignTop)
-
-        self.radio_buttons_group = QButtonGroup()
 
         self.scroll_widget.setLayout(self.elements_vbox)
         self.scroll_area.setWidget(self.scroll_widget)
@@ -2664,7 +2639,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         utilities.python_object_to_csv(to_write, self.save_uri)
 
     def map_cb_toggle(self, state):
-        # TODO DOUG 1 BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
+        # TODO BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
         # is a probability of a concurrency error. Fix this by making the canvas be preloaded?
         toggled_signal = str(self.sender().text())
         if state:
@@ -2777,7 +2752,7 @@ class Map(MeshAbstractObject, QWidget):
 
     def use(self):
         """NYI"""
-        print('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
+        LOGGER.critical('NYI, but a good place to start would be making self.root_app.reports_widget.create_element()')
 
     def remove_self(self):
         del self.parent.elements[self.name]
@@ -2795,8 +2770,6 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
-        # self.setMaximumSize(222, 222)
-
         self.title_l = QLabel()
         self.title_l.setText('View Input and Output Maps')
         self.title_l.setFont(config.heading_font)
@@ -2810,11 +2783,13 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
         self.main_layout.addWidget(self.map_viewer_nav)
 
 
-class ShapefileViewerCanvas(FigureCanvas):
-    # TODO DOUG 2 Make better. Work with bigger files without crashing.
+
+
+
+class ShapefileViewerCanvasBasemaps(FigureCanvas):
     def __init__(self, root_app=None, parent=None):
         self.fig = Figure(figsize=(100, 100), dpi=75)
-        super(ShapefileViewerCanvas, self).__init__(self.fig)
+        super(ShapefileViewerCanvasBasemaps, self).__init__(self.fig)
         self.root_app = root_app
         self.parent = parent
 
@@ -2824,9 +2799,6 @@ class ShapefileViewerCanvas(FigureCanvas):
         cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
     def draw_shapefile(self, shapefile_uri):
-        """Function currently unimplemented after removing dependency on
-            mpl_toolkits.basemap
-        """
         self.ds = ogr.Open(shapefile_uri)
         self.n_layers = self.ds.GetLayerCount()
         self.layer = self.ds.GetLayer(0)
@@ -2834,7 +2806,15 @@ class ShapefileViewerCanvas(FigureCanvas):
         self.x_center = (self.extent[3] - self.extent[2]) / 2.0
         self.y_center = (self.extent[1] - self.extent[0]) / 2.0
 
-        # After removing basemap dependency, currenly unfinished function
+        self.basemap = Basemap(llcrnrlon=self.extent[0],llcrnrlat=self.extent[2],urcrnrlon=self.extent[1],urcrnrlat=self.extent[3],
+                     resolution='c', projection='cyl', lat_0 = self.y_center, lon_0 = self.x_center, ax=self.ax) #cyl tmerc merc
+        self.basemap.drawmapboundary(fill_color='aqua')
+        self.basemap.fillcontinents(color='#ddaa66',lake_color='aqua')
+        #self.basemap.drawcoastlines()
+        self.basemap.drawparallels(range(-90,90,45))
+        self.basemap.drawmeridians(range(-180,180,45))
+
+        self.shapefile = self.basemap.readshapefile(os.path.splitext(shapefile_uri)[0], os.path.split(shapefile_uri)[1], ax=self.ax) # NOTE: basemap calls exclude the shp extension
         self.draw()
 
 
@@ -2886,7 +2866,7 @@ class MapCanvas(FigureCanvas):  # Objects created from this class generate a Fig
         self.ax.set_title(self.root_app.visible_map.title)
         self.cbar.set_label(self.root_app.visible_map.cbar_label)
         self.cax.set_cmap(self.root_app.visible_map.color_scheme)
-        # TODO JUSTIN Incorporate auto-interpolation.
+        # NOTE I should Incorporate auto-interpolation here.
         self.draw()
 
 
@@ -2914,7 +2894,7 @@ class Source(MeshAbstractObject, QWidget):
         self.main_hbox = QHBoxLayout()
         self.main_hbox.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.main_hbox)
-        # TODO JUSTIN CONSIDER I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
+        # NOTE I took a shortcut here: rather than have it save to the sources.csv file, i assumed all names are the last bit of their uri.
         shortened_name = os.path.split(self.name)[1]
         self.source_l = QLabel(shortened_name)
         self.source_l.setContentsMargins(0, 0, 2, 0)  # L T R B. Because sources are itallic, this doesn't work without a tiny bit of padding.
@@ -2930,8 +2910,6 @@ class WarningPopupWidget(QMessageBox):
         QMessageBox.__init__(self)
         self.widget = QWidget()
         self.warning(self.widget, 'Warning', message_text)
-        self.setMinimumHeight(400)
-        self.setMinimumWidth(600)
         # self.message_box.exec_()
 
 class NewProjectWidget(MeshAbstractObject, QWidget):
@@ -2998,8 +2976,9 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
 
         self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
                              'Full Technical Report']
-        # TODO JUSTIN SHORTCUT I didn't follow the approach i used for the other things, like scenario generators, of having this be an external file, though, i am not sure that was the best choice anyhow.
-        # TODO JUSTIN SHORTCUT I also didn't follow the OrderedDict.name, .longname notation
+        # NOTE FLAW: This should use the approach i used for the other things, like scenario generators,
+        # of having this be an external file, though, i am not sure that was the best choice anyhow.
+        # I also didn't follow the OrderedDict.name, .longname notation
 
         self.pbs = OrderedDict()
         for report_type in self.report_types:
@@ -3076,6 +3055,8 @@ class BaselinePopulatorDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(BaselinePopulatorDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
         self.setLayout(self.main_layout)
         self.setWindowTitle('Data for Baseline')
         self.description = QLabel('Define or create data for the baseline scenario')
@@ -3203,7 +3184,6 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_state['user_defined_folder']['model_args'] = ''
     default_state['user_defined_folder']['enabled'] = True
 
-    default_state = OrderedDict()
     default_state['update_invest_args'] = default_element_args.copy()
     default_state['update_invest_args']['name'] = 'update_invest_args'
     default_state['update_invest_args']['long_name'] = 'Update InVEST Parameters'
@@ -3364,7 +3344,6 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
         scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(scroll_widget)
         scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        scroll_widget.setMinimumSize(800, 700)
         # Structure the layout in a 3 x N grid. With the following headers
         # below.
         grid = QGridLayout()
@@ -3392,17 +3371,19 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 setup_file_dir = os.path.join(
                     self.root_app.project_folder, 'output',
                     'model_setup_runs', model.name)
+
                 # Find the archive json file, load and grab arguments
+                # NOTE that creation of this archive file is done manually by the user in the invest UI.
                 for file in os.listdir(setup_file_dir):
-                    if file.endswith('.json') and "archive" in file:
+                    if file.endswith('.json') and "archive" in file: #
                         json_archive = open(os.path.join(setup_file_dir, file)).read()
                         archive_args = json.loads(json_archive)
                         args = archive_args["arguments"]
                         break
                 # We need the original json file for the InVEST model so we
-                # can print out readable labels
+                # can get out readable labels
                 invest_json_copy = os.path.join(
-                    self.root_app.project_folder, 'invest-json-copies', model.name + '.json')
+                    self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
                 invest_json = json.loads(open(invest_json_copy).read())
                 invest_args = self.get_flat_arguments(invest_json)
 
@@ -3441,9 +3422,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                         grid.addWidget(label_box, grid_row, 2)
                     else:
                         # Not sure if we could see a different "type" here,
-                        # adding print and pass for debug
-                        print("UPDATING InVEST SCENARIO ARG WITH TYPE:")
-                        print(arg_type)
+                        # adding pass for debug
+                        LOGGER.critical('Unexpected type received in UpdatedInputsDialog')
                         pass
 
             # New layout to hold Submit / Cancel button
@@ -3570,6 +3550,10 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(ClipFromHydroshedsWatershedDialog, self).__init__(root_app, parent)
         self.main_layout = QVBoxLayout()
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .8), int(self.root_app.application_window_starting_size[1] * .8))
+        self.resize(default_size[0], default_size[1])
+
         self.setLayout(self.main_layout)
         self.setWindowTitle('Create baseline data for selected models using HydroBASINS ID')
         self.title_l = QLabel('Create baseline data for selected models using HydroBASINS ID')
@@ -3590,7 +3574,7 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.search_for_hybas_hbox.addWidget(self.continents_combobox)
         #        self.continents_combobox.setCurrentIndex(self.continents.index('--select--'))
 
-        self.hybas_levels = ['1', '2', '3', '4', '5', '6']
+        self.hybas_levels = ['1', '2', '3', '4', '5']
         self.hybas_level_combobox = QComboBox()
         self.hybas_level_combobox.addItems(self.hybas_levels)
         self.search_for_hybas_hbox.addWidget(self.hybas_level_combobox)
@@ -3599,7 +3583,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.display_hybas_shapefile_pb = QPushButton('Display')
         self.search_for_hybas_hbox.addWidget(self.display_hybas_shapefile_pb)
         self.display_hybas_shapefile_pb.clicked.connect(self.show_map)
-        self.display_hybas_shapefile_pb.setMaximumWidth(160)
 
         self.main_layout.addWidget(QLabel())
 
@@ -3611,9 +3594,8 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
 
-        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.shapefile_viewer_canvas = ShapefileViewerCanvasBasemaps(self.root_app, self)
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
 
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
@@ -3628,7 +3610,6 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         self.select_pb = QPushButton('Select ID')
         self.select_hbox.addWidget(self.select_pb)
         self.select_pb.clicked.connect(self.select_id)
-        self.select_pb.setMaximumWidth(100)
 
         self.show()
 
@@ -3637,48 +3618,46 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
 
         self.shapefile_viewer_canvas.close()
         self.shapefile_viewer_nav.close()
-        self.shapefile_viewer_canvas = ShapefileViewerCanvas(self.root_app, self)
+        self.shapefile_viewer_canvas = ShapefileViewerCanvasBasemaps(self.root_app, self)
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_canvas)
 
         self.shapefile_viewer_nav = NavigationToolbar(self.shapefile_viewer_canvas, QWidget())
         self.scroll_widget.scroll_layout.addWidget(self.shapefile_viewer_nav)
 
-        # TODO Implement basemaps removal here.
-        # Commenting out this line becasue the function being called is
-        # unfinished after removing dependency on basemap
-        #self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
+        self.shapefile_viewer_canvas.draw_shapefile(selected_shapefile_uri)
 
 
     def get_selected_hybas_uri(self):
+        hybas_uri = None
         selected_continent = str(self.continents_combobox.currentText())
         selected_level = str(self.hybas_level_combobox.currentText())
 
         if selected_continent == 'Africa':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_af_lev01-06_v1c/hybas_af_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Arctic':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_ar_lev01-06_v1c/hybas_ar_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Asia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_as_lev01-06_v1c/hybas_as_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Australia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_au_lev01-06_v1c/hybas_au_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Europe':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_eu_lev01-06_v1c/hybas_eu_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Greenland':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_gr_lev01-06_v1c/hybas_gr_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'North America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_na_lev01-06_v1c/hybas_na_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'South America':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_sa_lev01-06_v1c/hybas_sa_lev0' + selected_level + '_v1c.shp')
         if selected_continent == 'Siberia':
-            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds',
+            hybas_uri = os.path.join(self.root_app.base_data_folder, 'Hydrosheds', 'hydrobasins',
                                      'hybas_si_lev01-06_v1c/hybas_si_lev0' + selected_level + '_v1c.shp')
 
         return hybas_uri
@@ -3706,6 +3685,10 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(DataExplorerDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Data explorer for run ' + self.parent.name)
@@ -3721,7 +3704,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
         self.models_in_run_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.models_in_run_hbox)
         self.models_in_run_header_l = QLabel('Models in run:')
-        self.models_in_run_header_l.setMaximumWidth(160)
         self.models_in_run_header_l.setFont(config.italic_font)
         self.models_in_run_hbox.addWidget(self.models_in_run_header_l)
         self.models_in_run_l = QLabel()
@@ -3733,7 +3715,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
         self.scenarios_in_run_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.scenarios_in_run_hbox)
         self.scenarios_in_run_header_l = QLabel('Scenarios in run:')
-        self.scenarios_in_run_header_l.setMaximumWidth(160)
         self.scenarios_in_run_header_l.setFont(config.italic_font)
         self.scenarios_in_run_hbox.addWidget(self.scenarios_in_run_header_l)
         self.scenarios_in_run_l = QLabel()
@@ -3746,7 +3727,6 @@ class DataExplorerDialog(MeshAbstractObject, QDialog):
 
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
 
         for model in self.models_in_run:
@@ -3777,6 +3757,9 @@ class MapEditDialog(MeshAbstractObject, QDialog):
 
     def __init__(self, root_app=None, parent=None):
         super(MapEditDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .4), int(self.root_app.application_window_starting_size[1] * .4))
+        self.resize(default_size[0], default_size[1])
 
         self.color_schemes = []
         self.color_schemes.extend(
@@ -3895,13 +3878,19 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(RunMeshModelDialog, self).__init__(root_app, parent)
 
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
-        self.setMinimumSize(400, 500)
         self.setLayout(self.main_layout)
         self.setWindowTitle('Run MESH Model')
         self.title_l = QLabel('Run MESH Model for the following scenario-model pairs\n')
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
+
+        # self.relaunch_mesh_note_l = QLabel('*MESH sometimes freezes on the first run of a new project. To fix this, save your project and relaunch MESH.\n\n')
+        # self.relaunch_mesh_note_l.setFont(config.small_font)
+        # self.main_layout.addWidget(self.relaunch_mesh_note_l)
 
         self.draw_scenario_model_pairs_gridlayout()
 
@@ -3919,11 +3908,26 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
         self.exec_()
 
+        # TODO IDEA INCORPORATE CROP PRODUCTION MODEL
+
     def run_next_in_queue(self):
         current_args = self.root_app.args_queue.items()[0][1]
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
+
+        # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
+        # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
+        # probably wrong with folder creation.
+
+        # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
+        setup_file_dir = os.path.join(
+            self.root_app.project_folder, 'output',
+            'model_setup_runs', current_model_name)
+        tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
+        if not os.path.exists(tmp_file_dir):
+            os.makedirs(tmp_file_dir)
+
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
         self.root_app.threads.append(runner)
@@ -4006,6 +4010,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         'model_setup_runs', model.name)
 
                     # Find the archive json file, load and grab arguments
+                    # NOTE that creation of this archive file is done manually by the user in the invest UI.
                     for file in os.listdir(setup_file_dir):
                         if file.endswith('.json') and "archive" in file:
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
@@ -4050,6 +4055,9 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         super(InstallPluginsDialog, self).__init__(root_app, parent)
         self.plugin_folder = None
 
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Add plugins to MESH')
@@ -4073,7 +4081,6 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         self.add_plugin_hbox.addWidget(self.plugin_path_le)
 
         self.select_folder_pb = QPushButton()
-        #self.select_folder_pb.setMaximumWidth(32)
         self.select_folder_icon = QIcon(QPixmap('icons/document-open-7.png'))
         self.select_folder_pb.setIcon(self.select_folder_icon)
         self.add_plugin_hbox.addWidget(self.select_folder_pb)
@@ -4091,7 +4098,6 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addWidget(self.scroll_widget)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         for plugin in self.root_app.models_dock.models_widget.elements:
             self.scroll_widget.scroll_layout.addWidget(QLabel(plugin))
@@ -4105,7 +4111,7 @@ class InstallPluginsDialog(MeshAbstractObject, QDialog):
 
 
     def install_plugin(self):
-        # TODO JUSTIN NYI
+        # NOTE 'NYI'
         self.scroll_widget.scroll_layout.addWidget(QLabel('Not yet implemented.'))
 
 
@@ -4116,6 +4122,10 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
     # NEXT RELEASE I have a deep conceptual problem insofar as not all data that would have generators are baseline. How, for instance, would the Scenario generator know to create it's own transition_table.csv?
     def __init__(self, root_app=None, parent=None):
         super(CreateBaselineDataDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
@@ -4135,7 +4145,6 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         self.root_app.project_aoi
         checked_models = self.root_app.models_dock.models_widget.get_checked_elements()
@@ -4163,31 +4172,32 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                                                           parent=self)
                         self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
 
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            self.optional_l = QLabel('Optional Inputs')
-            self.optional_l.setFont(config.minor_heading_font)
-            self.scroll_widget.scroll_layout.addWidget(self.optional_l)
-
-            self.optional_model_headers = OrderedDict()
-            self.optional_specify_buttons = OrderedDict()
-            for model in checked_models:
-                self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-                self.optional_model_headers[model.name] = QLabel(model.long_name)
-                self.optional_model_headers[model.name].setFont(config.bold_font)
-                self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
-
-                self.input_mapping_uri = os.path.join('../settings/default_setup_files',
-                                                      model.name + '_input_mapping.csv')
-                input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-
-                for key, value in input_mapping.items():
-                    if not utilities.convert_to_bool(value['required']):
-                        self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
-                                                                                          specify_function=self.create_data_from_args,
-                                                                                          root_app=self.root_app,
-                                                                                          parent=self)
-                        self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+            ## Deactivated display of optional data input creation.
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            # self.optional_l = QLabel('Optional Inputs')
+            # self.optional_l.setFont(config.minor_heading_font)
+            # self.scroll_widget.scroll_layout.addWidget(self.optional_l)
+            #
+            # self.optional_model_headers = OrderedDict()
+            # self.optional_specify_buttons = OrderedDict()
+            # for model in checked_models:
+            #     self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            #     self.optional_model_headers[model.name] = QLabel(model.long_name)
+            #     self.optional_model_headers[model.name].setFont(config.bold_font)
+            #     self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
+            #
+            #     self.input_mapping_uri = os.path.join('../settings/default_setup_files',
+            #                                           model.name + '_input_mapping.csv')
+            #     input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+            #
+            #     for key, value in input_mapping.items():
+            #         if not utilities.convert_to_bool(value['required']):
+            #             self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
+            #                                                                               specify_function=self.create_data_from_args,
+            #                                                                               root_app=self.root_app,
+            #                                                                               parent=self)
+            #             self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')
@@ -4221,10 +4231,12 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
     """
     def __init__(self, root_app=None, parent=None):
         super(ConfigureBaseDataDialog, self).__init__(root_app, parent)
+
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1][0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
-
-        self.setMinimumWidth(650)
 
         self.setWindowTitle('Configure Base Data')
         self.title_l = QLabel('You need to obtain or configure your base data')
@@ -4287,6 +4299,9 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(DefineDecisionContextDialog, self).__init__(root_app, parent)
 
+        default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
+        self.resize(default_size[0], default_size[1])
+
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
@@ -4296,12 +4311,17 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.title_l)
         self.main_layout.addWidget(QLabel())
 
+        self.beta_update_l = QLabel('This feature is not fully implemented but can be useful for assisting in the '
+                                    'creation of scenarios.\nClicking \"Use these pathways\" will add scecnarios to the\n'
+                                    'Scenarios window, ready for you to add details to the new scenarios.')
+        self.beta_update_l.setFont(config.small_font)
+        self.main_layout.addWidget(self.beta_update_l)
+
         self.add_decision_option_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.add_decision_option_hbox)
         self.add_decision_option_pb = QPushButton('Add decision option')
         self.add_decision_option_icon = QIcon(QPixmap('icons/document-properties.png'))
         self.add_decision_option_pb.setIcon(self.add_decision_option_icon)
-        self.add_decision_option_pb.setMaximumWidth(250)
         self.add_decision_option_pb.clicked.connect(self.add_decision_option)
         self.add_decision_option_hbox.addWidget(self.add_decision_option_pb)
         self.add_decision_option_description_l = QLabel('Choose a name for one of the decisions being considered, e.g. reforestation, business-as-usual, agricultural expansion.')
@@ -4314,7 +4334,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.define_external_driver_pb = QPushButton('Define external driver')
         self.define_external_driver_icon = QIcon(QPixmap('icons/office-chart-area.png'))
         self.define_external_driver_pb.setIcon(self.define_external_driver_icon)
-        self.define_external_driver_pb.setMaximumWidth(250)
         self.define_external_driver_pb.clicked.connect(self.define_external_driver)
         self.define_external_driver_hbox.addWidget(self.define_external_driver_pb)
         self.define_external_driver_description_l = QLabel('Define any external drivers that might affect your decision, e.g. climate change, price changes.')
@@ -4327,7 +4346,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.add_assessment_time_pb = QPushButton('Add assessment time')
         self.add_assessment_time_icon = QIcon(QPixmap('icons/edit-clear-history-3.png'))
         self.add_assessment_time_pb.setIcon(self.add_assessment_time_icon)
-        self.add_assessment_time_pb.setMaximumWidth(250)
         self.add_assessment_time_pb.clicked.connect(self.add_assessment_time)
         self.add_assessment_time_hbox.addWidget(self.add_assessment_time_pb)
         self.add_assessment_time_description_l = QLabel('Specify which moments in time you want to assess the outcomes of your decision, e.g. 2010, 2015, 2020.')
@@ -4341,14 +4359,12 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.use_these_pathways_pb = QPushButton('Use these pathways')
         self.use_these_pathways_icon = QIcon(QPixmap('icons/crab16.png'))
         self.use_these_pathways_pb.setIcon(self.use_these_pathways_icon)
-        self.use_these_pathways_pb.setMaximumWidth(250)
         self.use_these_pathways_pb.clicked.connect(self.use_these_pathways)
         self.use_these_pathways_hbox.addWidget(self.use_these_pathways_pb)
 
         self.clear_pathways_pb = QPushButton('Clear pathways')
         self.clear_pathways_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.clear_pathways_pb.setIcon(self.clear_pathways_icon)
-        self.clear_pathways_pb.setMaximumWidth(250)
         self.clear_pathways_pb.clicked.connect(self.clear_pathways)
         self.use_these_pathways_hbox.addWidget(self.clear_pathways_pb)
 
@@ -4360,7 +4376,6 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
         self.scroll_widget = ScrollWidget(self.root_app, self)
         self.main_layout.addWidget(self.scroll_widget)
         self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
-        self.scroll_widget.setMinimumSize(800, 700)
 
         self.tree = QTreeWidget()
         self.tree.setColumnCount(1)
