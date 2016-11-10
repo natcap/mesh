@@ -1283,7 +1283,6 @@ class ModelsWidget(ScrollWidget):
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
 
-        print('new_json_path', new_json_path)
         self.running_setup_uis.append(modelui.main(new_json_path))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
@@ -3916,11 +3915,16 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
 
+        # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
+        setup_file_dir = os.path.join(
+            self.root_app.project_folder, 'output',
+            'model_setup_runs', current_model_name)
+        tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
+        os.makedirs(tmp_file_dir)
+
         # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
         # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
         # probably wrong with folder creation.
-
-        print('current_args', current_args)
 
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
@@ -4006,7 +4010,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                     # Find the archive json file, load and grab arguments
                     # NOTE that creation of this archive file is done manually by the user in the invest UI.
                     for file in os.listdir(setup_file_dir):
-                        if file.endswith('.json') and "archive" in file: # Doug added  and "archive" in file but not sure why. that wasn't in the json file causing it not to load.
+                        if file.endswith('.json') and "archive" in file:
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
                             args = archive_args["arguments"]

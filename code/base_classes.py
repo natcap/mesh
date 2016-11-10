@@ -50,8 +50,6 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Water Yield Model.')
             if self.model_name == 'carbon':
                 self.update_run_log('Starting Carbon Model.')
-
-                print('Args that were given to carbon execute statement.', self.args)
                 execute_carbon_model(self.args)
                 self.update_run_log('Finished Carbon Model.')
             if self.model_name == 'pollination':
@@ -180,7 +178,7 @@ class InputSelector(MeshAbstractObject, QWidget):
         elif self.input_type == 'folder':
             file_uri = str(QFileDialog.getExistingDirectory(self, 'Select folder', self.root_app.project_folder))
         else:
-            raise
+            raise NameError('Unexpected outcome of InputSelector')
 
         self.le.setText(file_uri)
 
@@ -241,6 +239,5 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
         input_text, ok = QInputDialog.getText(self, 'Specify text', 'Text:')
         if ok:
             text = str(input_text)
-            print('Text inputed: ' + text)
 
 
