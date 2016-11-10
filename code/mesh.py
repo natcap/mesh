@@ -3888,10 +3888,9 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
 
-        self.relaunch_mesh_note_l = QLabel('*MESH sometimes freezes on the first run of a new project. To fix this, save your project and relaunch MESH.\n\n')
-        self.relaunch_mesh_note_l.setFont(config.small_font)
-        self.main_layout.addWidget(self.relaunch_mesh_note_l)
-
+        # self.relaunch_mesh_note_l = QLabel('*MESH sometimes freezes on the first run of a new project. To fix this, save your project and relaunch MESH.\n\n')
+        # self.relaunch_mesh_note_l.setFont(config.small_font)
+        # self.main_layout.addWidget(self.relaunch_mesh_note_l)
 
         self.draw_scenario_model_pairs_gridlayout()
 
@@ -4316,7 +4315,7 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
                                     'creation of scenarios.\nClicking \"Use these pathways\" will add scecnarios to the\n'
                                     'Scenarios window, ready for you to add details to the new scenarios.')
         self.beta_update_l.setFont(config.small_font)
-        self.main_layout.addWidget(beta_update_l)
+        self.main_layout.addWidget(self.beta_update_l)
 
         self.add_decision_option_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.add_decision_option_hbox)
