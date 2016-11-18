@@ -11,7 +11,8 @@ from PyQt4.QtCore import *
 from natcap.invest.iui import modelui
 from natcap.invest.hydropower.hydropower_water_yield import execute as execute_hydropower_model
 from natcap.invest.ndr.ndr import execute as execute_nutrient_model
-from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
+# from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
+from natcap.invest.carbon import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
 

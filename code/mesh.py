@@ -1221,67 +1221,65 @@ class ModelsWidget(ScrollWidget):
         """
         self.sender = sender
 
-        # Check if trying to create a differenct scenario with
-        # InVEST Scenario generator
+        # Check if trying to create a differenct scenario with InVEST Scenario generator
         if isinstance(self.sender, Scenario):
-            # If a call from Scenario the sender.name is going to be the name
-            # of the user labeled scenario and not the InVEST model name
+            # If a call from Scenario the sender.name is going to be the name of the user labeled scenario and not the InVEST model name
             model_name = self.sender.model_name
         else:
             model_name = self.sender.name
 
         # Json file name with extension for InVEST model model.name
         json_file_name = model_name + '.json'
+
         # Path to CSV file for mapping MESH input data to the model model.name
-        input_mapping_uri = os.path.join(
-            '../settings/default_setup_files',
-            '%s_input_mapping.csv' % model_name)
+        input_mapping_uri = os.path.join('../settings/default_setup_files', '%s_input_mapping.csv' % model_name)
+
         # Read the input mapping CSV into a dictionary
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
-        # Path where an InVEST setup run json file is saved. If the model
-        # has already been run and this file exists, use this as default.
-        existing_last_run_uri = os.path.join(
-            self.root_app.project_folder, 'output', 'model_setup_runs',
-            model_name, '%s_setup_file.json' % model_name)
-        # Path to the MESH default json parameters.
-        default_last_run_uri = os.path.join(
-            self.root_app.default_setup_files_folder,
-            '%s_setup_file.json' % model_name)
-        # Check to see if an existing json file exists from a previous
-        # setup run
 
+        # Path where an InVEST setup run json file is saved. If the model has already been run and this file exists, use this as default.
+        existing_last_run_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_setup_file.json' % model_name)
+
+        # Path to the MESH default json parameters.
+        default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
+
+        # TODO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
+        # Check to see if an existing json file exists from a previous setup run
         if os.path.exists(existing_last_run_uri):
             dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
             shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
         else:
             # Read in MESH setup json to a dictionary
-            default_args = utilities.file_to_python_object(
-                default_last_run_uri)
-            # Get the location of the InVEST model json file, which is
-            # distributed with InVEST in IUI package
-            invest_model_json_path = os.path.join(
-                os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+            default_args = utilities.file_to_python_object(default_last_run_uri)
+
+            # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
+            invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+
             # Path to copy InVEST json file to
-            invest_json_copy = os.path.join(
-                self.root_app.project_folder, json_file_name)
+            invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
             shutil.copy(invest_model_json_path, invest_json_copy)
+
             # Read in copied InVEST Json to dictionary
-            invest_json_dict = utilities.file_to_python_object(
-                invest_json_copy)
-            # Update the dictionary based on MESH setup json and input mapping
-            # files
-            new_json_args = self.modify_invest_args(
-                invest_json_dict, default_args, model_name, input_mapping)
-            # Make the model directory, which will also be the InVEST workspace
-            # In order to place the json file in that location
+            invest_json_dict = utilities.file_to_python_object(invest_json_copy)
+
+            # Update the dictionary based on MESH setup json and input mapping files
+            new_json_args = self.modify_invest_args(invest_json_dict, default_args, model_name, input_mapping)
+            print('invest_json_dict', invest_json_dict)
+            print('default_args', default_args)
+            print('model_name', model_name)
+            print('input_mapping', input_mapping)
+            print('new_json_args', new_json_args)
+
+            # Make the model directory, which will also be the InVEST workspace In order to place the json file in that location
             if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
+
             # Write updated dictionary to new json file.
             new_json_path = existing_last_run_uri
-
             with open(new_json_path, 'w') as fp:
                 json.dump(new_json_args, fp)
+
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
 
@@ -1566,7 +1564,11 @@ class Model(MeshAbstractObject, QWidget):
                 elif file.endswith('.json') and "archive" in file: # Doug added therequirement that archive_args were added separately. Check where else this is used.
                     archive_params_valid = True
 
-            if success_string in open(newest_log_path).read():
+            if os.path.exists(newest_log_path):
+                f = open(newest_log_path).read()
+            else:
+                f = None
+            if success_string in f:
                 invest_run_valid = True
 
         return invest_run_valid and archive_params_valid
@@ -3920,13 +3922,13 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
         # probably wrong with folder creation.
 
-        # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
-        setup_file_dir = os.path.join(
-            self.root_app.project_folder, 'output',
-            'model_setup_runs', current_model_name)
-        tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
-        if not os.path.exists(tmp_file_dir):
-            os.makedirs(tmp_file_dir)
+        # # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
+        # setup_file_dir = os.path.join(
+        #     self.root_app.project_folder, 'output',
+        #     'model_setup_runs', current_model_name)
+        # tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
+        # if not os.path.exists(tmp_file_dir):
+        #     os.makedirs(tmp_file_dir)
 
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
@@ -4233,7 +4235,7 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         super(ConfigureBaseDataDialog, self).__init__(root_app, parent)
 
         default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
-        self.resize(default_size[0], default_size[1][0], default_size[1])
+        self.resize(default_size[0], default_size[1])
 
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
