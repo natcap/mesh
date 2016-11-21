@@ -10,6 +10,7 @@ the ES models, and reporting/visualization of the results.
 """
 
 import sys
+import time
 import os
 import logging
 from collections import OrderedDict
@@ -77,6 +78,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
+        self.program_launch_time = time.time()
+
 
         # Project state variables
         self.decision_contexts = OrderedDict()
@@ -765,7 +768,6 @@ class ScenariosWidget(ScrollWidget):
     def save_invest_archive(self):
         """Save each Scenario.archive_args to json file in project sttings."""
         base_dir = os.path.join(self.root_app.project_folder, 'settings')
-
         for name, scenario in self.elements.items():
             if len(scenario.archive_args.keys()) > 0:
                 save_path = os.path.join(base_dir, '%s_archive_args.json' % name)
@@ -1212,6 +1214,34 @@ class ModelsWidget(ScrollWidget):
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
 
+    def save_invest_archive(self):
+        """Save the invest args archive at .archive_args to json file in project sttings."""
+        # TODO Make the scenario specific invest args save in the scenario folders.
+        default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
+                                                self.name, '%s_archive.json' % self.name)
+        self.copy_user_lastrun(self.name, default_archive_args_uri)
+
+    def get_user_lastrun_uri(self, model_name):
+        user_natcap_folder = utilities.get_user_natcap_folder()
+        invest_version = natcap.invest.__version__
+        filename = '%s_lastrun_%s.json' % (model_name, invest_version)
+        model_lastrun_uri = os.path.join(user_natcap_folder, filename)
+        return model_lastrun_uri
+
+    def copy_user_lastrun(self, model_name, dst_uri):
+        """Find and copy the lastrun json file to the project directory.
+        InVEST Saves a file to a local user folder that contains the parameters used to call
+        Invest's Execute statement."""
+        model_lastrun_uri = self.get_user_lastrun_uri(model_name)
+
+        dst_dir = os.path.split(dst_uri)[0]
+        try:
+            os.makedirs(dst_dir)
+        except:
+            'Already exists'
+
+        shutil.copy(model_lastrun_uri, dst_uri)
+
     def setup_invest_model(self, sender):
         """
         There are two basic ways a model might be run in MESH. The setup run, which in the case of invest models creates
@@ -1243,13 +1273,21 @@ class ModelsWidget(ScrollWidget):
         # Path to the MESH default json parameters.
         default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
 
+        default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_archive.json' % model_name)
+
+        # UNUSED model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_archive.json' % model_name)
+
+
+
         # TODO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
         if os.path.exists(existing_last_run_uri):
+            print('using existing_last_run_uri', existing_last_run_uri)
             dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
             shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
         else:
+            print('using NON existing_last_run_uri', existing_last_run_uri)
             # Read in MESH setup json to a dictionary
             default_args = utilities.file_to_python_object(default_last_run_uri)
 
@@ -1260,16 +1298,15 @@ class ModelsWidget(ScrollWidget):
             invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
             shutil.copy(invest_model_json_path, invest_json_copy)
 
-            # Read in copied InVEST Json to dictionary
-            invest_json_dict = utilities.file_to_python_object(invest_json_copy)
+            # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
+            mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
+            if os.path.exists(mesh_json_uri):
+                json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+            else:
+                json_launch_dict = utilities.file_to_python_object(invest_json_copy)
 
             # Update the dictionary based on MESH setup json and input mapping files
-            new_json_args = self.modify_invest_args(invest_json_dict, default_args, model_name, input_mapping)
-            print('invest_json_dict', invest_json_dict)
-            print('default_args', default_args)
-            print('model_name', model_name)
-            print('input_mapping', input_mapping)
-            print('new_json_args', new_json_args)
+            json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
 
             # Make the model directory, which will also be the InVEST workspace In order to place the json file in that location
             if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
@@ -1278,10 +1315,12 @@ class ModelsWidget(ScrollWidget):
             # Write updated dictionary to new json file.
             new_json_path = existing_last_run_uri
             with open(new_json_path, 'w') as fp:
-                json.dump(new_json_args, fp)
+                json.dump(json_launch_dict, fp)
 
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
+
+
 
         self.running_setup_uis.append(modelui.main(new_json_path))
 
@@ -1545,6 +1584,26 @@ class Model(MeshAbstractObject, QWidget):
         invest_run_valid = False
         archive_params_valid = False
 
+        # Check to see if there's a more recent model-specific lastrun file.
+        model_lastrun_uri = self.parent.get_user_lastrun_uri(self.name)
+        if os.path.exists(model_lastrun_uri):
+            lastrun_time = os.path.getmtime(model_lastrun_uri)
+        else:
+            lastrun_time = 0
+
+        model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
+
+
+
+        if lastrun_time > self.root_app.program_launch_time:
+            print('Lastrun IS more recent than program launch. Copying to project file.')
+            self.parent.copy_user_lastrun('carbon', model_archive_uri)
+        else:
+            print('Lastrun not more recent than program launch.')
+
+
+
+
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
             date = ""
@@ -1566,10 +1625,11 @@ class Model(MeshAbstractObject, QWidget):
 
             if os.path.exists(newest_log_path):
                 f = open(newest_log_path).read()
+                if success_string in f:
+                    invest_run_valid = True
             else:
-                f = None
-            if success_string in f:
-                invest_run_valid = True
+                invest_run_valid = False
+
 
         return invest_run_valid and archive_params_valid
 
@@ -4017,7 +4077,17 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         if file.endswith('.json') and "archive" in file:
                             json_archive = open(os.path.join(setup_file_dir, file)).read()
                             archive_args = json.loads(json_archive)
+
+                            # START HERE, The lastrun file generated by InVEST automatically is operating unexpectedly,
+                            # bringing in information that shouldn't be there (e.g., uri of geotiffs not used in the run).
+                            # the export archive args function, however, does produce the correct ones. How can I
+                            # get the correct ones withthe constraint that i can't make invest call something it doesn't
+                            # currently call? Perhpas use doug's update_invest_args func, but to do this I need to start with
+                            # understanding better what it does and what if any correct information is in the last-run.
                             args = archive_args["arguments"]
+                            # if 'arguments' in archive_args:
+                            #     raise NameError('Inclusion of arguments implies this was an old-version of json args.')
+                            # args = archive_args
                             break
 
                     args['workspace_dir'] = os.path.join(

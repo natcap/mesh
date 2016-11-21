@@ -5,6 +5,8 @@ import os
 import datetime
 import json
 import csv
+import platform
+import sys
 
 from osgeo import gdal, ogr
 from PyQt4.QtGui import *
@@ -12,6 +14,17 @@ import xlrd
 import pygeoprocessing.geoprocessing
 import numpy
 import config
+
+def get_user_natcap_folder():
+    """Return the file location of the user's settings folder.  This folder
+    location is OS-dependent."""
+    if platform.system() == 'Windows':
+        config_folder = os.path.join('~', 'AppData', 'Local', 'NatCap')
+    else:
+        config_folder = os.path.join('~', '.natcap')
+    expanded_path = os.path.expanduser(config_folder)
+    user_folder = expanded_path.decode(sys.getfilesystemencoding())
+    return user_folder
 
 
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):

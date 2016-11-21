@@ -51,6 +51,7 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Water Yield Model.')
             if self.model_name == 'carbon':
                 self.update_run_log('Starting Carbon Model.')
+                print('self.args', self.args)
                 execute_carbon_model(self.args)
                 self.update_run_log('Finished Carbon Model.')
             if self.model_name == 'pollination':
