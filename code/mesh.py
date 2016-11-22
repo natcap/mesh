@@ -1214,12 +1214,13 @@ class ModelsWidget(ScrollWidget):
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
 
-    def save_invest_archive(self):
-        """Save the invest args archive at .archive_args to json file in project sttings."""
-        # TODO Make the scenario specific invest args save in the scenario folders.
-        default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
-                                                self.name, '%s_archive.json' % self.name)
-        self.copy_user_lastrun(self.name, default_archive_args_uri)
+    # def save_invest_archive(self):
+    #     """Save the invest args archive at .archive_args to json file in project sttings."""
+    #     # NOTE THIS CURRENTLY does not work well as the last_run is a superset of archive args and isnt formatted correctly
+    #     # TODO Make the scenario specific invest args save in the scenario folders.
+    #     default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
+    #                                             self.name, '%s_archive.json' % self.name)
+    #     self.copy_user_lastrun(self.name, default_archive_args_uri)
 
     def get_user_lastrun_uri(self, model_name):
         user_natcap_folder = utilities.get_user_natcap_folder()
@@ -1593,7 +1594,8 @@ class Model(MeshAbstractObject, QWidget):
 
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
 
-
+        lastrun_json_uri = self.parent.get_user_lastrun_uri('carbon')
+        print('lastrun_json_uri', lastrun_json_uri)
 
         if lastrun_time > self.root_app.program_launch_time:
             print('Lastrun IS more recent than program launch. Copying to project file.')
