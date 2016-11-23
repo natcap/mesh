@@ -30,11 +30,7 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
-
-# import geopandas as gp
-# import shapely
-# import fiona
-# import descartes
+import pprint
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
@@ -42,9 +38,6 @@ import zipfile
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 from mpl_toolkits.basemap import Basemap
-#from matplotlib.patches import Polygon
-#from matplotlib.collections import PatchCollection
-#from matplotlib.patches import PathPatch
 
 from mesh_models.data_creation import data_creation
 from mesh_utilities import config
@@ -52,7 +45,6 @@ from mesh_utilities import utilities
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
 from natcap.invest.iui import modelui
 import natcap.invest.iui
-
 
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
 LOGGER.setLevel(logging.WARN)
@@ -602,6 +594,28 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 return False
         return True
 
+    def get_flat_arguments(self, args):
+        """Build a dictionary with the label and type of the args_id.
+
+        Based on the args_id's / arguments the user ran the InVEST setup
+        model with, grab those fields 'type' and 'label' to use in displaying
+        for the dialog.
+        """
+        flatDict = {}
+        if isinstance(args, dict):
+            if 'args_id' in args:
+                flatDict[args['args_id']] = {}
+                for param in ['type', 'label', 'id']:
+                    if param in args:
+                        flatDict[args['args_id']][param] = args[param]
+            if 'elements' in args:
+                flatDict.update(self.get_flat_arguments(args['elements']))
+        elif isinstance(args, list):
+            for element in args:
+                flatDict.update(self.get_flat_arguments(element))
+
+        return flatDict
+
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
     """
@@ -994,7 +1008,7 @@ class Scenario(MeshAbstractObject, QWidget):
         # Updated inputs dictionary if model name args have been updated
         output_args = {}
         if model_name in self.archive_args:
-            for key, val in input_args.iteritems():
+            for key, val in input_args.items():
                 # If the User has updated this input and it's not blank, update
                 if key in self.archive_args[model_name] and self.archive_args[model_name][key] != '':
                     output_args[key] = self.archive_args[model_name][key]
@@ -1242,6 +1256,54 @@ class ModelsWidget(ScrollWidget):
             'Already exists'
 
         shutil.copy(model_lastrun_uri, dst_uri)
+
+    def get_args_from_lastrun(self, model_name):
+        iui_model_setup_filename = model_name + '.json'
+        iui_model_setup_file_uri = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], iui_model_setup_filename)
+
+        with open(iui_model_setup_file_uri) as f:
+            iui_model_setup_file_dict = json.load(f)
+
+        # InVEST has slightly different names for UI elements vs Execute args (arg_id, id respectively)
+        # Process the IUI estup file provided by invest to define the current version of this correspondence.
+        archive_args_last_run_correspondence = self.get_args_arg_ids_correspondence(iui_model_setup_file_dict)
+
+        LOGGER.debug(pprint.pformat(archive_args_last_run_correspondence))
+
+        lastrun_json_uri = self.get_user_lastrun_uri(model_name)
+        with open(lastrun_json_uri) as f:
+            lastrun_dict = json.load(f)
+
+        LOGGER.debug(pprint.pformat(lastrun_dict))
+        archive_args = {'model': 'natcap.invest.' + model_name,
+                        'arguments': {}}
+
+        for args_key, iui_key in archive_args_last_run_correspondence.items():
+            # Convert away from Unicode
+            args_key = str(args_key)
+            iui_key =str(iui_key)
+            archive_args['arguments'][args_key] = lastrun_dict[iui_key]
+
+        # Remove the args that are not used. InVEST checks the args to see if it should be run and ignores the boolean
+        # so I remove it to not confuse InVEST
+        for k,v in archive_args['arguments'].items():
+            if type(v) is str or isinstance(v, unicode):
+                # test if the string appears to be a filetype
+                if any(filter in v for filter in [':', '/', '\\', '..']):
+                    if not os.path.exists(v):
+                        archive_args['arguments'][k] = ''
+        LOGGER.debug(pprint.pformat(archive_args))
+
+        return archive_args
+
+    def get_args_arg_ids_correspondence(self, iui_model_setup_file_dict):
+        correspondence = {}
+        arg_ids = self.root_app.get_flat_arguments(iui_model_setup_file_dict)
+        for k,v in arg_ids.items():
+            correspondence[k] = v['id']
+        return correspondence
+
+
 
     def setup_invest_model(self, sender):
         """
@@ -1550,16 +1612,6 @@ class Model(MeshAbstractObject, QWidget):
             LOGGER.critical("Exception hit on: self.root_app.scenarios_dock")
             raise
 
-        # NOTE, previously i updated the state of MESH readyness whenever a model was toggled.
-        # if scenarios_ready:
-        #     num_validated, num_checked = self.parent.get_elements_validated_and_checked()
-        #     if num_checked == 0:
-        #         to_update = '--Select models to run in the Models window--'
-        #     elif num_validated == num_checked:
-        #         to_update = 'Ready!'
-        #     else:
-        #         to_update = str(num_validated) + ' of ' + str(num_checked) + ' checked models are set up for Baseline'
-
     def check_if_validated(self):
         """Makes sure that a given InVEST setup run has completed successfully.
 
@@ -1594,17 +1646,13 @@ class Model(MeshAbstractObject, QWidget):
 
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
 
-        lastrun_json_uri = self.parent.get_user_lastrun_uri('carbon')
-        print('lastrun_json_uri', lastrun_json_uri)
-
         if lastrun_time > self.root_app.program_launch_time:
-            print('Lastrun IS more recent than program launch. Copying to project file.')
-            self.parent.copy_user_lastrun('carbon', model_archive_uri)
+            LOGGER.debug('Lastrun IS more recent than program launch. Copying to project file.')
+            archive_args = self.parent.get_args_from_lastrun(self.name)
+            with open(model_archive_uri, 'w') as f:
+                json.dump(archive_args, f)
         else:
-            print('Lastrun not more recent than program launch.')
-
-
-
+            LOGGER.debug('Lastrun not more recent than program launch.')
 
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
@@ -3449,9 +3497,9 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 invest_json_copy = os.path.join(
                     self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
                 invest_json = json.loads(open(invest_json_copy).read())
-                invest_args = self.get_flat_arguments(invest_json)
+                invest_args = self.root_app.get_flat_arguments(invest_json)
 
-                for arg_id, arg_val in args.iteritems():
+                for arg_id, arg_val in args.items():
                     grid_row += 1
                     arg_label = QLabel(invest_args[arg_id]['label'])
                     # Don't want to give the user the choice to update
@@ -3528,36 +3576,13 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
         """
         for model_name in self.elements.keys():
             self.scenario.archive_args[model_name] = {}
-            for key, val in self.elements[model_name].iteritems():
+            for key, val in self.elements[model_name].items():
                 self.scenario.archive_args[model_name][key] = str(val.text())
 
         # Add this to the Scenario Widget for display update
         self.scenario.load_element(
             "Scenario Parameters Adjusted", "Scenario Parameters Adjusted")
-
         self.close()
-
-    def get_flat_arguments(self, args):
-        """Build a dictionary with the label and type of the args_id.
-
-        Based on the args_id's / arguments the user ran the InVEST setup
-        model with, grab those fields 'type' and 'label' to use in displaying
-        for the dialog.
-        """
-        flatDict = {}
-        if isinstance(args, dict):
-            if 'args_id' in args:
-                flatDict[args['args_id']] = {}
-                for param in ['type', 'label']:
-                    if param in args:
-                        flatDict[args['args_id']][param] = args[param]
-            if 'elements' in args:
-                flatDict.update(self.get_flat_arguments(args['elements']))
-        elif isinstance(args, list):
-            for element in args:
-                flatDict.update(self.get_flat_arguments(element))
-
-        return flatDict
 
 
 class FileButton(QPushButton):
