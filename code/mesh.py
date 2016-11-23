@@ -1231,7 +1231,7 @@ class ModelsWidget(ScrollWidget):
     # def save_invest_archive(self):
     #     """Save the invest args archive at .archive_args to json file in project sttings."""
     #     # NOTE THIS CURRENTLY does not work well as the last_run is a superset of archive args and isnt formatted correctly
-    #     # TODO Make the scenario specific invest args save in the scenario folders.
+    #     # TODOO Make the scenario specific invest args save in the scenario folders.
     #     default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
     #                                             self.name, '%s_archive.json' % self.name)
     #     self.copy_user_lastrun(self.name, default_archive_args_uri)
@@ -1342,7 +1342,7 @@ class ModelsWidget(ScrollWidget):
 
 
 
-        # TODO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
+        # TODOO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
         if os.path.exists(existing_last_run_uri):
             print('using existing_last_run_uri', existing_last_run_uri)
@@ -2535,7 +2535,7 @@ class Report(MeshAbstractObject, QFrame):
     def add_report_list(self, uri):
         reports_folder = os.path.join(self.root_app.project_folder, 'output/reports')
 
-        # TODO Add robust reporting feature.
+        # TODOO Add robust reporting feature.
         # Here is probably the silliest shortcut I took but I implemented it on the plane to Rome the day before I presented it.
         # Ultimatly this should draw from XML or JSON files that define a report type and the images should be based on the
         # define_report_ready_object() from upcoming release.
@@ -2751,8 +2751,6 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         utilities.python_object_to_csv(to_write, self.save_uri)
 
     def map_cb_toggle(self, state):
-        # TODO BUG If the user clicks a checkbox before the matplotlib canvas had been loaded by other means, there
-        # is a probability of a concurrency error. Fix this by making the canvas be preloaded?
         toggled_signal = str(self.sender().text())
         if state:
             self.name_of_toggled = toggled_signal
@@ -3997,7 +3995,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
         self.exec_()
 
-        # TODO IDEA INCORPORATE CROP PRODUCTION MODEL
+        # TODOO IDEA INCORPORATE CROP PRODUCTION MODEL
 
     def run_next_in_queue(self):
         current_args = self.root_app.args_queue.items()[0][1]
