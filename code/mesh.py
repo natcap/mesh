@@ -30,7 +30,8 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import zipfile
-import pprint
+from pprint import pprint as pp
+from pprint import pformat as ps
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
@@ -594,8 +595,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 return False
         return True
 
+    #--- Application level functions required for multiple parts of the project flow.
     def get_flat_arguments(self, args):
-        """Build a dictionary with the label and type of the args_id.
+        """Recursively analyze the InVEST json file that defines the IUI setup to de-nest the dictionary
+        and return a subset of args relevant to running the underlying model.
 
         Based on the args_id's / arguments the user ran the InVEST setup
         model with, grab those fields 'type' and 'label' to use in displaying
@@ -615,6 +618,74 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 flatDict.update(self.get_flat_arguments(element))
 
         return flatDict
+
+    def get_user_lastrun_uri(self, model_name):
+        user_natcap_folder = utilities.get_user_natcap_folder()
+        invest_version = natcap.invest.__version__
+        filename = '%s_lastrun_%s.json' % (model_name, invest_version)
+        model_lastrun_uri = os.path.join(user_natcap_folder, filename)
+        return model_lastrun_uri
+
+    def copy_user_lastrun(self, model_name, dst_uri):
+        """Find and copy the lastrun json file to the project directory.
+
+        InVEST Saves a file to a local user folder that contains the parameters used to call
+        Invest's Execute statement.
+
+        No Longer Used because I just analyze the lastrun file inplace."""
+        model_lastrun_uri = self.get_user_lastrun_uri(model_name)
+
+        dst_dir = os.path.split(dst_uri)[0]
+        try:
+            os.makedirs(dst_dir)
+        except:
+            'Already exists'
+        shutil.copy(model_lastrun_uri, dst_uri)
+
+    def get_args_arg_ids_correspondence(self, iui_model_setup_file_dict):
+        correspondence = {}
+        arg_ids = self.root_app.get_flat_arguments(iui_model_setup_file_dict)
+        for k, v in arg_ids.items():
+            correspondence[k] = v['id']
+        return correspondence
+
+    def get_args_from_lastrun(self, model_name):
+        iui_model_setup_filename = model_name + '.json'
+        iui_model_setup_file_uri = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], iui_model_setup_filename)
+
+        with open(iui_model_setup_file_uri) as f:
+            iui_model_setup_file_dict = json.load(f)
+
+        # InVEST has slightly different names for UI elements vs Execute args (arg_id, id respectively)
+        # Process the IUI estup file provided by invest to define the current version of this correspondence.
+        archive_args_last_run_correspondence = self.get_args_arg_ids_correspondence(iui_model_setup_file_dict)
+        LOGGER.debug(ps(archive_args_last_run_correspondence))
+
+        lastrun_json_uri = self.get_user_lastrun_uri(model_name)
+        with open(lastrun_json_uri) as f:
+            lastrun_dict = json.load(f)
+        LOGGER.debug(ps(lastrun_dict))
+
+        archive_args = {'model': 'natcap.invest.' + model_name,
+                        'arguments': {}}
+
+        for args_key, iui_key in archive_args_last_run_correspondence.items():
+            # Convert away from Unicode
+            args_key = str(args_key)
+            iui_key = str(iui_key)
+            archive_args['arguments'][args_key] = lastrun_dict[iui_key]
+
+        # Remove the args that are not used. InVEST checks the args to see if it should be run and ignores the boolean
+        # so I remove it to not confuse InVEST
+        for k, v in archive_args['arguments'].items():
+            if type(v) is str or isinstance(v, unicode):
+                # test if the string appears to be a filetype
+                if any(filter in v for filter in [':', '/', '\\', '..']):
+                    if not os.path.exists(v):
+                        archive_args['arguments'][k] = ''
+        LOGGER.debug(ps(archive_args))
+
+        return archive_args
 
 
 class ScenariosDock(MeshAbstractObject, QDockWidget):
@@ -1228,83 +1299,6 @@ class ModelsWidget(ScrollWidget):
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
 
-    # def save_invest_archive(self):
-    #     """Save the invest args archive at .archive_args to json file in project sttings."""
-    #     # NOTE THIS CURRENTLY does not work well as the last_run is a superset of archive args and isnt formatted correctly
-    #     # TODOO Make the scenario specific invest args save in the scenario folders.
-    #     default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs',
-    #                                             self.name, '%s_archive.json' % self.name)
-    #     self.copy_user_lastrun(self.name, default_archive_args_uri)
-
-    def get_user_lastrun_uri(self, model_name):
-        user_natcap_folder = utilities.get_user_natcap_folder()
-        invest_version = natcap.invest.__version__
-        filename = '%s_lastrun_%s.json' % (model_name, invest_version)
-        model_lastrun_uri = os.path.join(user_natcap_folder, filename)
-        return model_lastrun_uri
-
-    def copy_user_lastrun(self, model_name, dst_uri):
-        """Find and copy the lastrun json file to the project directory.
-        InVEST Saves a file to a local user folder that contains the parameters used to call
-        Invest's Execute statement."""
-        model_lastrun_uri = self.get_user_lastrun_uri(model_name)
-
-        dst_dir = os.path.split(dst_uri)[0]
-        try:
-            os.makedirs(dst_dir)
-        except:
-            'Already exists'
-
-        shutil.copy(model_lastrun_uri, dst_uri)
-
-    def get_args_from_lastrun(self, model_name):
-        iui_model_setup_filename = model_name + '.json'
-        iui_model_setup_file_uri = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], iui_model_setup_filename)
-
-        with open(iui_model_setup_file_uri) as f:
-            iui_model_setup_file_dict = json.load(f)
-
-        # InVEST has slightly different names for UI elements vs Execute args (arg_id, id respectively)
-        # Process the IUI estup file provided by invest to define the current version of this correspondence.
-        archive_args_last_run_correspondence = self.get_args_arg_ids_correspondence(iui_model_setup_file_dict)
-
-        LOGGER.debug(pprint.pformat(archive_args_last_run_correspondence))
-
-        lastrun_json_uri = self.get_user_lastrun_uri(model_name)
-        with open(lastrun_json_uri) as f:
-            lastrun_dict = json.load(f)
-
-        LOGGER.debug(pprint.pformat(lastrun_dict))
-        archive_args = {'model': 'natcap.invest.' + model_name,
-                        'arguments': {}}
-
-        for args_key, iui_key in archive_args_last_run_correspondence.items():
-            # Convert away from Unicode
-            args_key = str(args_key)
-            iui_key =str(iui_key)
-            archive_args['arguments'][args_key] = lastrun_dict[iui_key]
-
-        # Remove the args that are not used. InVEST checks the args to see if it should be run and ignores the boolean
-        # so I remove it to not confuse InVEST
-        for k,v in archive_args['arguments'].items():
-            if type(v) is str or isinstance(v, unicode):
-                # test if the string appears to be a filetype
-                if any(filter in v for filter in [':', '/', '\\', '..']):
-                    if not os.path.exists(v):
-                        archive_args['arguments'][k] = ''
-        LOGGER.debug(pprint.pformat(archive_args))
-
-        return archive_args
-
-    def get_args_arg_ids_correspondence(self, iui_model_setup_file_dict):
-        correspondence = {}
-        arg_ids = self.root_app.get_flat_arguments(iui_model_setup_file_dict)
-        for k,v in arg_ids.items():
-            correspondence[k] = v['id']
-        return correspondence
-
-
-
     def setup_invest_model(self, sender):
         """
         There are two basic ways a model might be run in MESH. The setup run, which in the case of invest models creates
@@ -1337,10 +1331,6 @@ class ModelsWidget(ScrollWidget):
         default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
 
         default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_archive.json' % model_name)
-
-        # UNUSED model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_archive.json' % model_name)
-
-
 
         # TODOO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
@@ -1638,7 +1628,7 @@ class Model(MeshAbstractObject, QWidget):
         archive_params_valid = False
 
         # Check to see if there's a more recent model-specific lastrun file.
-        model_lastrun_uri = self.parent.get_user_lastrun_uri(self.name)
+        model_lastrun_uri = self.root_app.get_user_lastrun_uri(self.name)
         if os.path.exists(model_lastrun_uri):
             lastrun_time = os.path.getmtime(model_lastrun_uri)
         else:
@@ -1648,7 +1638,7 @@ class Model(MeshAbstractObject, QWidget):
 
         if lastrun_time > self.root_app.program_launch_time:
             LOGGER.debug('Lastrun IS more recent than program launch. Copying to project file.')
-            archive_args = self.parent.get_args_from_lastrun(self.name)
+            archive_args = self.root_app.get_args_from_lastrun(self.name)
             with open(model_archive_uri, 'w') as f:
                 json.dump(archive_args, f)
         else:
@@ -4003,6 +3993,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
 
+        # TODOO I never figured out why this issue went away... ignore?
         # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
         # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
         # probably wrong with folder creation.
