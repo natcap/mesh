@@ -3,16 +3,16 @@ hwp_fut_shape_uri,raster,FALSE,FALSE,fut_harvest_map,fut_harvest_map,carbon,copy
 yr_cur,parameter,FALSE,FALSE,yr_cur,yr_cur,carbon,copy_default,,2015
 r,parameter,FALSE,FALSE,discount_rate,discount_rate,carbon,copy_default,,7
 confidence_threshold,parameter,FALSE,FALSE,confidence_threshold,confidence_threshold,carbon,copy_default,,90
-lulc_redd_uri,raster,FALSE,TRUE,redd_lulc_raster,redd_lulc_raster,carbon,copy_default,input/Baseline/lulc_redd.tif,models/carbon/lulc_redd.tif
+lulc_redd_uri,raster,FALSE,FALSE,redd_lulc_raster,redd_lulc_raster,carbon,copy_default,input/Baseline/lulc_redd.tif,models/carbon/lulc_redd.tif
 carbon_pools_uri,table,TRUE,TRUE,carbon_pools,Carbon pools biophysical table,carbon,copy_default,input/Baseline/carbon_biophysical_table.csv,models/carbon/carbon_biophysical_table.csv
 lulc_cur_uri,raster,TRUE,TRUE,cur_lulc_raster,LULC raster,carbon,clip_from_global,input/Baseline/lulc.tif,lulc/lulc_modis_2012.tif
 lulc_fut_year,parameter,FALSE,FALSE,fut_lulc_year,fut_lulc_year,carbon,copy_default,,2030
-hwp_cur_shape_uri,raster,FALSE,TRUE,cur_harvest_map,cur_harvest_map,carbon,copy_default,input/Baseline/current_harvest.tif,models/carbon/harv_samp_cur.shp
+hwp_cur_shape_uri,raster,FALSE,FALSE,cur_harvest_map,cur_harvest_map,carbon,copy_default,input/Baseline/current_harvest.tif,models/carbon/harv_samp_cur.shp
 sequest_uri,raster,FALSE,FALSE,sequest_uri,sequest_uri,carbon,copy_default,input/Baseline/sequestration.tif,models/carbon/sequestration.tif
 yr_fut,parameter,FALSE,FALSE,yr_fut,yr_fut,carbon,copy_default,,2050
 lulc_cur_year,parameter,FALSE,FALSE,cur_lulc_year,cur_lulc_year,carbon,copy_default,,2000
 c,paremeter,FALSE,FALSE,rate_change,rate_change,carbon,copy_default,,0
 carbon_price_units,parameter,FALSE,FALSE,carbon_price_units,carbon_price_units,carbon,copy_default,,0
 V,parameter,FALSE,FALSE,value,value,carbon,copy_default,,43
-carbon_pools_uncertain_uri,table,TRUE,TRUE,carbon_pools_uncertain,carbon_pools_uncertain,carbon,copy_default,input/Baseline/carbon_uncertainty_biophysical_table.csv,models/carbon/carbon_uncertainty_biophysical_table.csv
+carbon_pools_uncertain_uri,table,FALSE,TRUE,carbon_pools_uncertain,carbon_pools_uncertain,carbon,copy_default,input/Baseline/carbon_uncertainty_biophysical_table.csv,models/carbon/carbon_uncertainty_biophysical_table.csv
 lulc_fut_uri,raster,FALSE,FALSE,fut_lulc_raster,fut_lulc_raster,carbon,copy_default,input/Baseline/lulc_future.tif,models/carbon/lulc_future.tif

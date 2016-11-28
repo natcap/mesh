@@ -644,7 +644,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
     def get_args_arg_ids_correspondence(self, iui_model_setup_file_dict):
         correspondence = {}
-        arg_ids = self.root_app.get_flat_arguments(iui_model_setup_file_dict)
+        arg_ids = self.get_flat_arguments(iui_model_setup_file_dict)
         for k, v in arg_ids.items():
             correspondence[k] = v['id']
         return correspondence
@@ -1373,7 +1373,11 @@ class ModelsWidget(ScrollWidget):
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
 
-
+            ## This didn't work because the json_launch_dict didnt have all the IUI information needed.
+            ## Actually it didnt work beacsue that's not how setupfiles work.
+            # # Place our newly created json setup file in the place where invest looks for it.
+            # lastrun_json_uri = self.root_app.get_user_lastrun_uri(model_name)
+            # shutil.copy(new_json_path, lastrun_json_uri)
 
         self.running_setup_uis.append(modelui.main(new_json_path))
 
@@ -4253,39 +4257,40 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
                 for key, value in input_mapping.items():
-                    if utilities.convert_to_bool(value['required']):
-                        self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
-                                                                                          specify_function=self.create_data_from_args,
-                                                                                          root_app=self.root_app,
-                                                                                          parent=self)
-                        self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
+                    if utilities.convert_to_bool(value['enabled']):
+                        if utilities.convert_to_bool(value['required']):
+                            self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
+                                                                                              specify_function=self.create_data_from_args,
+                                                                                              root_app=self.root_app,
+                                                                                              parent=self)
+                            self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
 
-            ## Deactivated display of optional data input creation.
-            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            # self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            # self.optional_l = QLabel('Optional Inputs')
-            # self.optional_l.setFont(config.minor_heading_font)
-            # self.scroll_widget.scroll_layout.addWidget(self.optional_l)
-            #
-            # self.optional_model_headers = OrderedDict()
-            # self.optional_specify_buttons = OrderedDict()
-            # for model in checked_models:
-            #     self.scroll_widget.scroll_layout.addWidget(QLabel(''))
-            #     self.optional_model_headers[model.name] = QLabel(model.long_name)
-            #     self.optional_model_headers[model.name].setFont(config.bold_font)
-            #     self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
-            #
-            #     self.input_mapping_uri = os.path.join('../settings/default_setup_files',
-            #                                           model.name + '_input_mapping.csv')
-            #     input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-            #
-            #     for key, value in input_mapping.items():
-            #         if not utilities.convert_to_bool(value['required']):
-            #             self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'],
-            #                                                                               specify_function=self.create_data_from_args,
-            #                                                                               root_app=self.root_app,
-            #                                                                               parent=self)
-            #             self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+            self.optional_l = QLabel('Optional Inputs')
+            self.optional_l.setFont(config.minor_heading_font)
+            self.scroll_widget.scroll_layout.addWidget(self.optional_l)
+
+            self.optional_model_headers = OrderedDict()
+            self.optional_specify_buttons = OrderedDict()
+            for model in checked_models:
+                self.scroll_widget.scroll_layout.addWidget(QLabel(''))
+                self.optional_model_headers[model.name] = QLabel(model.long_name)
+                self.optional_model_headers[model.name].setFont(config.bold_font)
+                self.scroll_widget.scroll_layout.addWidget(self.optional_model_headers[model.name])
+
+                self.input_mapping_uri = os.path.join('../settings/default_setup_files',
+                                                      model.name + '_input_mapping.csv')
+                input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+
+                for key, value in input_mapping.items():
+                    if utilities.convert_to_bool(value['enabled']):
+                        if not utilities.convert_to_bool(value['required']):
+                            self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'], value,
+                                                                                              specify_function=self.create_data_from_args,
+                                                                                              root_app=self.root_app,
+                                                                                              parent=self)
+                            self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')
