@@ -1,17 +1,17 @@
 {
 	"workspace_dir": "set_based_on_model_setup_runs_folder",
 	"results_suffix": "",
-    "precipitation_uri": "set_base_on_project_input",
+    "precipitation_uri": "set_based_on_project_input",
 	"eto_uri": "set_based_on_project_input",
 	"depth_to_root_rest_layer_uri": "set_based_on_project_input",
-	"pawc_uri": "set_base_on_project_input",
-	"lulc_uri": "set_base_on_project_input",
+	"pawc_uri": "set_based_on_project_input",
+	"lulc_uri": "set_based_on_project_input",
 	"watersheds_uri": "set_based_on_project_input",
     "sub_watersheds_uri": "",
 	"biophysical_table_uri": "set_based_on_project_input",
 	"seasonality_constant": "5",
     "water_scarcity_container": false,
-	"demand_table_uri": "set_base_on_project_input",
+	"demand_table_uri": "set_based_on_project_input",
 	"valuation_container": false,
     "valuation_table_uri": "set_based_on_project_input"
 }

@@ -3750,8 +3750,13 @@ class ClipFromHydroshedsWatershedDialog(MeshAbstractObject, QDialog):
         selected_level = str(self.hybas_level_combobox.currentText())
         hybas_uri = self.get_selected_hybas_uri()
 
-        output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
-                                      selected_continent.replace(' ', '_').lower() + '_' + selected_level + '_' + str(id) + '.shp')
+        output_shp_uri = os.path.join(self.root_app.project_folder, 'input', 'baseline', 'aoi.shp')
+        # output_shp_uri = os.path.join(self.root_app.project_folder, 'input',
+        #                               selected_continent.replace(' ', '_').lower() + '_' + selected_level + '_' + str(id) + '.shp')
+
+        if os.path.exists(output_shp_uri):
+            backup_uri = os.path.splitext(output_shp_uri)[0] + utilities.pretty_time() + os.path.splitext(output_shp_uri)[1]
+            os.rename(output_shp_uri, backup_uri)
 
         data_creation.save_shp_feature_by_attribute(hybas_uri, id, output_shp_uri)
 

@@ -59,3 +59,46 @@ size_policy.setVerticalStretch(1)
 size_policy_minimum = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 size_policy_minimum.setHorizontalStretch(1)
 size_policy_minimum.setVerticalStretch(1)
+
+
+gdal_number_to_ogr_field_type = {
+    1: 0, # not sure if not OFSTBoolean
+    2: 0, # seemed to be unimplemented as uint etc.
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 2,
+    7: 2, # not sure if correct
+}
+
+type_string_to_ogr_field_type = {
+    'int': gdal_number_to_ogr_field_type[1],
+    'uint': gdal_number_to_ogr_field_type[1],
+    'uint8': gdal_number_to_ogr_field_type[1],
+    'uint16': gdal_number_to_ogr_field_type[1],
+    'int16': gdal_number_to_ogr_field_type[1],
+    'uint32': gdal_number_to_ogr_field_type[1],
+    'int32': gdal_number_to_ogr_field_type[1],
+    'float': gdal_number_to_ogr_field_type[6],
+    'float32': gdal_number_to_ogr_field_type[6],
+    'float64': gdal_number_to_ogr_field_type[7],
+    'string': 4,
+}
+
+possible_shapefile_extensions = ['.shp',
+                            '.shx',
+                            '.dbf',
+                            '.prj',
+                            '.sbn',
+                            '.sbx',
+                            '.fbn',
+                            '.fbx',
+                            '.ain',
+                            '.aih',
+                            '.ixs',
+                            '.mxs',
+                            '.atx',
+                            '.shp.xml',
+                            '.cpg',
+                            '.qix'
+                            ]
