@@ -27,6 +27,13 @@ def get_user_natcap_folder():
     return user_folder
 
 
+def correct_temp_env():
+    # HACKISH solution to solve tmpfile problem that arose when iui deleted the tmpfile folder via atexit, which made tmpfile calls from mesh  no longer work.
+    for temp_var in ['TMP',' TEMP', 'TMPDIR']:
+        if temp_var in os.environ:
+            del os.environ[temp_var]
+
+
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):
     """Read a txt file where the number of blank lines before a line indicates what level in the title-heirarchy it is. Top level
     level denotes how many blank lines define the highest level heading, otherwise it determinesw the highest level by the number

@@ -2000,7 +2000,7 @@ class ModelRun(MeshAbstractObject, QWidget):
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
                 if model.name == 'carbon':
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'tot_c_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'tot_c_cur.tif'))
                 if model.name == 'hydropower_water_yield':
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
@@ -4077,6 +4077,9 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
             name = 'run_at_' + run_id
         elif name in self.parent.elements:
             name = name + '_at_' + run_id
+
+        # HACK IUI tempfile fix
+        utilities.correct_temp_env()
 
         args = self.root_app.model_runs_widget.create_default_element_args(name)
         args['run_id'] = run_id
