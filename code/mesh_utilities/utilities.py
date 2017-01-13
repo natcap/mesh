@@ -15,6 +15,11 @@ import pygeoprocessing.geoprocessing
 import numpy
 import config
 
+initial_temp_env_var = None
+for temp_var in ['TMP', ' TEMP', 'TMPDIR']:
+    if temp_var in os.environ:
+        initial_temp_env_var = os.environ[temp_var]
+
 def get_user_natcap_folder():
     """Return the file location of the user's settings folder.  This folder
     location is OS-dependent."""
@@ -27,12 +32,22 @@ def get_user_natcap_folder():
     return user_folder
 
 
-def correct_temp_env():
+def correct_temp_env(app):
     # HACKISH solution to solve tmpfile problem that arose when iui deleted the tmpfile folder via atexit, which made tmpfile calls from mesh  no longer work.
-    for temp_var in ['TMP',' TEMP', 'TMPDIR']:
-        if temp_var in os.environ:
-            del os.environ[temp_var]
-
+    # for temp_var in ['TMP',' TEMP', 'TMPDIR']:
+    #     if temp_var in os.environ:
+    #         del os.environ[temp_var]
+    #
+    #     if temp_var in os.environ:
+    #         os.environ[temp_var] = initial_temp_env_var
+    #
+    # print(55, initial_temp_env_var)
+    required_paths = [os.path.join(app.project_folder, 'output\\model_setup_runs\\hydropower_water_yield\\tmp')]
+    for path in required_paths:
+        try:
+            os.makedirs(path)
+        except:
+            'exists'
 
 def read_txt_file_as_serialized_headers(uri, highest_level_blanks=3):
     """Read a txt file where the number of blank lines before a line indicates what level in the title-heirarchy it is. Top level

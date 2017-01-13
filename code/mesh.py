@@ -5,8 +5,6 @@ Mapping Ecosystem Services to Human wellbeing, MESH, is a toolkit that helps cal
 to humans in the form of ecosystem services (ES). MESH combines existing ES production function models from InVEST
 (more to come soon) into a combined framework that enables creating input data to define scenarios, interaction between
 the ES models, and reporting/visualization of the results.
-
-
 """
 
 import sys
@@ -1372,6 +1370,9 @@ class ModelsWidget(ScrollWidget):
 
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
+
+            # HACK IUI tempfile fix
+            utilities.correct_temp_env(self.root_appp)
 
             ## This didn't work because the json_launch_dict didnt have all the IUI information needed.
             ## Actually it didnt work beacsue that's not how setupfiles work.
@@ -3397,6 +3398,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
             self.parent.model_name = 'scenario_gen_proximity'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
 
+
     def populate_with_existing_file(self):
         source_uri = str(QFileDialog.getOpenFileName(self, 'Select map file to attach', self.root_app.project_folder))
         if source_uri:
@@ -3964,6 +3966,10 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
     def __init__(self, root_app=None, parent=None):
         super(RunMeshModelDialog, self).__init__(root_app, parent)
 
+        # HACK IUI tempfile fix
+        utilities.correct_temp_env(self.root_app)
+
+
         default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
         self.resize(default_size[0], default_size[1])
 
@@ -3973,10 +3979,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.title_l = QLabel('Run MESH Model for the following scenario-model pairs\n')
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
-
-        # self.relaunch_mesh_note_l = QLabel('*MESH sometimes freezes on the first run of a new project. To fix this, save your project and relaunch MESH.\n\n')
-        # self.relaunch_mesh_note_l.setFont(config.small_font)
-        # self.main_layout.addWidget(self.relaunch_mesh_note_l)
 
         self.draw_scenario_model_pairs_gridlayout()
 
@@ -4001,19 +4003,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
         self.update_run_details(
             'Starting to run ' + current_model_name + ' model for scenario ' + current_scenario_name + '.')
-
-        # TODOO I never figured out why this issue went away... ignore?
-        # I Have a concurrency bug here. If I run a mesh run on the same launching of mesh tha ti created the project,
-        # it causes tmpfile to fail with No such file or directoy. However, if I reload MESH, this goes away. Something
-        # probably wrong with folder creation.
-
-        # # Hack to force creation of a tmp file for invest to save into. This is a poor workaround to the fact that usage of the tmpfile module in InVEST has concurrency issues when a folder is created external to the execute statement.
-        # setup_file_dir = os.path.join(
-        #     self.root_app.project_folder, 'output',
-        #     'model_setup_runs', current_model_name)
-        # tmp_file_dir = os.path.join(setup_file_dir, 'tmp')
-        # if not os.path.exists(tmp_file_dir):
-        #     os.makedirs(tmp_file_dir)
 
         runner = ProcessingThread(current_args, self.root_app.args_queue.items()[0][0].split(' -- ', 1)[0],
                                   self.root_app, self)
@@ -4079,7 +4068,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
             name = name + '_at_' + run_id
 
         # HACK IUI tempfile fix
-        utilities.correct_temp_env()
+        utilities.correct_temp_env(self.root_app)
 
         args = self.root_app.model_runs_widget.create_default_element_args(name)
         args['run_id'] = run_id
