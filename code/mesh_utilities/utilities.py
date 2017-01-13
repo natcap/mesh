@@ -40,10 +40,11 @@ def correct_temp_env(app):
     #
     #     if temp_var in os.environ:
     #         os.environ[temp_var] = initial_temp_env_var
-    #
-    # print(55, initial_temp_env_var)
-    required_paths = [os.path.join(app.project_folder, 'output\\model_setup_runs\\hydropower_water_yield\\tmp')]
-    for path in required_paths:
+
+    # Current fix: just read off what could be a tempfile location and attempt to remake that directory.
+    tmp_paths = [str(os.environ[i]) for i in os.environ if 'TEMP' in i or 'TMP' in i]
+    for path in tmp_paths:
+        #print('making path', path)
         try:
             os.makedirs(path)
         except:

@@ -1372,7 +1372,7 @@ class ModelsWidget(ScrollWidget):
             os.remove(invest_json_copy)
 
             # HACK IUI tempfile fix
-            utilities.correct_temp_env(self.root_appp)
+            utilities.correct_temp_env(self.root_app)
 
             ## This didn't work because the json_launch_dict didnt have all the IUI information needed.
             ## Actually it didnt work beacsue that's not how setupfiles work.
@@ -1644,6 +1644,7 @@ class Model(MeshAbstractObject, QWidget):
         if lastrun_time > self.root_app.program_launch_time:
             LOGGER.debug('Lastrun IS more recent than program launch. Copying to project file.')
             archive_args = self.root_app.get_args_from_lastrun(self.name)
+            # if os.path.exists(model_archive_uri):
             with open(model_archive_uri, 'w') as f:
                 json.dump(archive_args, f)
         else:
@@ -3574,6 +3575,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 self.scenario.archive_args[model_name][key] = str(val.text())
 
         # Add this to the Scenario Widget for display update
+
+        print('self.scenario.archive_args', self.scenario.archive_args)
         self.scenario.load_element(
             "Scenario Parameters Adjusted", "Scenario Parameters Adjusted")
         self.close()
