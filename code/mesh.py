@@ -817,10 +817,10 @@ class ScenariosWidget(ScrollWidget):
         Attempts to load them to Scenario by name and to
         Scenario.archive_args dictionary
         """
-        base_dir = os.path.join(self.root_app.project_folder, 'settings')
+        scenario_dir = os.path.join(self.root_app.project_folder, 'input')
         archive_files = {}
         for name, scenario in self.elements.items():
-            archive_path = os.path.join(base_dir, '%s_archive_args.json' % name)
+            archive_path = os.path.join(scenario_dir, name, 'archive_args.json')
             if os.path.isfile(archive_path):
                 json_archive = open(archive_path).read()
                 scenario.archive_args = json.loads(json_archive)
@@ -850,10 +850,10 @@ class ScenariosWidget(ScrollWidget):
 
     def save_invest_archive(self):
         """Save each Scenario.archive_args to json file in project sttings."""
-        base_dir = os.path.join(self.root_app.project_folder, 'settings')
+        scenario_dir = os.path.join(self.root_app.project_folder, 'input')
         for name, scenario in self.elements.items():
             if len(scenario.archive_args.keys()) > 0:
-                save_path = os.path.join(base_dir, '%s_archive_args.json' % name)
+                save_path = os.path.join(scenario_dir, name, 'archive_args.json')
                 with open(save_path, 'w') as fp:
                     json.dump(scenario.archive_args, fp)
 
@@ -1337,6 +1337,7 @@ class ModelsWidget(ScrollWidget):
             dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
             shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
+            utilities.correct_temp_env(self.root_app)
         else:
             print('using NON existing_last_run_uri', existing_last_run_uri)
             # Read in MESH setup json to a dictionary

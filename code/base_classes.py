@@ -101,6 +101,8 @@ class Listener(QThread):
         self.root_app.args_queue.popitem(last=False)  # removes the first item, last=False sets it to be First In First out rather than Last In First Out
         if len(self.root_app.args_queue) > 0:
             self.parent.run_next_in_queue() # Feels awkward
+        else:
+            self.parent.update_run_details('All scenario model pairs finished!')
         self.root_app.update_ui()
 
 
