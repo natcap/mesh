@@ -40,7 +40,7 @@ from mpl_toolkits.basemap import Basemap
 
 # TODO Before releasing, create python 2 version of nd and release it on pip.
 sys.path.extend('c:/onedrive/projects')
-import numdal as nd
+#import numdal as nd
 
 from mesh_models.data_creation import data_creation
 from mesh_utilities import config
@@ -4128,7 +4128,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                                     setup_run_args[k] = source
 
                     args = setup_run_args.copy()
-                    nd.pp(args)
 
                     args['workspace_dir'] = os.path.join(
                         self.parent.elements[name].run_folder, scenario.name, model.name)
