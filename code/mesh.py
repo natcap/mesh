@@ -39,7 +39,7 @@ from matplotlib import rcParams  # Used below to make Matplotlib automatically a
 from mpl_toolkits.basemap import Basemap
 
 # TODO Before releasing, create python 2 version of nd and release it on pip.
-sys.path.extend('c:/onedrive/projects')
+# sys.path.extend('c:/onedrive/projects')
 #import numdal as nd
 
 from mesh_models.data_creation import data_creation
@@ -1156,6 +1156,17 @@ class ModelsWidget(ScrollWidget):
     default_state['sdr']['long_name'] = 'Sediment Delivery'
     default_state['sdr']['model_type'] = 'InVEST Model'
 
+    default_state['crop_production'] = default_element_args.copy()
+    default_state['crop_production']['name'] = 'crop_production'
+    default_state['crop_production']['long_name'] = 'Crop Production'
+    default_state['crop_production']['model_type'] = 'InVEST Model'
+
+    default_state['globio'] = default_element_args.copy()
+    default_state['globio']['name'] = 'globio'
+    default_state['globio']['long_name'] = 'Globio (biodiversity)'
+    default_state['globio']['model_type'] = 'InVEST Model'
+
+
     def __init__(self, root_app=None, parent=None):
         super(ModelsWidget, self).__init__(root_app, parent)
         self.default_state = ScenariosWidget.default_state.copy()
@@ -1337,13 +1348,13 @@ class ModelsWidget(ScrollWidget):
         # TODOO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
         if os.path.exists(existing_last_run_uri):
-            print('using existing_last_run_uri', existing_last_run_uri)
+            #('using existing_last_run_uri', existing_last_run_uri)
             dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
             shutil.copy(existing_last_run_uri, dst_uri)
             new_json_path = existing_last_run_uri
             utilities.correct_temp_env(self.root_app)
         else:
-            print('using NON existing_last_run_uri', existing_last_run_uri)
+            #('using NON existing_last_run_uri', existing_last_run_uri)
             # Read in MESH setup json to a dictionary
             default_args = utilities.file_to_python_object(default_last_run_uri)
 
@@ -1362,6 +1373,10 @@ class ModelsWidget(ScrollWidget):
                 json_launch_dict = utilities.file_to_python_object(invest_json_copy)
 
             # Update the dictionary based on MESH setup json and input mapping files
+            #('json_launch_dict', json_launch_dict)
+            #('default_args', default_args)
+            #('model_name', model_name)
+            #('input_mapping', input_mapping)
             json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
 
             # Make the model directory, which will also be the InVEST workspace In order to place the json file in that location
@@ -1631,7 +1646,7 @@ class Model(MeshAbstractObject, QWidget):
             self.root_app.project_folder, 'output', 'model_setup_runs',
             self.name)
         # String to match to verify a valid run of an InVEST model
-        success_string = "Operations completed successfully"
+        success_strings = ["Operations completed successfully", "Finished."]
 
         # Initialize validators to False
         invest_run_valid = False
@@ -1647,13 +1662,13 @@ class Model(MeshAbstractObject, QWidget):
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
 
         if lastrun_time > self.root_app.program_launch_time:
-            LOGGER.debug('Lastrun IS more recent than program launch. Copying to project file.')
+            LOGGER.info('Lastrun IS more recent than program launch. Copying to project file.')
             archive_args = self.root_app.get_args_from_lastrun(self.name)
             # if os.path.exists(model_archive_uri):
             with open(model_archive_uri, 'w') as f:
                 json.dump(archive_args, f)
         else:
-            LOGGER.debug('Lastrun not more recent than program launch.')
+            LOGGER.info('Lastrun not more recent than program launch.')
 
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
@@ -1676,7 +1691,7 @@ class Model(MeshAbstractObject, QWidget):
 
             if os.path.exists(newest_log_path):
                 f = open(newest_log_path).read()
-                if success_string in f:
+                if any(True for success_string in success_strings if success_string in f):
                     invest_run_valid = True
             else:
                 invest_run_valid = False
@@ -3580,8 +3595,6 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
                 self.scenario.archive_args[model_name][key] = str(val.text())
 
         # Add this to the Scenario Widget for display update
-
-        print('self.scenario.archive_args', self.scenario.archive_args)
         self.scenario.load_element(
             "Scenario Parameters Adjusted", "Scenario Parameters Adjusted")
         self.close()
@@ -4117,14 +4130,11 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
                     # Check to see if any files in the scenario's sources have a corresponding name in the setup args. If so, replace
                     for k, v in manually_updated_args.items():
-                        print(type(v))
                         if type(v) in [str, unicode]:
                             for source in scenario_args['sources']:
                                 setup_filename = os.path.split(v)[1]
                                 source_filename = os.path.split(source)[1]
-                                print('setup_filename', source_filename, setup_filename, source_filename)
                                 if setup_filename == source_filename:
-                                    print('updating to source', source)
                                     setup_run_args[k] = source
 
                     args = setup_run_args.copy()
@@ -4331,7 +4341,7 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         if args['load_method'] == 'copy_default':
             data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location, self.root_app.base_data_folder)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 

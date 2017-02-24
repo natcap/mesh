@@ -15,6 +15,8 @@ from natcap.invest.ndr.ndr import execute as execute_nutrient_model
 from natcap.invest.carbon import execute as execute_carbon_model
 from natcap.invest.pollination.pollination import execute as execute_pollination_model
 from natcap.invest.sdr import execute as execute_sdr_model
+from natcap.invest.crop_production.crop_production import execute as execute_crop_production_model # NOTE Inconsistent double naming here.
+from natcap.invest.globio import execute as execute_globio
 
 
 class ProcessingThread(QThread):
@@ -42,25 +44,36 @@ class ProcessingThread(QThread):
             #     nutrition.execute(self.args, self)
             #     self.update_run_log('Finished Food Security and Nutrition Model.')
             if self.model_name == 'ndr':
-                self.update_run_log('Starting Delivery Ratio Model.')
+                self.update_run_log('\nStarting Delivery Ratio Model.')
                 execute_nutrient_model(self.args)
                 self.update_run_log('Finished Nutrient Retention Model.')
             if self.model_name == 'hydropower_water_yield':
-                self.update_run_log('Starting Water Yield Model.')
+                self.update_run_log('\nStarting Water Yield Model.')
                 execute_hydropower_model(self.args)
                 self.update_run_log('Finished Water Yield Model.')
             if self.model_name == 'carbon':
-                self.update_run_log('Starting Carbon Model.')
+                self.update_run_log('\nStarting Carbon Model.')
                 execute_carbon_model(self.args)
                 self.update_run_log('Finished Carbon Model.')
             if self.model_name == 'pollination':
-                self.update_run_log('Starting Pollination Model.')
+                self.update_run_log('\nStarting Pollination Model.')
                 execute_pollination_model(self.args)
                 self.update_run_log('Finished Pollination Model.')
             if self.model_name == 'sdr':
-                self.update_run_log('Starting Sediment Delivery Ratio Model.')
+                self.update_run_log('\nStarting Sediment Delivery Ratio Model.')
                 execute_sdr_model(self.args)
                 self.update_run_log('Finished Sediment Delivery Ratio Model.')
+            if self.model_name == 'crop_production':
+                self.update_run_log('\nStarting Crop Production Model.')
+                execute_sdr_model(self.args)
+                self.update_run_log('Finished Crop Production Model.')
+            if self.model_name == 'globio':
+                self.update_run_log('\nStarting Globio Model.')
+                execute_sdr_model(self.args)
+                self.update_run_log('Finished Globio Model.')
+
+
+
 
             # This one is different because it's not calling the python library but the full modelui iui file.
             #if self.model_name == 'scenario_generator':
@@ -102,7 +115,7 @@ class Listener(QThread):
         if len(self.root_app.args_queue) > 0:
             self.parent.run_next_in_queue() # Feels awkward
         else:
-            self.parent.update_run_details('All scenario model pairs finished!')
+            self.parent.update_run_details('\n\nAll scenario model pairs finished!')
         self.root_app.update_ui()
 
 

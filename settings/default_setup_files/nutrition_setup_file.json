@@ -1,1 +1,16 @@
-{"lulc_uri": "C:/mesh/projects/volta_demo/input/Baseline/lulc_2012.tif", "crop_maps_folder": "C:/mesh/base_data/nutrition/crop_data", "nutritional_content_table_uri": "C:/mesh/base_data/nutrition/nutrient_contents_table.csv", "nutritional_requirements_table_uri": "C:/mesh/base_data/nutrition/nutrition_requirements_by_demographics.csv", "population_uri": "C:/mesh/projects/volta_demo/input/Baseline/pop.tif", "economic_value_table_uri": "C:/mesh/base_data/nutrition/economics_table.csv", "new_yield_uri": "", "cotential_yield_uri": "", "proportional_yield_increase_factor": "", "pollinator_presence_uri": "", "water_availability_uri": "", "demographic_groups_list": "", "demographics_folder": "", "output_folder": "../projects/volta_demo/output/model_setup_runs/nutrition/"}
+{
+  "lulc_uri": "C:/mesh/projects/volta_demo/input/Baseline/lulc_2012.tif",
+  "crop_maps_folder": "C:/mesh/base_data/nutrition/crop_data",
+  "nutritional_content_table_uri": "C:/mesh/base_data/nutrition/nutrient_contents_table.csv",
+  "nutritional_requirements_table_uri": "C:/mesh/base_data/nutrition/nutrition_requirements_by_demographics.csv",
+  "population_uri": "C:/mesh/projects/volta_demo/input/Baseline/pop.tif",
+  "economic_value_table_uri": "C:/mesh/base_data/nutrition/economics_table.csv",
+  "new_yield_uri": "",
+  "cotential_yield_uri": "",
+  "proportional_yield_increase_factor": "",
+  "pollinator_presence_uri": "",
+  "water_availability_uri": "",
+  "demographic_groups_list": "",
+  "demographics_folder": "",
+  "output_folder": "../projects/volta_demo/output/model_setup_runs/nutrition/"
+}
