@@ -6,8 +6,11 @@
 	"do_uncertainty": false,
 	"do_valuation": false,
 	"lulc_redd_uri": "set_based_on_project_input",
+	"lulc_redd_path": "set_based_on_project_input",
 	"carbon_pools_uri": "set_based_on_project_input",
+	"carbon_pools_path": "set_based_on_project_input",
 	"lulc_cur_uri": "set_based_on_project_input",
+	"lulc_cur_path": "set_based_on_project_input",
 	"lulc_fut_year": "2030",
 	"hwp_cur_shape_uri": "set_based_on_project_input",
 	"sequest_uri": "",
@@ -20,5 +23,6 @@
 	"do_biophysical": true,
 	"carbon_pools_uncertain_uri": "set_based_on_project_input",
 	"workspace_dir": "set_based_on_model_setup_runs_folder",
-	"lulc_fut_uri": "set_based_on_project_input"
+	"lulc_fut_uri": "set_based_on_project_input",
+	"lulc_fut_path": "set_based_on_project_input"
 }

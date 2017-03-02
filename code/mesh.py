@@ -473,7 +473,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             try:
                 os.makedirs(relative_path)
             except:
-                LOGGER.debug('Couldn\'t make directory ' + relative_path + '. Does it already exist?')
+                pass
+                #LOGGER.debug('Couldn\'t make directory ' + relative_path + '. Does it already exist?')
 
 
     def select_project_to_load(self):
@@ -661,12 +662,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         # InVEST has slightly different names for UI elements vs Execute args (arg_id, id respectively)
         # Process the IUI estup file provided by invest to define the current version of this correspondence.
         archive_args_last_run_correspondence = self.get_args_arg_ids_correspondence(iui_model_setup_file_dict)
-        LOGGER.debug(ps(archive_args_last_run_correspondence))
 
         lastrun_json_uri = self.get_user_lastrun_uri(model_name)
         with open(lastrun_json_uri) as f:
             lastrun_dict = json.load(f)
-        LOGGER.debug(ps(lastrun_dict))
 
         archive_args = {'model': 'natcap.invest.' + model_name,
                         'arguments': {}}
@@ -675,7 +674,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             # Convert away from Unicode
             args_key = str(args_key)
             iui_key = str(iui_key)
-            archive_args['arguments'][args_key] = lastrun_dict[iui_key]
+            if iui_key in lastrun_dict:
+                archive_args['arguments'][args_key] = lastrun_dict[iui_key]
 
         # Remove the args that are not used. InVEST checks the args to see if it should be run and ignores the boolean
         # so I remove it to not confuse InVEST
@@ -685,7 +685,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                 if any(filter in v for filter in [':', '/', '\\', '..']):
                     if not os.path.exists(v):
                         archive_args['arguments'][k] = ''
-        LOGGER.debug(ps(archive_args))
 
         return archive_args
 
@@ -732,6 +731,12 @@ class ScenariosWidget(ScrollWidget):
         self.elements = OrderedDict()
         self.create_ui()
 
+        self._width = 500
+        self._height = 200
+
+    def sizeHint(self):
+        return QSize(self._width, self._height)
+
     def create_ui(self):
 
         self.scenarios_title_l = QLabel()
@@ -771,9 +776,11 @@ class ScenariosWidget(ScrollWidget):
 
     def load_element(self, name, args):
         if not name:
-            LOGGER.warn('Asked to load an element with a blank name.')
+            pass
+            #LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
         else:
             element = Scenario(name, args, self.root_app, self)
             self.elements[name] = element
@@ -901,7 +908,8 @@ class Scenario(MeshAbstractObject, QWidget):
         try:
             os.makedirs(self.folder)
         except:
-            LOGGER.debug('Couldn\'t make directory. Does it already exist?')
+            pass
+            #LOGGER.debug('Couldn\'t make directory. Does it already exist?')
 
         self.set_state_from_args()
 
@@ -1006,9 +1014,12 @@ class Scenario(MeshAbstractObject, QWidget):
 
     def load_element(self, name, uri):
         if not name:
-            LOGGER.debug('Asked to load an element with a blank name.')
+            pass
+            #LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.debug('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
+
         else:
             element = Source(name, uri, self.root_app, self)
             self.elements[name] = element
@@ -1174,8 +1185,15 @@ class ModelsWidget(ScrollWidget):
         self.running_setup_uis = []
         self.create_ui()
 
+        self._width = 500
+        self._height = 10
+
+    def sizeHint(self):
+        return QSize(self._width, self._height)
+
     def create_ui(self):
         self.scroll_layout.setAlignment(Qt.AlignTop)
+
 
         self.project_frame = QFrame()
         self.project_frame.setObjectName('project_frame')
@@ -1286,7 +1304,8 @@ class ModelsWidget(ScrollWidget):
 
     def load_element(self, name, args):
         if name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
         else:
             element = Model(name, args, self.root_app, self)
             self.elements[name] = element
@@ -1311,6 +1330,37 @@ class ModelsWidget(ScrollWidget):
             for name, element in self.elements.items():
                 to_write.update({name: element.get_element_state_as_args()})
         utilities.python_object_to_csv(to_write, self.save_uri)
+
+    def check_if_lastrun_uri_is_from_current_project(self, model_name):
+        """Check to see if the json file saved in the user lastrun folder (automatically saved by invest), located at
+        C:\Users\jandr\AppData\Local\NatCap, is from the current project.
+        """
+        model_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+
+        LOGGER.debug('Checking if lastrun_uri for this model is from the current project. model_lastrun_uri=' + model_lastrun_uri)
+
+        if os.path.exists(model_lastrun_uri):
+            name_from_lastrun = self.get_project_name_from_lastrun(model_name)
+            LOGGER.debug('Name  of  this project is ' + str(self.root_app.project_name) +
+                         '. Name of project implied from lastrun is ' + str(name_from_lastrun))
+            if self.root_app.project_name == name_from_lastrun:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+
+    def get_project_name_from_lastrun(self, model_name):
+        lastrun_args = self.root_app.get_args_from_lastrun(model_name)
+        for k, v in lastrun_args['arguments'].items():
+            if 'workspace' in k:
+                workspace_list = v.split(os.sep)
+                for c, i in enumerate(workspace_list): # LEARNING POINT, i lost time when i mixed up c, i (enumerate is COUNTER then ITEM)
+                    if str(i) == 'projects' and str(workspace_list[c + 2]) == 'output':  # Find the elements before and after the project name
+                        return str(workspace_list[c+1])
+
+
 
     def setup_invest_model(self, sender):
         """
@@ -1340,23 +1390,39 @@ class ModelsWidget(ScrollWidget):
         # Path where an InVEST setup run json file is saved. If the model has already been run and this file exists, use this as default.
         existing_last_run_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_setup_file.json' % model_name)
 
+
         # Path to the MESH default json parameters.
         default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
 
-        default_archive_args_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_archive.json' % model_name)
-
         # TODOO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
+
+        lastrun_is_from_current_project = self.check_if_lastrun_uri_is_from_current_project(model_name)
+
         if os.path.exists(existing_last_run_uri):
-            #('using existing_last_run_uri', existing_last_run_uri)
-            dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
-            shutil.copy(existing_last_run_uri, dst_uri)
-            new_json_path = existing_last_run_uri
-            utilities.correct_temp_env(self.root_app)
+            if lastrun_is_from_current_project:
+                # Is from current project, so we want to use it. We displace the  previous one in case anything has changed.
+                dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
+                shutil.copy(existing_last_run_uri, dst_uri)
+                utilities.correct_temp_env(self.root_app)
+            else:
+                # Shouldn't get here  because if the existing_lastrun is already saved in the current directory but there is no invest saved one, this is illogical.
+                pass
         else:
-            #('using NON existing_last_run_uri', existing_last_run_uri)
+            if not lastrun_is_from_current_project:
+                # Then it is an old lastrun from some other project and will ut in the wrong default uris.
+                natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+                backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
+                if os.path.exists(natcap_lastrun_uri):
+                    os.rename(natcap_lastrun_uri, backup_uri)
+                else:
+                    pass # No need to the old  natcap lastrun because it doesn't exist.
+
+
+            LOGGER.debug('Did not find lastrun file in project directory. Creating from default.')
             # Read in MESH setup json to a dictionary
             default_args = utilities.file_to_python_object(default_last_run_uri)
+
 
             # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
             invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
@@ -1373,8 +1439,6 @@ class ModelsWidget(ScrollWidget):
                 json_launch_dict = utilities.file_to_python_object(invest_json_copy)
 
             # Update the dictionary based on MESH setup json and input mapping files
-            #('json_launch_dict', json_launch_dict)
-            #('default_args', default_args)
             #('model_name', model_name)
             #('input_mapping', input_mapping)
             json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
@@ -1383,10 +1447,12 @@ class ModelsWidget(ScrollWidget):
             if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
 
-            # Write updated dictionary to new json file.
-            new_json_path = existing_last_run_uri
-            with open(new_json_path, 'w') as fp:
+            # Write updated dictionary to the projects json location.
+            with open(existing_last_run_uri, 'w') as fp:
                 json.dump(json_launch_dict, fp)
+
+            # DUPLICATIVE?
+            model_lastrun_uri = self.root_app.get_user_lastrun_uri(self.sender.name)
 
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
@@ -1394,13 +1460,7 @@ class ModelsWidget(ScrollWidget):
             # HACK IUI tempfile fix
             utilities.correct_temp_env(self.root_app)
 
-            ## This didn't work because the json_launch_dict didnt have all the IUI information needed.
-            ## Actually it didnt work beacsue that's not how setupfiles work.
-            # # Place our newly created json setup file in the place where invest looks for it.
-            # lastrun_json_uri = self.root_app.get_user_lastrun_uri(model_name)
-            # shutil.copy(new_json_path, lastrun_json_uri)
-
-        self.running_setup_uis.append(modelui.main(new_json_path))
+        self.running_setup_uis.append(modelui.main(existing_last_run_uri))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
         """Walks a dictionary and updates the values.
@@ -1662,13 +1722,14 @@ class Model(MeshAbstractObject, QWidget):
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
 
         if lastrun_time > self.root_app.program_launch_time:
-            LOGGER.info('Lastrun IS more recent than program launch. Copying to project file.')
+            LOGGER.info('During validation of model ' + str(self.name) + ' the Lastrun file IS more recent than program launch. Copying to project file.')
             archive_args = self.root_app.get_args_from_lastrun(self.name)
             # if os.path.exists(model_archive_uri):
             with open(model_archive_uri, 'w') as f:
                 json.dump(archive_args, f)
+
         else:
-            LOGGER.info('Lastrun not more recent than program launch.')
+            LOGGER.info('During validation of model ' + str(self.name) + ' the Lastrun file was not more recent than program launch.')
 
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
@@ -1851,9 +1912,11 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
 
     def load_element(self, name, args):
         if not name:
-            LOGGER.warn('Asked to load an element with a blank name.')
+            pass
+            #LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
         else:
             element = ModelRun(name, args, self.root_app, self)
             self.elements[name] = element
@@ -1986,7 +2049,8 @@ class ModelRun(MeshAbstractObject, QWidget):
             try:
                 self.scenarios_in_run.append(self.root_app.scenarios_dock.scenarios_widget.elements[scenario_name])
             except:
-                warnings.warn(scenario_name + ' added to scenarios_widget.elements, but something broke.')
+                pass
+                # warnings.warn(scenario_name + ' added to scenarios_widget.elements, but something broke.')
 
         if isinstance(self.args['models_in_run'], str):
             self.models_in_run_names = [self.args['models_in_run']]  # NOTE the wrapping in a list
@@ -2172,11 +2236,14 @@ class ReportsWidget(MeshAbstractObject, QWidget):
 
     def load_element(self, name, args):
         if not name:
-            LOGGER.warn('Asked to load an element with a blank name.')
+            pass
+            #LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
         elif name not in args:
-            warnings.warn("Warning, run name not in loaded CSV.")
+            pass
+            # warnings.warn("Warning, run name not in loaded CSV.")
         else:
             model_run = self.root_app.model_runs_widget.elements[args['run_name']]
             element = Report(name, args, self.root_app, model_run)
@@ -2646,6 +2713,13 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.create_ui()
         self.name_of_toggled = None
 
+        # NOTE, not sure why but these size hints do not seem to matter. is this because the scenarios size-hints have already set it?
+        self._width = 500
+        self._height = 10
+
+    def sizeHint(self):
+        return QSize(self._width, self._height)
+
     def create_ui(self):
         # Create dock window
         self.setSizePolicy(config.size_policy)
@@ -2719,9 +2793,11 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
     def load_element(self, name, args):
         if not name:
-            LOGGER.warn('Asked to load an element with a blank name.')
+            pass
+            #LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
-            LOGGER.warn('Attempted to add element that already exists.')
+            pass
+            #LOGGER.warn('Attempted to add element that already exists.')
         else:
             element = Map(name, args, self.root_app, self)
             self.elements[name] = element
@@ -3411,13 +3487,19 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         self.show()
 
     def setup_invest_model_signal_wrapper(self):
-        self.close()
+
         if self.sender() is self.pbs['invest_scenario_generator']:
+
+            # TODO, currently the scenario generator will fail beacuse of a python2-3 error where the number of pixels to convert SHOULD be an int but it's not. i'm thinking of just pulling the scenario_generator in to mesh code to make the change.
+
             self.parent.model_name = 'scenario_generator'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
+
         if self.sender() is self.pbs['scenario_gen_proximity']:
             self.parent.model_name = 'scenario_gen_proximity'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
+
+        self.close()
 
 
     def populate_with_existing_file(self):
@@ -3425,6 +3507,8 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         if source_uri:
             source_name = os.path.split(source_uri)[1]
             self.parent.load_element(source_name, source_uri)
+
+        self.close()
 
     def populate_with_scenario_generator(self):
         """
@@ -3447,6 +3531,8 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         scenario_generator_iui_json_file = 'scenario-generator.json'
         modelui.main(scenario_generator_iui_json_file, last_run_override=override_args)
         uri = os.path.join(save_folder, 'scenario_' + override_args['suffix'] + '.tif')
+
+        self.close()
 
 
 class UpdatedInputsDialog(MeshAbstractObject, QDialog):
@@ -4573,6 +4659,7 @@ class DefineDecisionContextDialog(MeshAbstractObject, QDialog):
 
 
 if __name__ == '__main__':
+    LOGGER.setLevel(logging.DEBUG)
     app = QApplication(sys.argv)
     mesh_app = MeshApplication()
     mesh_app.show()
