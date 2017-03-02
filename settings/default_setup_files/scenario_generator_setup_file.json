@@ -1,6 +1,6 @@
 {
 	"suffix": "",
-	"weight": "0.5",
+	"weight": "0.6",
 	"override_inclusion": 0,
 	"calculate_constraints": false,
 	"workspace_dir": "set_based_on_scenario",

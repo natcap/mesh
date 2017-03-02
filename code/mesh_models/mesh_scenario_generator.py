@@ -11,7 +11,7 @@ import scipy as sp
 from osgeo import gdal, ogr
 
 import pygeoprocessing.geoprocessing as geoprocess
-from .. import utils as invest_utils
+from mesh_utilities import invest_utils as invest_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -1436,9 +1436,11 @@ def execute(args):
                     tmp_array = tmp_array[pixels_to_change]
 
                     # select the number of pixels that need to be converted
-                    # TODO JUSTIN Note that  in python 3, pixels_changed needs to be cast as an int
+
                     tmp_index = np.argsort(tmp_array)
-                    tmp_index = tmp_index[:count - pixels_changed]
+
+                    # NOTE Had to fix this so that slices such as below are cast as an int
+                    tmp_index = tmp_index[:int(count - pixels_changed)]
 
                     # convert the selected pixels into coordinates
                     # pixels_to_change = np.array(zip(patch[0], patch[1]))

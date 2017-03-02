@@ -1369,6 +1369,7 @@ class ModelsWidget(ScrollWidget):
         Next is the full run, which uses the json setup files and calls the selected models iteratively without bringing up the ui
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
+        print(66, sender)
         self.sender = sender
 
         # Check if trying to create a differenct scenario with InVEST Scenario generator
@@ -1407,7 +1408,20 @@ class ModelsWidget(ScrollWidget):
                 utilities.correct_temp_env(self.root_app)
             else:
                 # Shouldn't get here  because if the existing_lastrun is already saved in the current directory but there is no invest saved one, this is illogical.
-                pass
+                print(112, 'NOT existing_last_run_uri', existing_last_run_uri)
+
+                # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
+                mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, 'mesh_' + model_name + '.json')
+                print('mesh_json_uri', mesh_json_uri)
+                if os.path.exists(mesh_json_uri):
+                    json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+                else:
+                    LOGGER.critical('Shouldnt get here json_launch_dict')
+
+                with open(existing_last_run_uri, 'w') as fp:
+                    json.dump(json_launch_dict, fp)
+
+
         else:
             if not lastrun_is_from_current_project:
                 # Then it is an old lastrun from some other project and will ut in the wrong default uris.
@@ -1447,6 +1461,10 @@ class ModelsWidget(ScrollWidget):
             if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
 
+
+
+
+
             # Write updated dictionary to the projects json location.
             with open(existing_last_run_uri, 'w') as fp:
                 json.dump(json_launch_dict, fp)
@@ -1459,6 +1477,12 @@ class ModelsWidget(ScrollWidget):
 
             # HACK IUI tempfile fix
             utilities.correct_temp_env(self.root_app)
+
+        print(55, model_name)
+
+        # If the model is the scenario generator, overwrite the target script value to the mesh version
+        if model_name == 'scenario_generator':
+            print(444, json_launch_dict, existing_last_run_uri)
 
         self.running_setup_uis.append(modelui.main(existing_last_run_uri))
 
@@ -3482,6 +3506,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         self.pbs['user_defined_folder'].clicked.connect(self.populate_with_existing_file)
         self.pbs['update_invest_args'].clicked.connect(lambda: UpdatedInputsDialog(self.root_app, self))
         self.pbs['invest_scenario_generator'].clicked.connect(self.setup_invest_model_signal_wrapper)
+        ###self.pbs['invest_scenario_generator'].clicked.connect(self.populate_with_scenario_generator)
         self.pbs['scenario_gen_proximity'].clicked.connect(self.setup_invest_model_signal_wrapper)
 
         self.show()
@@ -3489,9 +3514,6 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     def setup_invest_model_signal_wrapper(self):
 
         if self.sender() is self.pbs['invest_scenario_generator']:
-
-            # TODO, currently the scenario generator will fail beacuse of a python2-3 error where the number of pixels to convert SHOULD be an int but it's not. i'm thinking of just pulling the scenario_generator in to mesh code to make the change.
-
             self.parent.model_name = 'scenario_generator'
             self.root_app.models_dock.models_widget.setup_invest_model(self.parent)
 
@@ -3516,6 +3538,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         This works by loading an args dict from a pre-defined json file, and then using the suffix blank on the UI form
         as the name of the source. There are many ways this could be improved, but I didn't want to modify scenario_generator.py
         """
+        print('populate_with_scenario_generator')
         default_scenario_generator_setup_file_uri = os.path.join(self.root_app.default_setup_files_folder,
                                                                  'scenario_generator_setup_file.json')  # note that json files for some reason have - not _
         save_folder = os.path.join(self.root_app.project_folder, 'input', self.parent.name)
@@ -3528,8 +3551,10 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
             override_args = utilities.file_to_python_object(default_scenario_generator_setup_file_uri)
 
         override_args['workspace_dir'] = save_folder
-        scenario_generator_iui_json_file = 'scenario-generator.json'
-        modelui.main(scenario_generator_iui_json_file, last_run_override=override_args)
+        scenario_generator_iui_json_file = os.path.join(self.root_app.default_setup_files_folder,
+                                                        'mesh_scenario_generator.json')
+        ##scenario_generator_iui_json_file = 'scenario-generator.json'
+        modelui.main(scenario_generator_iui_json_file)
         uri = os.path.join(save_folder, 'scenario_' + override_args['suffix'] + '.tif')
 
         self.close()
