@@ -1,0 +1,14 @@
+{
+  "fertilizer_dir": "set_based_on_project_input",
+  "yield_function": "observed",
+  "irrigation_raster": "set_based_on_project_input",
+  "percentile_column": "yield_95th",
+  "results_suffix": "",
+  "workspace_dir": "set_based_on_model_setup_runs_folder",
+  "lookup_table": "set_based_on_project_input",
+  "aoi_raster": "set_based_on_project_input",
+  "compute_nutritional_contents": false,
+  "dataset_dir": "set_based_on_project_input",
+  "compute_financial_analysis": false
+}
+

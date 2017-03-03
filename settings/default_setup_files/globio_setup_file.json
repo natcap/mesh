@@ -1,0 +1,14 @@
+{
+  "aoi_uri": "C:\\InVEST_3.3.1_x86\\globio\\sub_aoi.shp",
+  "workspace_dir": "C:\\Users\\jandr/Documents/globio_workspace",
+  "infrastructure_dir": "C:\\InVEST_3.3.1_x86\\globio\\infrastructure_dir",
+  "intensification_fraction": "0.46",
+  "potential_vegetation_uri": "C:\\InVEST_3.3.1_x86\\globio\\potential_vegetation.tif",
+  "lulc_to_globio_table_uri": "C:\\InVEST_3.3.1_x86\\globio\\lulc_conversion_table.csv",
+  "pasture_threshold": "0.5",
+  "predefined_globio": false,
+  "lulc_uri": "C:\\InVEST_3.3.1_x86\\globio\\lulc_2008.tif",
+  "pasture_uri": "C:\\InVEST_3.3.1_x86\\globio\\pasture.tif",
+  "msa_parameters_uri": "C:\\InVEST_3.3.1_x86\\globio\\msa_parameters.csv",
+  "primary_threshold": "0.66"
+}

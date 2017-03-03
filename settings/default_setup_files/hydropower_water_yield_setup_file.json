@@ -10,8 +10,8 @@
     "sub_watersheds_uri": "",
 	"biophysical_table_uri": "set_based_on_project_input",
 	"seasonality_constant": "5",
-    "water_scarcity_container": false,
+    "water_scarcity_container": true,
 	"demand_table_uri": "set_based_on_project_input",
-	"valuation_container": false,
+	"valuation_container": true,
     "valuation_table_uri": "set_based_on_project_input"
 }

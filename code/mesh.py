@@ -734,6 +734,12 @@ class ScenariosWidget(ScrollWidget):
         self._width = 500
         self._height = 200
 
+        self.define_scenarios_hint_string = 'After creating an empty scenario, add/create model inputs to define what is\n' \
+                                            'different from the baseline scenario. This can be done either by specifying a\n' \
+                                            'file with the User Defined File button or by using the Update InVEST Parameters button. ' \
+                                            '\nNote that if you create a new file, you still have to add it to the scenario.'
+        self.setToolTip(self.define_scenarios_hint_string)
+
     def sizeHint(self):
         return QSize(self._width, self._height)
 
@@ -773,6 +779,10 @@ class ScenariosWidget(ScrollWidget):
         # horizontal_line.setFrameStyle(QFrame.HLine)
         # self.elements_vbox.addWidget(horizontal_line)
         self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
+
+
+        # self.define_scenarios_hint_l.setFont(config.italic_font)
+        # self.scroll_layout.addWidget(self.define_scenarios_hint_l)
 
     def load_element(self, name, args):
         if not name:
@@ -1144,7 +1154,7 @@ class ModelsWidget(ScrollWidget):
     default_state = OrderedDict()
     default_state['ndr'] = default_element_args.copy()
     default_state['ndr']['name'] = 'ndr'
-    default_state['ndr']['long_name'] = 'Nutrient Retention'
+    default_state['ndr']['long_name'] = 'Nutrient Retention *'
     default_state['ndr']['model_type'] = 'InVEST Model'
 
     default_state['hydropower_water_yield'] = default_element_args.copy()
@@ -1159,7 +1169,7 @@ class ModelsWidget(ScrollWidget):
 
     default_state['pollination'] = default_element_args.copy()
     default_state['pollination']['name'] = 'pollination'
-    default_state['pollination']['long_name'] = 'Pollination'
+    default_state['pollination']['long_name'] = 'Pollination *'
     default_state['pollination']['model_type'] = 'InVEST Model'
 
     default_state['sdr'] = default_element_args.copy()
@@ -1169,12 +1179,12 @@ class ModelsWidget(ScrollWidget):
 
     default_state['crop_production'] = default_element_args.copy()
     default_state['crop_production']['name'] = 'crop_production'
-    default_state['crop_production']['long_name'] = 'Crop Production'
+    default_state['crop_production']['long_name'] = 'Crop Production **'
     default_state['crop_production']['model_type'] = 'InVEST Model'
 
     default_state['globio'] = default_element_args.copy()
     default_state['globio']['name'] = 'globio'
-    default_state['globio']['long_name'] = 'Globio (biodiversity)'
+    default_state['globio']['long_name'] = 'Globio (biodiversity) **'
     default_state['globio']['model_type'] = 'InVEST Model'
 
 
@@ -1266,18 +1276,24 @@ class ModelsWidget(ScrollWidget):
 
         self.create_data_hbox = QHBoxLayout()
         self.scroll_layout.addLayout(self.create_data_hbox)
-        self.create_data_l = QLabel('Create data for selected models:*')
-        self.create_data_hbox.addWidget(self.create_data_l)
+        # self.create_data_l = QLabel('Create data for selected models:*')
+        # self.create_data_hbox.addWidget(self.create_data_l)
 
-        self.asterisk_nyi_l = QLabel('Here and elsewhere, * denotes a feature that is partially implemented. Along with '
-                                     'greyed-out buttons, these features will be fully implemented in the forthcoming MESH 1.0 release.')
+        # self.asterisk_nyi_l = QLabel('Here and elsewhere, * denotes a feature that is partially implemented. Along with '
+        #                              'greyed-out buttons, these features will be fully implemented in the forthcoming MESH 1.0 release.')
+
+
+
+        self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
+
+        self.asterisk_nyi_l = QLabel('* Almost finished. May lack features such as automatic data generation or report creation.\n\n'
+                                     '** Model is still in development. Check the InVEST forums for details.\n\n'
+                                     'These features, and other greyed-out buttons, will be fully implemented in the forthcoming MESH 1.0 release.\n\n')
         self.asterisk_nyi_l.setWordWrap(True)
         self.asterisk_nyi_l.setFont(config.italic_font)
         self.scroll_layout.addWidget(self.asterisk_nyi_l)
 
 
-
-        self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
         self.additional_models_l = QLabel('\nAdditional models can be added as plugins.')
         self.additional_models_l.setFont(config.italic_font)
         self.additional_models_l.setFont(config.italic_font)
@@ -1369,7 +1385,7 @@ class ModelsWidget(ScrollWidget):
         Next is the full run, which uses the json setup files and calls the selected models iteratively without bringing up the ui
          and instead uses the values defined in scenarios. This method calls the ProcessingThread class to handle calculations.
         """
-        print(66, sender)
+
         self.sender = sender
 
         # Check if trying to create a differenct scenario with InVEST Scenario generator
@@ -1399,29 +1415,53 @@ class ModelsWidget(ScrollWidget):
         # Check to see if an existing json file exists from a previous setup run
 
         lastrun_is_from_current_project = self.check_if_lastrun_uri_is_from_current_project(model_name)
-
         if os.path.exists(existing_last_run_uri):
             if lastrun_is_from_current_project:
                 # Is from current project, so we want to use it. We displace the  previous one in case anything has changed.
                 dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
                 shutil.copy(existing_last_run_uri, dst_uri)
                 utilities.correct_temp_env(self.root_app)
+
             else:
                 # Shouldn't get here  because if the existing_lastrun is already saved in the current directory but there is no invest saved one, this is illogical.
-                print(112, 'NOT existing_last_run_uri', existing_last_run_uri)
+                LOGGER.debug('Existing_last_run_uri, ' + existing_last_run_uri + ' does not exist.')
 
                 # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
                 mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, 'mesh_' + model_name + '.json')
-                print('mesh_json_uri', mesh_json_uri)
                 if os.path.exists(mesh_json_uri):
                     json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
                 else:
-                    LOGGER.critical('Shouldnt get here json_launch_dict')
+                    LOGGER.debug('Should only get here if you open then abort an iui run.')
+                    json_file_name = model_name + '.json'
 
-                with open(existing_last_run_uri, 'w') as fp:
-                    json.dump(json_launch_dict, fp)
+                    default_args = utilities.file_to_python_object(default_last_run_uri)
 
+                    # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
+                    invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
 
+                    # Path to copy InVEST json file to
+                    invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
+                    shutil.copy(invest_model_json_path, invest_json_copy)
+
+                    json_launch_dict = utilities.file_to_python_object(invest_json_copy)
+                    ##json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+
+                    # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
+                    mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
+                    if os.path.exists(mesh_json_uri):
+                        json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+                    else:
+                        json_launch_dict = utilities.file_to_python_object(invest_json_copy)
+
+                    # Update the dictionary based on MESH setup json and input mapping files
+                    # ('model_name', model_name)
+                    # ('input_mapping', input_mapping)
+                    json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
+
+                    with open(existing_last_run_uri, 'w') as fp:
+                        json.dump(json_launch_dict, fp)
+
+                LOGGER.debug('Last_run did exist, so using that as the json_launch_dict.')
         else:
             if not lastrun_is_from_current_project:
                 # Then it is an old lastrun from some other project and will ut in the wrong default uris.
@@ -1457,13 +1497,13 @@ class ModelsWidget(ScrollWidget):
             #('input_mapping', input_mapping)
             json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
 
-            # Make the model directory, which will also be the InVEST workspace In order to place the json file in that location
+            # If the model is the scenario generator, overwrite the target script value to the mesh version
+            if model_name == 'scenario_generator':
+                LOGGER.debug('Last_run did not exist, modifying json_launch_dict[target_script] manually.')
+                json_launch_dict['targetScript'] = 'mesh_models.mesh_scenario_generator'
+
             if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
                 os.mkdir(os.path.dirname(existing_last_run_uri))
-
-
-
-
 
             # Write updated dictionary to the projects json location.
             with open(existing_last_run_uri, 'w') as fp:
@@ -1478,11 +1518,7 @@ class ModelsWidget(ScrollWidget):
             # HACK IUI tempfile fix
             utilities.correct_temp_env(self.root_app)
 
-        print(55, model_name)
 
-        # If the model is the scenario generator, overwrite the target script value to the mesh version
-        if model_name == 'scenario_generator':
-            print(444, json_launch_dict, existing_last_run_uri)
 
         self.running_setup_uis.append(modelui.main(existing_last_run_uri))
 
@@ -1746,14 +1782,14 @@ class Model(MeshAbstractObject, QWidget):
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
 
         if lastrun_time > self.root_app.program_launch_time:
-            LOGGER.info('During validation of model ' + str(self.name) + ' the Lastrun file IS more recent than program launch. Copying to project file.')
+            LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file IS more recent than program launch. Copying to project file.')
             archive_args = self.root_app.get_args_from_lastrun(self.name)
             # if os.path.exists(model_archive_uri):
             with open(model_archive_uri, 'w') as f:
                 json.dump(archive_args, f)
 
         else:
-            LOGGER.info('During validation of model ' + str(self.name) + ' the Lastrun file was not more recent than program launch.')
+            LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file was not more recent than program launch.')
 
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
@@ -3287,6 +3323,7 @@ class BaselinePopulatorDialog(MeshAbstractObject, QDialog):
         self.setWindowTitle('Data for Baseline')
         self.description = QLabel('Define or create data for the baseline scenario')
         self.main_layout.addWidget(self.description)
+        self.main_layout.setAlignment(Qt.AlignTop)
 
         self.pbs = OrderedDict()
 
@@ -3403,12 +3440,12 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
     default_element_args['enabled'] = ''
 
     default_state = OrderedDict()
-    default_state['user_defined_folder'] = default_element_args.copy()
-    default_state['user_defined_folder']['name'] = 'user_defined_folder'
-    default_state['user_defined_folder']['long_name'] = 'User Defined Folder'
-    default_state['user_defined_folder']['model_type'] = 'MESH_built_in'
-    default_state['user_defined_folder']['model_args'] = ''
-    default_state['user_defined_folder']['enabled'] = True
+    default_state['user_defined_file'] = default_element_args.copy()
+    default_state['user_defined_file']['name'] = 'user_defined_file'
+    default_state['user_defined_file']['long_name'] = 'User Defined File'
+    default_state['user_defined_file']['model_type'] = 'MESH_built_in'
+    default_state['user_defined_file']['model_args'] = ''
+    default_state['user_defined_file']['enabled'] = True
 
     default_state['update_invest_args'] = default_element_args.copy()
     default_state['update_invest_args']['name'] = 'update_invest_args'
@@ -3503,7 +3540,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         self.add_plugins_pb.clicked.connect(self.root_app.create_load_plugin_dialog)
         self.main_layout.addWidget(self.add_plugins_pb)
 
-        self.pbs['user_defined_folder'].clicked.connect(self.populate_with_existing_file)
+        self.pbs['user_defined_file'].clicked.connect(self.populate_with_existing_file)
         self.pbs['update_invest_args'].clicked.connect(lambda: UpdatedInputsDialog(self.root_app, self))
         self.pbs['invest_scenario_generator'].clicked.connect(self.setup_invest_model_signal_wrapper)
         ###self.pbs['invest_scenario_generator'].clicked.connect(self.populate_with_scenario_generator)
@@ -3528,7 +3565,19 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         source_uri = str(QFileDialog.getOpenFileName(self, 'Select map file to attach', self.root_app.project_folder))
         if source_uri:
             source_name = os.path.split(source_uri)[1]
-            self.parent.load_element(source_name, source_uri)
+
+            # Check that there is something in the baseline this is named the same as.
+            selected_source_has_analog_in_baseline = False
+            for k, v in self.root_app.scenarios_dock.scenarios_widget.elements.items():
+                # NOTE that we need to go 2 layers deep in slements because sources are elements of scenarios which are elements of the scenarios_widget.
+                for k2, v2 in v.elements.items():
+                    if os.path.split(v2.name)[1] == source_name:
+                        selected_source_has_analog_in_baseline = True
+
+            if selected_source_has_analog_in_baseline:
+                self.parent.load_element(source_name, source_uri)
+            else:
+                QMessageBox.warning(self, 'Selected file does not exist in Baseline.', 'Selected file does not exist in Baseline. This means that adding this source did not modify anything about this scenario. To make this file have an effect, ensure it shares a name with the file in the baseline you want to replace in this scenario.')
 
         self.close()
 
@@ -3538,7 +3587,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         This works by loading an args dict from a pre-defined json file, and then using the suffix blank on the UI form
         as the name of the source. There are many ways this could be improved, but I didn't want to modify scenario_generator.py
         """
-        print('populate_with_scenario_generator')
+        LOGGER.debug('Populating with populate_with_scenario_generator().')
         default_scenario_generator_setup_file_uri = os.path.join(self.root_app.default_setup_files_folder,
                                                                  'scenario_generator_setup_file.json')  # note that json files for some reason have - not _
         save_folder = os.path.join(self.root_app.project_folder, 'input', self.parent.name)
@@ -3573,6 +3622,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
         # Create the layout for the Dialog
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
+
+        self.resize(QSize(800, 800))
 
         self.setWindowTitle('Update Inputs For Scenario')
         self.title_l = QLabel('Update Model Inputs')
@@ -3612,12 +3663,17 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
 
                 # Find the archive json file, load and grab arguments
                 # NOTE that creation of this archive file is done manually by the user in the invest UI.
+                args = {}
                 for file in os.listdir(setup_file_dir):
                     if file.endswith('.json') and "archive" in file: #
                         json_archive = open(os.path.join(setup_file_dir, file)).read()
                         archive_args = json.loads(json_archive)
                         args = archive_args["arguments"]
                         break
+
+                if not args:
+                    QMessageBox.warning(self, 'Could not create scenario', 'Could not create scenario. Did you validate your models?')
+
                 # We need the original json file for the InVEST model so we
                 # can get out readable labels
                 invest_json_copy = os.path.join(
@@ -3708,6 +3764,8 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
         # Add this to the Scenario Widget for display update
         self.scenario.load_element(
             "Scenario Parameters Adjusted", "Scenario Parameters Adjusted")
+
+        self.scenario.parent.save_to_disk()
         self.close()
 
 
@@ -4128,8 +4186,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
         self.exec_()
 
-        # TODOO IDEA INCORPORATE CROP PRODUCTION MODEL
-
     def run_next_in_queue(self):
         current_args = self.root_app.args_queue.items()[0][1]
         current_model_name, current_scenario_name = self.root_app.args_queue.items()[0][0].split(' -- ', 1)
@@ -4215,10 +4271,11 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
                 if model.model_type == 'InVEST Model':
+
                     # Directory where archived json file is saved
                     setup_file_dir = os.path.join(
-                        self.root_app.project_folder, 'output',
-                        'model_setup_runs', model.name)
+                       self.root_app.project_folder, 'output',
+                       'model_setup_runs', model.name)
 
                     # Find the archive json file, load and grab arguments
                     # NOTE that creation of this archive file is done manually by the user in the invest UI.
@@ -4229,24 +4286,42 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                             setup_run_args = archive_args["arguments"]
                             break
 
+                    # Directory where scenario-specific modified args are saved.
+                    scenario_setup_file_dir = os.path.join(
+                        self.root_app.project_folder, 'input',
+                        scenario.name)
+
+                    # Find the archive json file, load and grab arguments
+                    # NOTE that creation of this archive file is done manually by the user in the invest UI.
+                    scenario_setup_run_args = {}
+                    for file in os.listdir(scenario_setup_file_dir):
+                        if file.endswith('.json') and "archive" in file:
+                            scenario_json_archive = open(os.path.join(scenario_setup_file_dir, file)).read()
+                            scenario_archive_args = json.loads(scenario_json_archive)
+                            scenario_setup_run_args = scenario_archive_args[model.name]
+                            break
+
+
                     scenario_args = scenario.get_element_state_as_args()
                     scenario_args = {k.decode('utf8'): v for k, v in scenario_args.items()}
 
-                    if scenario.name != 'Baseline':
-                        manually_updated_args = self.root_app.scenarios_dock.scenarios_widget.elements[
-                            scenario.name].update_archive_args(model.name, setup_run_args)
-                    else:
-                        manually_updated_args = setup_run_args.copy()
-
-
                     # Check to see if any files in the scenario's sources have a corresponding name in the setup args. If so, replace
-                    for k, v in manually_updated_args.items():
+                    for k, v in setup_run_args.items():
                         if type(v) in [str, unicode]:
                             for source in scenario_args['sources']:
                                 setup_filename = os.path.split(v)[1]
                                 source_filename = os.path.split(source)[1]
                                 if setup_filename == source_filename:
                                     setup_run_args[k] = source
+                    for k, v in scenario_setup_run_args.items():
+                        if v and k in setup_run_args:
+                            setup_run_args[k] = v
+
+                    # if scenario.name != 'Baseline':
+                    #     manually_updated_args = self.root_app.scenarios_dock.scenarios_widget.elements[
+                    #         scenario.name].update_archive_args(model.name, setup_run_args)
+                    # else:
+                    #     manually_updated_args = setup_run_args.copy()
 
                     args = setup_run_args.copy()
 
@@ -4381,7 +4456,7 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         checked_models = self.root_app.models_dock.models_widget.get_checked_elements()
         if checked_models and self.root_app.project_aoi:
             self.required_l = QLabel('Required Inputs')
-            self.required_l.setFont(config.minor_heading_font)
+            self.required_l.setFont(config.heading_font)
             self.scroll_widget.scroll_layout.addWidget(self.required_l)
 
             self.required_model_headers = OrderedDict()
@@ -4395,14 +4470,20 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-                for key, value in input_mapping.items():
-                    if utilities.convert_to_bool(value['enabled']):
-                        if utilities.convert_to_bool(value['required']):
-                            self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
-                                                                                              specify_function=self.create_data_from_args,
-                                                                                              root_app=self.root_app,
-                                                                                              parent=self)
-                            self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
+                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0:
+                    for key, value in input_mapping.items():
+                        if utilities.convert_to_bool(value['enabled']):
+                            if utilities.convert_to_bool(value['required']):
+                                self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
+                                                                                                  specify_function=self.create_data_from_args,
+                                                                                                  root_app=self.root_app,
+                                                                                                  parent=self)
+                                self.scroll_widget.scroll_layout.addWidget(self.required_specify_buttons[value['name']])
+                else:
+                    self.scroll_widget.scroll_layout.addWidget(QLabel('No data generators available.'))
+
+                    LOGGER.debug('Loading ' + self.input_mapping_uri + ' did not yield a dictionary. Possibly its just blank or the file doesnt exist.')
+
 
             self.scroll_widget.scroll_layout.addWidget(QLabel(''))
             self.scroll_widget.scroll_layout.addWidget(QLabel(''))
@@ -4422,14 +4503,22 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
 
-                for key, value in input_mapping.items():
-                    if utilities.convert_to_bool(value['enabled']):
-                        if not utilities.convert_to_bool(value['required']):
-                            self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'], value,
-                                                                                              specify_function=self.create_data_from_args,
-                                                                                              root_app=self.root_app,
-                                                                                              parent=self)
-                            self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+
+
+                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0:
+                    for key, value in input_mapping.items():
+                        if utilities.convert_to_bool(value['enabled']):
+                            if not utilities.convert_to_bool(value['required']):
+                                self.optional_specify_buttons[value['name']] = NamedSpecifyButton(value['long_name'], value,
+                                                                                                  specify_function=self.create_data_from_args,
+                                                                                                  root_app=self.root_app,
+                                                                                                  parent=self)
+                                self.scroll_widget.scroll_layout.addWidget(self.optional_specify_buttons[value['name']])
+
+                else:
+                    self.scroll_widget.scroll_layout.addWidget(QLabel('No data generators available.'))
+                    LOGGER.debug('Loading ' + self.input_mapping_uri + ' did not yield a dictionary. Possibly its just blank or the file doesnt exist.')
+
         else:
             if not self.root_app.project_aoi:
                 self.no_aoi_selected_l = QLabel('No Area of Interest selected. Specify AOI before creating data.')

@@ -1,0 +1,15 @@
+{
+  "model": "mesh_models.mesh_scenario_generator",
+  "arguments": {
+    "suffix": "",
+    "transition": "C:/OneDrive/Projects/mesh/mesh_local/base_data/models/scenario_generator/transition_table.csv",
+    "calculate_priorities": false,
+    "workspace_dir": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\33\\input\\s4",
+    "override_layer": false,
+    "calculate_transition": true,
+    "landcover": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\33\\input\\Baseline\\lulc.tif",
+    "calculate_factors": false,
+    "calculate_proximity": false,
+    "calculate_constraints": false
+  }
+}
