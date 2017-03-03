@@ -29,7 +29,6 @@ kwargs = {
         'markdown',
         'distutils',
         'distutils.dist',
-        'mesh_models.data_creation',
         'natcap.versioner',
         'natcap.versioner.version',
         'natcap.invest.version',
