@@ -1,0 +1,10 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+base_lulc_path,,TRUE,TRUE,base_lulc_path,base_lulc_path,scenario_gen_proximity,set_to_default,lulc.tif,
+replacment_lucode,,TRUE,TRUE,replacment_lucode,replacment_lucode,scenario_gen_proximity,set_to_default,,
+area_to_convert,,TRUE,TRUE,area_to_convert,area_to_convert,scenario_gen_proximity,set_to_default,,
+convert_nearest_to_edge,,TRUE,TRUE,convert_nearest_to_edge,convert_nearest_to_edge,scenario_gen_proximity,set_to_default,,
+convertible_landcover_codes,,TRUE,TRUE,convertible_landcover_codes,convertible_landcover_codes,scenario_gen_proximity,set_to_default,,
+aoi_path,,TRUE,TRUE,aoi_path,aoi_path,scenario_gen_proximity,set_to_default,aoi.shp,
+convert_farthest_from_edge,,TRUE,TRUE,convert_farthest_from_edge,convert_farthest_from_edge,scenario_gen_proximity,set_to_default,,
+n_fragmentation_steps,,TRUE,TRUE,n_fragmentation_steps,n_fragmentation_steps,scenario_gen_proximity,set_to_default,,
+workspace_dir,,TRUE,TRUE,workspace_dir,workspace_dir,scenario_gen_proximity,set_to_default,,
