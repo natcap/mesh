@@ -1,0 +1,10 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+fertilizer_dir,parameter,TRUE,TRUE,fertilizer_dir,Fertilzer Directory,,copy_default,input/Baseline/fertilizer.csv,models/crop_production/input/fertilizer.csv
+yield_function,parameter,TRUE,TRUE,yield_function,Yield Function,,copy_default,observed,observed
+irrigation_raster,raster,TRUE,TRUE,irrigation_raster,Irrigation Raster,,clip_from_global,input/Baseline/irrigation.tif,input/Baseline/irrigation.tif
+percentile_column,parameter,TRUE,TRUE,percentile_column,Percentile Column,,copy_default,yield_95th,yield_95th
+lookup_table,parameter,TRUE,TRUE,lookup_table,lookup_table,,copy_default,input/Baseline/lookup.csv,models/crop_production/input/lookup.csv
+aoi_raster,raster,TRUE,TRUE,aoi_raster,aoi_raster,,create_raster_from_aoi,input/Baseline/aoi_raster.tif,input/Baseline/aoi_raster.tif
+compute_nutritional_contents,parameter,TRUE,TRUE,compute_nutritional_contents,compute_nutritional_contents,,copy_default,TRUE,TRUE
+dataset_dir,parameter,TRUE,TRUE,dataset_dir,dataset_dir,,copy_default,models/crop_production/global_dataset,models/crop_production/global_dataset
+compute_financial_analysis,parameter,TRUE,TRUE,compute_financial_analysis,compute_financial_analysis,,copy_default,TRUE,TRUE
