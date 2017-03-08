@@ -5,6 +5,7 @@ from PyInstaller.compat import is_win
 
 # Global Variables
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
+print 'CURRENT DIR: %s' % current_dir
 
 # Analyze Scripts for Dependencies
 # Add the release virtual environment to the extended PATH.
@@ -18,6 +19,7 @@ else:
     path_base = os.path.join('mesh_env', 'lib', 'python2.7')
 path_base = os.path.abspath(path_base)
 path_extension.insert(0, path_base)
+path_extension.insert(0, current_dir)
 path_extension.insert(0, os.path.join(path_base, 'site-packages'))
 print 'PATH EXT: %s' % path_extension
 
@@ -30,6 +32,7 @@ kwargs = {
         'distutils',
         'distutils.dist',
         'natcap.versioner',
+        'mesh_models.data_creation',
         'natcap.versioner.version',
         'natcap.invest.version',
         'pygeoprocessing.version',

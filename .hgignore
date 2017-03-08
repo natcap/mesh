@@ -8,3 +8,4 @@ settings\initialization_preferences.csv
 settings\scenario_generators.csv
 base_data_old/
 settings_old/
+*.zip
