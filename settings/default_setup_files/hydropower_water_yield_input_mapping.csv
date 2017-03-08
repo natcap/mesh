@@ -6,7 +6,7 @@ watersheds_uri,shapefile,FALSE,FALSE,watersheds,watersheds,hydropower_water_yiel
 eto_uri,raster,TRUE,TRUE,potential_evapotranspiration,Potential evapotranspiration (PET),hydropower_water_yield,clip_from_global,input/Baseline/reference_evapotranspiration.tif,cgiar_csi/pet.tif
 sub_watersheds_uri,shapefile,FALSE,FALSE,sub_watersheds,sub_watersheds,hydropower_water_yield,clip_from_global,input/Baseline/subwatersheds.shp,models/hydropower_water_yield/subwatersheds.shp
 demand_table_uri,table,FALSE,TRUE,demand_table,demand_table,hydropower_water_yield,copy_default,input/Baseline/water_demand_table.csv,models/hydropower_water_yield/water_demand_table.csv
-pawc_uri,raster,TRUE,TRUE,plant_available_water_fraction,Plant available water content (AWC),hydropower_water_yield,clip_from_global,input/Baseline/pawc.tif,isric/pawc_at_surface_7-5s.tif
+pawc_uri,raster,TRUE,TRUE,plant_available_water_fraction,Plant available water content (AWC),hydropower_water_yield,clip_from_global,input/Baseline/pawc.tif,soil/pawc_30s.tif
 lulc_uri,raster,TRUE,TRUE,land_use,Land-use,hydropower_water_yield,clip_from_global,input/Baseline/lulc.tif,lulc/lulc_modis_2012.tif
 precipitation_uri,raster,TRUE,TRUE,precipitation,Precipitation,hydropower_water_yield,clip_from_global,input/Baseline/precip.tif,worldclim/baseline/30s/bio_12.tif
 seasonality_constant,parameter,FALSE,FALSE,seasonality_constant,Seasonality constant,,copy_default,,7
