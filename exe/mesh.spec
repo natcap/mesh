@@ -7,24 +7,20 @@ from PyInstaller.compat import is_win
 current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
 print 'CURRENT DIR: %s' % current_dir
 
-code_dir = os.path.join(os.getcwd(), '..', 'code')
-print 'CODE DIR: %s' % code_dir
-
 # Analyze Scripts for Dependencies
 # Add the release virtual environment to the extended PATH.
 # This helps IMMENSELY with trying to get the binaries to work from within
 # a virtual environment, even if the virtual environment is hardcoded.
 path_extension = []
 if is_win:
-    import distutils
     path_base = os.path.join('mesh_env', 'lib')
 else:
     path_base = os.path.join('mesh_env', 'lib', 'python2.7')
 path_base = os.path.abspath(path_base)
 path_extension.insert(0, path_base)
 path_extension.insert(0, current_dir)
-path_extension.insert(0, code_dir)
 path_extension.insert(0, os.path.join(path_base, 'site-packages'))
+path_extension.insert(0, 'code')
 print 'PATH EXT: %s' % path_extension
 
 kwargs = {
