@@ -28,6 +28,7 @@ kwargs = {
     'excludes': None,
     'pathex': path_extension,
     'hiddenimports': [
+        'Tkinter',
         'markdown',
         'distutils',
         'distutils.dist',
