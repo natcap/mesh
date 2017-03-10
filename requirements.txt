@@ -3,6 +3,6 @@ gdal
 matplotlib>=1.4.2
 markdown
 xlrd
-git+https://github.com/pyinstaller/pyinstaller.git@v3.0
+git+https://github.com/pyinstaller/pyinstaller.git@v3.1.1
 git+https://github.com/phargogh/paver@natcap-version
 natcap.invest==3.3.2
