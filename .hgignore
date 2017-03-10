@@ -9,3 +9,4 @@ settings\scenario_generators.csv
 base_data_old/
 settings_old/
 *.zip
+base_data_internal/
