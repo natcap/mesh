@@ -5,4 +5,5 @@ markdown
 xlrd
 git+https://github.com/pyinstaller/pyinstaller.git@v3.2.1
 git+https://github.com/phargogh/paver@natcap-version
+pygeoprocessing==0.3.0a22
 natcap.invest==3.3.2
