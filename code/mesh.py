@@ -1350,8 +1350,7 @@ class ModelsWidget(ScrollWidget):
 
     def check_if_lastrun_uri_is_from_current_project(self, model_name):
         """Check to see if the json file saved in the user lastrun folder (automatically saved by invest), located at
-        C:\Users\jandr\AppData\Local\NatCap, is from the current project.
-        """
+        C:\\Users\\jandr\\AppData\\Local\\NatCap, is from the current project."""
         model_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
 
         LOGGER.debug('Checking if lastrun_uri for this model is from the current project. model_lastrun_uri=' + model_lastrun_uri)
