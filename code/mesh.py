@@ -779,7 +779,6 @@ class ScenariosWidget(ScrollWidget):
         # horizontal_line = QFrame()
         # horizontal_line.setFrameStyle(QFrame.HLine)
         # self.elements_vbox.addWidget(horizontal_line)
-        self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
 
 
         # self.define_scenarios_hint_l.setFont(config.italic_font)
@@ -1251,7 +1250,9 @@ class ModelsWidget(ScrollWidget):
         self.define_decision_context_icon.addPixmap(QPixmap('icons/filter.png'), QIcon.Normal, QIcon.Off)
         self.define_decision_context_pb.setIcon(self.define_decision_context_icon)
         self.define_decision_context_pb.clicked.connect(self.root_app.create_define_decision_context_dialog)
-        self.creation_hbox.addWidget(self.define_decision_context_pb)
+
+        ## Temporarily deactivaated define_decision_context from user view because it wasn't sufficiently finished. TODOO
+        # self.creation_hbox.addWidget(self.define_decision_context_pb)
 
         self.create_data_pb = QPushButton('Generate your data')
         self.create_data_icon = QIcon()
@@ -4600,6 +4601,7 @@ class ConfigureBaseDataDialog(MeshAbstractObject, QDialog):
         self.select_folder_pb.clicked.connect(self.select_folder)
         self.buttons_hbox.addWidget(self.select_folder_pb)
 
+        self.main_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
 
         self.show()
 
