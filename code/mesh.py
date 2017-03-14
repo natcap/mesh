@@ -211,6 +211,14 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.create_report_qaction.setText("View/Create Report")
         self.create_report_qaction.setCheckable(True)
 
+        self.help_qaction = QAction(self)
+        self.help_qaction.setText("Help")
+        self.help_icon = QIcon()
+        self.help_icon.addPixmap(QPixmap("icons/document-new-3.png"), QIcon.Normal, QIcon.Off)
+        self.help_qaction.setIcon(self.help_icon)
+        self.help_qaction.triggered.connect(self.view_help)
+
+
         # Create menubar and top-level menu items
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
@@ -230,6 +238,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.view_menu.addAction(self.run_models_qaction)
         self.view_menu.addAction(self.map_viewer_qaction)
         self.view_menu.addAction(self.create_report_qaction)
+        self.help_menu.addAction(self.help_qaction)
 
         # Add the top-level actions to the menu
         self.menu_bar.addAction(self.file_menu.menuAction())
@@ -383,6 +392,9 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def set_project_aoi(self, aoi_uri):
         self.project_aoi = aoi_uri
         self.update_ui()
+
+    def view_help(self):
+        self.help = WarningPopupWidget('For help and access to the  users\' guide, go to forums.naturalcapitalproject.org and check out the experimental software section.')
 
     def set_model_runs_as_central_widget(self):
         self.visible_central_widget_name = 'model_runs'
@@ -745,6 +757,7 @@ class ScenariosWidget(ScrollWidget):
         return QSize(self._width, self._height)
 
     def create_ui(self):
+        self.scroll_layout.setAlignment(Qt.AlignTop)
 
         self.scenarios_title_l = QLabel()
         self.scenarios_title_l.setText('Define Scenarios')
@@ -771,11 +784,11 @@ class ScenariosWidget(ScrollWidget):
 
         # NOTE, this is separate from the validation of invest setup runs.
         # pearhaps i should get rid of it or use it with the archive_args
-        self.validate_baseline_pb = QPushButton('Check if ready')
-        self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
-        self.validate_baseline_pb.setIcon(self.unvalidated_icon)
-        self.validate_baseline_pb.clicked.connect(self.validate_baseline)
-        self.add_scenarios_hbox.addWidget(self.validate_baseline_pb)
+        # self.validate_baseline_pb = QPushButton('Check if ready')
+        # self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
+        # self.validate_baseline_pb.setIcon(self.unvalidated_icon)
+        # self.validate_baseline_pb.clicked.connect(self.validate_baseline)
+        # self.add_scenarios_hbox.addWidget(self.validate_baseline_pb)
         # horizontal_line = QFrame()
         # horizontal_line.setFrameStyle(QFrame.HLine)
         # self.elements_vbox.addWidget(horizontal_line)
