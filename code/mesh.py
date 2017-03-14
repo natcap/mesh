@@ -72,7 +72,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.project_name = ''
         self.project_aoi = ''
         self.threads = []  # Processing threads get added here.
-        self.running_setup_uis = []
         self.settings_folder = '../settings/'
         self.default_setup_files_folder = '../settings/default_setup_files'
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
@@ -1207,15 +1206,11 @@ class ModelsWidget(ScrollWidget):
         super(ModelsWidget, self).__init__(root_app, parent)
         self.default_state = ScenariosWidget.default_state.copy()
         self.elements = OrderedDict()
-        self.running_setup_uis = self.root_app.running_setup_uis
+        self.running_setup_uis = []
         self.create_ui()
 
         self._width = 500
         self._height = 10
-
-        self.listener = Listener(self.root_app, self)
-        self.listener.start()
-
 
     def sizeHint(self):
         return QSize(self._width, self._height)
@@ -1540,14 +1535,7 @@ class ModelsWidget(ScrollWidget):
 
 
 
-
-
-        # Proposed change: add this to a thread:
-        #self.running_setup_uis.append(modelui.main(existing_last_run_uri))
-        current_args = existing_last_run_uri
-        runner = ProcessingThread(current_args, 'launch_by_last_run_uri', self.root_app, self)
-        self.root_app.threads.append(runner)
-        runner.start()
+        self.running_setup_uis.append(modelui.main(existing_last_run_uri))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
         """Walks a dictionary and updates the values.
