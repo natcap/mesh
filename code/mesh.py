@@ -46,6 +46,7 @@ from mpl_toolkits.basemap import Basemap
 from mesh_utilities import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
+from mesh_models import mesh_scenario_generator
 from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
 from natcap.invest.iui import modelui
 import natcap.invest.iui
