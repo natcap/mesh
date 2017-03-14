@@ -9,6 +9,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from natcap.invest.iui import modelui
+import natcap.invest.iui
 from natcap.invest.hydropower.hydropower_water_yield import execute as execute_hydropower_model
 from natcap.invest.ndr.ndr import execute as execute_nutrient_model
 # from natcap.invest.carbon.carbon_combined import execute as execute_carbon_model
@@ -17,6 +18,11 @@ from natcap.invest.pollination.pollination import execute as execute_pollination
 from natcap.invest.sdr import execute as execute_sdr_model
 from natcap.invest.crop_production.crop_production import execute as execute_crop_production_model # NOTE Inconsistent double naming here.
 from natcap.invest.globio import execute as execute_globio
+
+from mesh_models import mesh_scenario_generator
+
+# Unused?
+from mesh_models.mesh_scenario_generator import execute as execute_mesh_scenario_generator
 
 
 class ProcessingThread(QThread):
@@ -65,12 +71,19 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Sediment Delivery Ratio Model.')
             if self.model_name == 'crop_production':
                 self.update_run_log('\nStarting Crop Production Model.')
-                execute_sdr_model(self.args)
+                execute_crop_production_model(self.args)
                 self.update_run_log('Finished Crop Production Model.')
             if self.model_name == 'globio':
                 self.update_run_log('\nStarting Globio Model.')
-                execute_sdr_model(self.args)
+                execute_globio(self.args)
                 self.update_run_log('Finished Globio Model.')
+            # if self.model_name == 'mesh_scenario_generator':
+            #     # NOTE this one is differeent cause i'ts not run in the run dialog.
+            #     execute_mesh_scenario_generator(self.args)
+            if self.model_name == 'launch_by_last_run_uri':
+                # NOTE this one is differeent cause i'ts not run in the run dialog.
+                # execute_mesh_scenario_generator(self.args)
+                self.root_app.running_setup_uis.append(modelui.main(self.args))
 
 
 
