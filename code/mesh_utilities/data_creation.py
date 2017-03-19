@@ -44,7 +44,7 @@ def clip_geotiff_from_base_data(input_shape_uri, base_data_uri, output_geotiff_u
     temp_1_uri = temporary_filename('.tif')
 
     clip_dataset_uri(base_data_uri, input_shape_wgs84_uri, temp_1_uri,
-        assert_projections=False, process_pool=None, all_touched=False)
+                     assert_projections=False, process_pool=None, all_touched=False)
 
     pixel_spacing = get_cell_size_from_uri(default_dataset_uri)
 
@@ -154,7 +154,7 @@ def reproject_dataset_uri(
         "cubic": gdal.GRA_Cubic,
         "cubic_spline": gdal.GRA_CubicSpline,
         "lanczos": gdal.GRA_Lanczos
-        }
+    }
 
     # Get the nodata value and datatype from the original dataset
     output_type = get_datatype_from_uri(original_dataset_uri)
@@ -388,7 +388,7 @@ def get_cell_size_from_uri(dataset_uri):
     except AssertionError as e:
         LOGGER.warn(e)
         size_meters = (
-            abs(geotransform[1]) + abs(geotransform[5])) / 2.0 * linear_units
+                          abs(geotransform[1]) + abs(geotransform[5])) / 2.0 * linear_units
 
     # Close and clean up dataset
     gdal.Dataset.__swig_destroy__(dataset)
@@ -888,7 +888,7 @@ def vectorize_datasets(
     # of expensive readasarray calls
     for current_block_size in [band.GetBlockSize() for band in aligned_bands]:
         if (current_block_size[0] * current_block_size[1] >
-                block_size[0] * block_size[1]):
+                    block_size[0] * block_size[1]):
             block_size = current_block_size
 
     cols_per_block, rows_per_block = block_size[0], block_size[1]
@@ -946,7 +946,7 @@ def vectorize_datasets(
 
             #This is true at least once since last_* initialized with None
             if (last_row_block_width != row_block_width or
-                    last_col_block_width != col_block_width):
+                        last_col_block_width != col_block_width):
                 dataset_blocks = [
                     numpy.zeros(
                         (row_block_width, col_block_width),
@@ -1160,7 +1160,7 @@ def align_dataset_list(
         raise Exception(
             "Mode is 'dataset' but dataset_to_bound_index is not defined")
     if mode == "dataset" and (dataset_to_bound_index < 0 or
-                              dataset_to_bound_index >= len(dataset_uri_list)):
+                                      dataset_to_bound_index >= len(dataset_uri_list)):
         raise Exception(
             "dataset_to_bound_index is out of bounds of the datasets index: %s"
             "n_elements %s" % (dataset_to_bound_index, len(dataset_uri_list)))
@@ -1197,7 +1197,7 @@ def align_dataset_list(
             bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
 
     if (bounding_box[0] >= bounding_box[2] or
-            bounding_box[1] <= bounding_box[3]) and mode == "intersection":
+                bounding_box[1] <= bounding_box[3]) and mode == "intersection":
         raise Exception("The datasets' intersection is empty "
                         "(i.e., not all the datasets touch each other).")
 
@@ -1479,7 +1479,7 @@ def create_directories(directory_list):
             #It's okay if the directory already exists, if it fails for
             #some other reason, raise that exception
             if (exception.errno != errno.EEXIST and
-                    exception.errno != errno.ENOENT):
+                        exception.errno != errno.ENOENT):
                 raise
 
 
@@ -1506,8 +1506,8 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
 
 def new_raster_from_base(
-    base, output_uri, gdal_format, nodata, datatype, fill_value=None,
-    n_rows=None, n_cols=None, dataset_options=None):
+        base, output_uri, gdal_format, nodata, datatype, fill_value=None,
+        n_rows=None, n_cols=None, dataset_options=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         geotranforms of the base GDAL raster dataset.
 
