@@ -10,6 +10,7 @@ import numpy as np
 import scipy as sp
 from osgeo import gdal, ogr
 
+# NOTE That this is a reference to the python 2.7 verison of pygeoprocessing because that's still what mesh runs in.
 import pygeoprocessing.geoprocessing as geoprocess
 from mesh_utilities import invest_utils as invest_utils
 
