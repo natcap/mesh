@@ -28,6 +28,8 @@ LOGGER.setLevel(logging.INFO)
 ENCODING = sys.getfilesystemencoding()
 
 
+# TODO confirm this benefits from the public customizations in numdal
+
 def clip_geotiff_from_base_data_gdal(input_shape_uri, base_data_uri, output_geotiff_uri):
     # Deprecated and removed via rename because it meant the user had to have gdal installed.
     gdal_command = 'gdalwarp -cutline ' + input_shape_uri + ' -crop_to_cutline -overwrite -s_srs EPSG:4326 -t_srs EPSG:54030 -of GTiff ' + base_data_uri + ' ' + output_geotiff_uri
@@ -228,7 +230,7 @@ def reproject_dataset_uri(
 
 
 
-
+# TODO Update with numdal version
 def resize_and_resample_dataset_uri(
         original_dataset_uri, bounding_box, out_pixel_size, output_uri,
         resample_method):
