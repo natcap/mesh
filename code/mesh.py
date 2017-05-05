@@ -93,7 +93,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
 
         # Launch model from preferences file and load/create model_elements settings files
         if self.project_to_load_on_launch:
-            self.load_project_by_name(self.project_to_load_on_launch)
+            try:
+                self.load_project_by_name(self.project_to_load_on_launch)
+            except:
+                print('Project failed to load fully, probably because some expected files are missing. You may need to recreate some elements')
         else:
             self.new_project_widget.setVisible(True)
 
