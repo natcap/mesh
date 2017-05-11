@@ -96,7 +96,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             try:
                 self.load_project_by_name(self.project_to_load_on_launch)
             except:
-                print('Project failed to load fully, probably because some expected files are missing. You may need to recreate some elements')
+                LOGGER.warning('Project failed to load fully, probably because some expected files are missing. You may need to recreate some elements')
         else:
             self.new_project_widget.setVisible(True)
 
@@ -643,6 +643,11 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         user_natcap_folder = utilities.get_user_natcap_folder()
         invest_version = natcap.invest.__version__
         filename = '%s_lastrun_%s.json' % (model_name, invest_version)
+
+        # TODO Eliminate this hack on NDRsetupfile name
+        if model_name == 'ndr':
+            filename = '%s_lastrun_%s.json' % ('nutrient', invest_version)
+
         model_lastrun_uri = os.path.join(user_natcap_folder, filename)
         return model_lastrun_uri
 
@@ -1792,12 +1797,19 @@ class Model(MeshAbstractObject, QWidget):
 
         # Check to see if there's a more recent model-specific lastrun file.
         model_lastrun_uri = self.root_app.get_user_lastrun_uri(self.name)
+
+        LOGGER.debug('model_lastrun_uri: ' + str(model_lastrun_uri))
+
         if os.path.exists(model_lastrun_uri):
             lastrun_time = os.path.getmtime(model_lastrun_uri)
         else:
             lastrun_time = 0
 
+            LOGGER.debug('lastrun_time: ' + str(lastrun_time))
+
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
+
+        LOGGER.debug('model_archive_uri: ' + str(model_archive_uri))
 
         if lastrun_time > self.root_app.program_launch_time:
             LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file IS more recent than program launch. Copying to project file.')
