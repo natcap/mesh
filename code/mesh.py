@@ -4328,6 +4328,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         if file.endswith('.json') and "archive" in file:
                             scenario_json_archive = open(os.path.join(scenario_setup_file_dir, file)).read()
                             scenario_archive_args = json.loads(scenario_json_archive)
+                            print('scenario_archive_args', scenario_archive_args)
                             scenario_setup_run_args = scenario_archive_args[model.name]
                             break
 

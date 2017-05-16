@@ -1,0 +1,17 @@
+{
+  "model": "natcap.invest.carbon.carbon_combined",
+  "arguments": {
+    "c": 0.0,
+    "carbon_pools_uncertain_uri": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\vba\\input\\Baseline\\carbon_uncertainty_biophysical_table.csv",
+    "carbon_price_units": "Carbon (C)",
+    "carbon_pools_uri": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\vba\\input\\Baseline\\carbon_biophysical_table.csv",
+    "do_biophysical": true,
+    "workspace_dir": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\vba\\output\\model_setup_runs\\carbon",
+    "r": 7,
+    "do_uncertainty": false,
+    "lulc_cur_uri": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\vba\\input\\Baseline\\lulc.tif",
+    "V": 43.0,
+    "confidence_threshold": 90.0,
+    "do_valuation": false
+  }
+}
