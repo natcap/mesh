@@ -3,6 +3,9 @@ import numdal as nd
 import numpy as np
 import hazelbean as hb
 
+# TODO Make this type of post-mesh results parsing something included into mesh. All i'd need to do is get the run_name, scnearios as input. Then also systemitize what the outputs are.
+
+
 ag_dir = 'C:\\OneDrive\\base_data\\publications\\ag_tradeoffs\\land_econ'
 project_dir = 'input/Baseline'
 
