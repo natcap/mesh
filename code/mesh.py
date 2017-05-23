@@ -38,11 +38,6 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as Navigatio
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 from mpl_toolkits.basemap import Basemap
 
-# TODO Before releasing, create python 2 version of nd and release it on pip.
-# sys.path.extend('c:/onedrive/projects')
-#import numdal as nd
-
-# from mesh_models.data_creation import data_creation # ORIGINAL way here, before i moved it into utilities.
 from mesh_utilities import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
@@ -1376,12 +1371,12 @@ class ModelsWidget(ScrollWidget):
         C:\\Users\\jandr\\AppData\\Local\\NatCap, is from the current project."""
         model_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
 
-        LOGGER.debug('Checking if lastrun_uri for this model is from the current project. model_lastrun_uri=' + model_lastrun_uri)
+        # LOGGER.debug('Checking if lastrun_uri for this model is from the current project. model_lastrun_uri=' + model_lastrun_uri)
 
         if os.path.exists(model_lastrun_uri):
             name_from_lastrun = self.get_project_name_from_lastrun(model_name)
-            LOGGER.debug('Name  of  this project is ' + str(self.root_app.project_name) +
-                         '. Name of project implied from lastrun is ' + str(name_from_lastrun))
+            # LOGGER.debug('Name of this project is ' + str(self.root_app.project_name) +
+            #              '. Name of project implied from lastrun is ' + str(name_from_lastrun))
             if self.root_app.project_name == name_from_lastrun:
                 return True
             else:
@@ -1423,89 +1418,78 @@ class ModelsWidget(ScrollWidget):
 
         # Path to CSV file for mapping MESH input data to the model model.name
         input_mapping_uri = os.path.join('../settings/default_setup_files', '%s_input_mapping.csv' % model_name)
-
-        # Read the input mapping CSV into a dictionary
         input_mapping = utilities.file_to_python_object(input_mapping_uri)
 
+        # TODO eliminate?
         # Path where an InVEST setup run json file is saved. If the model has already been run and this file exists, use this as default.
-        existing_last_run_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_setup_file.json' % model_name)
+        model_setup_file_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s_setup_file.json' % model_name)
 
+        # Path to iui file custom to this  run
+        model_iui_file_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name, '%s.json' % model_name)
 
         # Path to the MESH default json parameters.
-        default_last_run_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
+        default_setup_file_uri = os.path.join(self.root_app.default_setup_files_folder, '%s_setup_file.json' % model_name)
 
-        # TODOO Make a heirarchical call where if there is a mesh version of the setup run, use that, else revert to invest's default
         # Check to see if an existing json file exists from a previous setup run
-
         lastrun_is_from_current_project = self.check_if_lastrun_uri_is_from_current_project(model_name)
-        if os.path.exists(existing_last_run_uri):
-            if lastrun_is_from_current_project:
-                # Is from current project, so we want to use it. We displace the  previous one in case anything has changed.
-                dst_uri = os.path.splitext(existing_last_run_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(existing_last_run_uri)[1]
-                shutil.copy(existing_last_run_uri, dst_uri)
-                utilities.correct_temp_env(self.root_app)
-
-            else:
-                # Shouldn't get here  because if the existing_lastrun is already saved in the current directory but there is no invest saved one, this is illogical.
-                LOGGER.debug('Existing_last_run_uri, ' + existing_last_run_uri + ' does not exist.')
-
-                # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
-                mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, 'mesh_' + model_name + '.json')
-                if os.path.exists(mesh_json_uri):
-                    json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
-                else:
-                    LOGGER.debug('Should only get here if you open then abort an iui run.')
-                    json_file_name = model_name + '.json'
-
-                    default_args = utilities.file_to_python_object(default_last_run_uri)
-
-                    # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
-                    invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
-
-                    # Path to copy InVEST json file to
-                    invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
-                    shutil.copy(invest_model_json_path, invest_json_copy)
-
-                    json_launch_dict = utilities.file_to_python_object(invest_json_copy)
-                    ##json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
-
-                    # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
-                    mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
-                    if os.path.exists(mesh_json_uri):
-                        json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
-                    else:
-                        json_launch_dict = utilities.file_to_python_object(invest_json_copy)
-
-                    # Update the dictionary based on MESH setup json and input mapping files
-                    # ('model_name', model_name)
-                    # ('input_mapping', input_mapping)
-                    json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
-
-                    with open(existing_last_run_uri, 'w') as fp:
-                        json.dump(json_launch_dict, fp)
-
-                LOGGER.debug('Last_run did exist, so using that as the json_launch_dict.')
-        else:
+        if os.path.exists(model_iui_file_uri):
+            #LOGGER.debug('model_iui_file_uri: ' + model_iui_file_uri + ' DOES exist.')
             if not lastrun_is_from_current_project:
-                # Then it is an old lastrun from some other project and will ut in the wrong default uris.
+                LOGGER.debug('Lastrun was not from current project. Removing it. This will prompt regeneration of the file based on the <model>_setup_file.json')
                 natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
                 backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
                 if os.path.exists(natcap_lastrun_uri):
                     os.rename(natcap_lastrun_uri, backup_uri)
+
+                # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
+                mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
+                if os.path.exists(mesh_json_uri):
+                    json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+                else:
+                    # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
+                    invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+
+                    # Path to copy InVEST json file to
+                    invest_json_copy = os.path.join(self.root_app.project_folder, 'settings', json_file_name)
+                    shutil.copy(invest_model_json_path, invest_json_copy)
+
+                    json_launch_dict = utilities.file_to_python_object(invest_json_copy)
+
+                setup_file_args = utilities.file_to_python_object(default_setup_file_uri)
+
+                # Overwrite the old model_iui_file_uri with a newly generated json_launch_dict
+                json_launch_dict = self.modify_invest_args(json_launch_dict, setup_file_args, model_name, input_mapping)
+                with open(model_iui_file_uri, 'w') as fp:
+                    json.dump(json_launch_dict, fp)
+
+
+        else:
+            LOGGER.debug('model_iui_file_uri, ' + model_iui_file_uri + ' DOES NOT exist. Creating from default.')
+            if not lastrun_is_from_current_project:
+                LOGGER.debug('lastrun_is_from_current_project was FALSE.')
+                # Then it is an old lastrun from some other project and will ut in the wrong default uris.
+                # Rename this to a backup (basically DELETING it)
+                natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+                backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
+                # LOGGER.debug('RENAMING ' + natcap_lastrun_uri + ' to ' + backup_uri)
+                if os.path.exists(natcap_lastrun_uri):
+                    os.rename(natcap_lastrun_uri, backup_uri)
                 else:
                     pass # No need to the old  natcap lastrun because it doesn't exist.
+            else:
+                raise NameError('Unhandled.')
 
 
             LOGGER.debug('Did not find lastrun file in project directory. Creating from default.')
             # Read in MESH setup json to a dictionary
-            default_args = utilities.file_to_python_object(default_last_run_uri)
-
+            setup_file_args = utilities.file_to_python_object(default_setup_file_uri)
 
             # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
             invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
 
-            # Path to copy InVEST json file to
-            invest_json_copy = os.path.join(self.root_app.project_folder, json_file_name)
+            # Path to copy InVEST json file to    self.root_app.project_folder, json_file_name)
+
+            invest_json_copy = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', model_name + '_invest_copy.json')
             shutil.copy(invest_model_json_path, invest_json_copy)
 
             # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
@@ -1516,34 +1500,27 @@ class ModelsWidget(ScrollWidget):
                 json_launch_dict = utilities.file_to_python_object(invest_json_copy)
 
             # Update the dictionary based on MESH setup json and input mapping files
-            #('model_name', model_name)
-            #('input_mapping', input_mapping)
-            json_launch_dict = self.modify_invest_args(json_launch_dict, default_args, model_name, input_mapping)
+            json_launch_dict = self.modify_invest_args(json_launch_dict, setup_file_args, model_name, input_mapping)
 
             # If the model is the scenario generator, overwrite the target script value to the mesh version
             if model_name == 'scenario_generator':
                 LOGGER.debug('Last_run did not exist, modifying json_launch_dict[target_script] manually.')
                 json_launch_dict['targetScript'] = 'mesh_models.mesh_scenario_generator'
 
-            if not os.path.isdir(os.path.dirname(existing_last_run_uri)):
-                os.mkdir(os.path.dirname(existing_last_run_uri))
+            if not os.path.isdir(os.path.dirname(model_iui_file_uri)):
+                os.mkdir(os.path.dirname(model_iui_file_uri))
 
             # Write updated dictionary to the projects json location.
-            with open(existing_last_run_uri, 'w') as fp:
+            with open(model_iui_file_uri, 'w') as fp:
                 json.dump(json_launch_dict, fp)
-
-            # DUPLICATIVE?
-            model_lastrun_uri = self.root_app.get_user_lastrun_uri(self.sender.name)
 
             # Don't need to keep arounnd copied InVEST Json file, delete.
             os.remove(invest_json_copy)
 
-            # HACK IUI tempfile fix
-            utilities.correct_temp_env(self.root_app)
+        # HACK IUI tempfile fix
+        utilities.correct_temp_env(self.root_app)
 
-
-
-        self.running_setup_uis.append(modelui.main(existing_last_run_uri))
+        self.running_setup_uis.append(modelui.main(model_iui_file_uri))
 
     def modify_invest_args(self, args, vals, model_name, input_mapping=None):
         """Walks a dictionary and updates the values.
@@ -1784,6 +1761,7 @@ class Model(MeshAbstractObject, QWidget):
             True if a run for the associated model completed successfully
             and the json archive file exists, False otherwise
         """
+
         # Get path for InVEST model logfile and archive
         log_file_dir = os.path.join(
             self.root_app.project_folder, 'output', 'model_setup_runs',
@@ -1798,19 +1776,15 @@ class Model(MeshAbstractObject, QWidget):
         # Check to see if there's a more recent model-specific lastrun file.
         model_lastrun_uri = self.root_app.get_user_lastrun_uri(self.name)
 
-        LOGGER.debug('model_lastrun_uri: ' + str(model_lastrun_uri))
-
+        # LOGGER.debug('model_lastrun_uri: ' + str(model_lastrun_uri))
         if os.path.exists(model_lastrun_uri):
             lastrun_time = os.path.getmtime(model_lastrun_uri)
         else:
             lastrun_time = 0
 
-            LOGGER.debug('lastrun_time: ' + str(lastrun_time))
-
+        # If the lastrun is more recent, write those to model_archive_uri
         model_archive_uri = os.path.join(self.root_app.project_folder, 'output', 'model_setup_runs', self.name, '%s_archive.json' % self.name)
-
-        LOGGER.debug('model_archive_uri: ' + str(model_archive_uri))
-
+        # LOGGER.debug('model_archive_uri: ' + str(model_archive_uri))
         if lastrun_time > self.root_app.program_launch_time:
             LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file IS more recent than program launch. Copying to project file.')
             archive_args = self.root_app.get_args_from_lastrun(self.name)
@@ -1819,7 +1793,8 @@ class Model(MeshAbstractObject, QWidget):
                 json.dump(archive_args, f)
 
         else:
-            LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file was not more recent than program launch.')
+            # LOGGER.debug('During validation of model ' + str(self.name) + ' the Lastrun file was not more recent than program launch.')
+            pass
 
         if os.path.isdir(log_file_dir):
             # Initialize variables to track latest log
@@ -1846,7 +1821,6 @@ class Model(MeshAbstractObject, QWidget):
                     invest_run_valid = True
             else:
                 invest_run_valid = False
-
 
         return invest_run_valid and archive_params_valid
 
@@ -3573,7 +3547,6 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
         self.pbs['user_defined_file'].clicked.connect(self.populate_with_existing_file)
         self.pbs['update_invest_args'].clicked.connect(lambda: UpdatedInputsDialog(self.root_app, self))
         self.pbs['invest_scenario_generator'].clicked.connect(self.setup_invest_model_signal_wrapper)
-        ###self.pbs['invest_scenario_generator'].clicked.connect(self.populate_with_scenario_generator)
         self.pbs['scenario_gen_proximity'].clicked.connect(self.setup_invest_model_signal_wrapper)
 
         self.show()
@@ -3608,33 +3581,6 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
                 self.parent.load_element(source_name, source_uri)
             else:
                 QMessageBox.warning(self, 'Selected file does not exist in Baseline.', 'Selected file does not exist in Baseline. This means that adding this source did not modify anything about this scenario. To make this file have an effect, ensure it shares a name with the file in the baseline you want to replace in this scenario.')
-
-        self.close()
-
-    def populate_with_scenario_generator(self):
-        """
-        Calls the InVEST scenario generator on a separate thread, and then adds a new source to the target scenario.
-        This works by loading an args dict from a pre-defined json file, and then using the suffix blank on the UI form
-        as the name of the source. There are many ways this could be improved, but I didn't want to modify scenario_generator.py
-        """
-        LOGGER.debug('Populating with populate_with_scenario_generator().')
-        default_scenario_generator_setup_file_uri = os.path.join(self.root_app.default_setup_files_folder,
-                                                                 'scenario_generator_setup_file.json')  # note that json files for some reason have - not _
-        save_folder = os.path.join(self.root_app.project_folder, 'input', self.parent.name)
-        scenario_specific_scenario_generator_setup_file_uri = os.path.join(save_folder,
-                                                                           'scenario_generator_setup_file.json')
-
-        if os.path.exists(scenario_specific_scenario_generator_setup_file_uri):
-            override_args = utilities.file_to_python_object(scenario_specific_scenario_generator_setup_file_uri)
-        else:
-            override_args = utilities.file_to_python_object(default_scenario_generator_setup_file_uri)
-
-        override_args['workspace_dir'] = save_folder
-        scenario_generator_iui_json_file = os.path.join(self.root_app.default_setup_files_folder,
-                                                        'mesh_scenario_generator.json')
-        ##scenario_generator_iui_json_file = 'scenario-generator.json'
-        modelui.main(scenario_generator_iui_json_file)
-        uri = os.path.join(save_folder, 'scenario_' + override_args['suffix'] + '.tif')
 
         self.close()
 
@@ -3706,8 +3652,12 @@ class UpdatedInputsDialog(MeshAbstractObject, QDialog):
 
                 # We need the original json file for the InVEST model so we
                 # can get out readable labels
+
+                ## PREVIOUS ATTEMPT
+                # invest_json_copy = os.path.join(
+                #     self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
                 invest_json_copy = os.path.join(
-                    self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '_setup_file.json')
+                    self.root_app.project_folder, 'output', 'model_setup_runs', model.name, model.name + '.json')
                 invest_json = json.loads(open(invest_json_copy).read())
                 invest_args = self.root_app.get_flat_arguments(invest_json)
 
@@ -4328,7 +4278,6 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                         if file.endswith('.json') and "archive" in file:
                             scenario_json_archive = open(os.path.join(scenario_setup_file_dir, file)).read()
                             scenario_archive_args = json.loads(scenario_json_archive)
-                            print('scenario_archive_args', scenario_archive_args)
                             scenario_setup_run_args = scenario_archive_args[model.name]
                             break
 

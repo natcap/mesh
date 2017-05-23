@@ -1,1 +1,20 @@
-{"model": "natcap.invest.ndr", "arguments": {"subsurface_eff_n": "0.8", "lulc_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/lulc.tif", "runoff_proxy_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/precip.tif", "results_suffix": "", "subsurface_critical_length_p": "150", "calc_n": true, "watersheds_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/aoi.shp", "calc_p": true, "threshold_flow_accumulation": "1000", "workspace_dir": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\case_study\\output\\model_setup_runs\\ndr", "subsurface_critical_length_n": "150", "k_param": "2", "dem_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/dem_burned.tif", "biophysical_table_path": "C:/OneDrive/Projects/mesh/mesh_local/base_data_internal/models/combined_biophysical_table_modis.csv", "subsurface_eff_p": "0.8"}}
+{
+  "model": "natcap.invest.ndr",
+  "arguments": {
+    "subsurface_eff_n": "0.8",
+    "lulc_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/lulc.tif",
+    "runoff_proxy_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/precip.tif",
+    "results_suffix": "",
+    "subsurface_critical_length_p": "150",
+    "calc_n": true,
+    "watersheds_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/aoi.shp",
+    "calc_p": true,
+    "threshold_flow_accumulation": "1000",
+    "workspace_dir": "C:\\OneDrive\\Projects\\mesh\\mesh_local\\projects\\case_study\\output\\model_setup_runs\\ndr",
+    "subsurface_critical_length_n": "150",
+    "k_param": "2",
+    "dem_path": "C:/OneDrive/Projects/mesh/mesh_local/projects/case_study/input/Baseline/dem_burned.tif",
+    "biophysical_table_path": "C:/OneDrive/Projects/mesh/mesh_local/base_data_internal/models/combined_biophysical_table_modis.csv",
+    "subsurface_eff_p": "0.8"
+  }
+}
