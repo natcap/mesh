@@ -1432,52 +1432,59 @@ class ModelsWidget(ScrollWidget):
 
         # Check to see if an existing json file exists from a previous setup run
         lastrun_is_from_current_project = self.check_if_lastrun_uri_is_from_current_project(model_name)
-        if os.path.exists(model_iui_file_uri):
+        if not lastrun_is_from_current_project:
+            LOGGER.debug('Lastrun was not from current project. Removing it. This will prompt regeneration of the file based on the <model>_setup_file.json')
+            natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+            backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
+            if os.path.exists(natcap_lastrun_uri):
+                os.rename(natcap_lastrun_uri, backup_uri)
+
+        if not os.path.exists(model_iui_file_uri):
             #LOGGER.debug('model_iui_file_uri: ' + model_iui_file_uri + ' DOES exist.')
-            if not lastrun_is_from_current_project:
-                LOGGER.debug('Lastrun was not from current project. Removing it. This will prompt regeneration of the file based on the <model>_setup_file.json')
-                natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
-                backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
-                if os.path.exists(natcap_lastrun_uri):
-                    os.rename(natcap_lastrun_uri, backup_uri)
+            # if not lastrun_is_from_current_project:
+            #     LOGGER.debug('Lastrun was not from current project. Removing it. This will prompt regeneration of the file based on the <model>_setup_file.json')
+            #     natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+            #     backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
+            #     if os.path.exists(natcap_lastrun_uri):
+            #         os.rename(natcap_lastrun_uri, backup_uri)
 
-                # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
-                mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
-                if os.path.exists(mesh_json_uri):
-                    json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
-                else:
-                    # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
-                    invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+                # # Read in the MESH IUI default json if it exists, else the InVEST shipped version.
+                # mesh_json_uri = os.path.join(self.root_app.default_setup_files_folder, model_name + '.json')
+                # if os.path.exists(mesh_json_uri):
+                #     json_launch_dict = utilities.file_to_python_object(mesh_json_uri)
+                # else:
+                #     # Get the location of the InVEST model json file, which is distributed with InVEST in IUI package
+                #     invest_model_json_path = os.path.join(os.path.split(natcap.invest.iui.__file__)[0], json_file_name)
+                #
+                #     # Path to copy InVEST json file to
+                #     invest_json_copy = os.path.join(self.root_app.project_folder, 'settings', json_file_name)
+                #     shutil.copy(invest_model_json_path, invest_json_copy)
+                #
+                #     json_launch_dict = utilities.file_to_python_object(invest_json_copy)
+                #
+                # setup_file_args = utilities.file_to_python_object(default_setup_file_uri)
+                #
+                # # Overwrite the old model_iui_file_uri with a newly generated json_launch_dict
+                # json_launch_dict = self.modify_invest_args(json_launch_dict, setup_file_args, model_name, input_mapping)
+                # with open(model_iui_file_uri, 'w') as fp:
+                #     json.dump(json_launch_dict, fp)
 
-                    # Path to copy InVEST json file to
-                    invest_json_copy = os.path.join(self.root_app.project_folder, 'settings', json_file_name)
-                    shutil.copy(invest_model_json_path, invest_json_copy)
-
-                    json_launch_dict = utilities.file_to_python_object(invest_json_copy)
-
-                setup_file_args = utilities.file_to_python_object(default_setup_file_uri)
-
-                # Overwrite the old model_iui_file_uri with a newly generated json_launch_dict
-                json_launch_dict = self.modify_invest_args(json_launch_dict, setup_file_args, model_name, input_mapping)
-                with open(model_iui_file_uri, 'w') as fp:
-                    json.dump(json_launch_dict, fp)
-
-
-        else:
+        #
+        # else:
             LOGGER.debug('model_iui_file_uri, ' + model_iui_file_uri + ' DOES NOT exist. Creating from default.')
-            if not lastrun_is_from_current_project:
-                LOGGER.debug('lastrun_is_from_current_project was FALSE.')
-                # Then it is an old lastrun from some other project and will ut in the wrong default uris.
-                # Rename this to a backup (basically DELETING it)
-                natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
-                backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
-                # LOGGER.debug('RENAMING ' + natcap_lastrun_uri + ' to ' + backup_uri)
-                if os.path.exists(natcap_lastrun_uri):
-                    os.rename(natcap_lastrun_uri, backup_uri)
-                else:
-                    pass # No need to the old  natcap lastrun because it doesn't exist.
-            else:
-                raise NameError('Unhandled.')
+            # if not lastrun_is_from_current_project:
+            #     LOGGER.debug('lastrun_is_from_current_project was FALSE.')
+            #     # Then it is an old lastrun from some other project and will ut in the wrong default uris.
+            #     # Rename this to a backup (basically DELETING it)
+            #     natcap_lastrun_uri = self.root_app.get_user_lastrun_uri(model_name)
+            #     backup_uri = os.path.splitext(natcap_lastrun_uri)[0] + '_' + str(utilities.pretty_time()) + os.path.splitext(natcap_lastrun_uri)[1]
+            #     # LOGGER.debug('RENAMING ' + natcap_lastrun_uri + ' to ' + backup_uri)
+            #     if os.path.exists(natcap_lastrun_uri):
+            #         os.rename(natcap_lastrun_uri, backup_uri)
+            #     else:
+            #         pass # No need to the old  natcap lastrun because it doesn't exist.
+            # else:
+            #     raise NameError('Unhandled.')
 
 
             LOGGER.debug('Did not find lastrun file in project directory. Creating from default.')
