@@ -7,31 +7,10 @@ import hazelbean
 
 """There are 41359569 ha in the volta."""
 
-input_folder = 'input'
-output_folder = 'output'
-runs_folder = os.path.join(output_folder, 'runs')
 
 
-results_names = ['carbon', 'wy', 'n_export', 'p_export', 'sed_retention']
-
-run_name = 'Baseline'
-
-scenarios = ['BAU',
-             'No Deforestation',
-             'ES Prioritized',
-             'ES and Slope Prioritized',
-             'Both Strategies',
-             'No Deforestation ES and Slope Prioritized']
-
-overall_results_dir = os.path.join(runs_folder, run_name)
-
-match_uri = os.path.join(runs_folder, run_name, 'Baseline', 'carbon/tot_c_cur.tif')
-match = nd.ArrayFrame(match_uri)
-
-
-do_compare_scenarios = True
-if do_compare_scenarios:
-    scenario_results = [['', 'carbon', 'wy', 'n_export', 'p_export', 'sed_retention']]
+def create_scenario_calorie_csv(input_dir, output_uri):
+    scenario_results = [['', 'carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'caloric_production']]
 
     for scenario in scenarios:
         scenario_result = []
@@ -54,6 +33,9 @@ if do_compare_scenarios:
         sed_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'sdr/sed_export.tif' ))
         sed_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'sed_export.png'))
 
+        calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif' ))
+        calories.show(output_uri=os.path.join(input_dir, scenario, 'caloric_production.png'))
+
 
         scenario_result.append(str(float(carbon.sum())))
         scenario_result.append(str(float(wy.sum())))
@@ -61,23 +43,50 @@ if do_compare_scenarios:
         scenario_result.append(str(float(p_export.sum())))
         scenario_result.append(str(float(sed_export.sum())))
 
+        # KLUDGE
+        scenario_result.append(str(float(calories.sum())))
+
         print('carbon sum: ', carbon.sum())
         print('wy sum: ', scenario, wy.sum())
         print('n_export sum: ', scenario, n_export.sum())
         print('p_export sum: ', scenario, p_export.sum())
         print('sed_export sum: ', scenario, sed_export.sum())
+        print('calories sum: ', scenario, calories.sum())
 
-    differences = []
-    for i in range(len(results_names)):
-        bau_difference = scenario_results[1][i] - scenario_results[0][i]
-        cons_difference = scenario_results[2][i] - scenario_results[0][i]
-        differences.append([bau_difference, cons_difference])
-
-        print(results_names[i] + ' bau difference ' + str(bau_difference) + ', cons difference ' + str(cons_difference))
+    # differences = []
+    # for i in range(len(results_names)):
+    #     bau_difference = float(scenario_results[1][i]) - float(scenario_results[0][i])
+    #     cons_difference = float(scenario_results[2][i]) - float(scenario_results[0][i])
+    #     differences.append([str(bau_difference, cons_difference])
+    #
+    #     print(results_names[i] + ' bau difference ' + str(bau_difference) + ', cons difference ' + str(cons_difference))
 
     nd.pp(scenario_results)
 
-    csv_output_uri = os.path.join(runs_folder, run_name, 'results.csv')
+    hazelbean.python_object_to_csv(scenario_results, os.path.join(output_uri))
 
 
-    hazelbean.python_object_to_csv(scenario_results, os.path.join(csv_output_uri))
+input_dir = 'input'
+output_dir = 'output'
+runs_folder = os.path.join(output_dir, 'runs')
+
+
+results_names = ['carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'calories']
+
+run_name = 'r1'
+
+scenarios = ['BAU',
+             'No Deforestation',
+             'ES Prioritized',
+             'ES and Slope Prioritized',
+             'Both Strategies',
+             'No Deforestation ES and Slope Prioritized']
+
+overall_results_dir = os.path.join(runs_folder, run_name)
+
+match_uri = os.path.join(runs_folder, run_name, 'Baseline', 'carbon/tot_c_cur.tif')
+match = nd.ArrayFrame(match_uri)
+
+output_uri = os.path.join(runs_folder, run_name, 'results.csv')
+
+create_scenario_calorie_csv(input_dir, output_uri)
