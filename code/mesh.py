@@ -2114,29 +2114,35 @@ class ModelRun(MeshAbstractObject, QWidget):
     def add_run_to_map_viewer_signal_wrapper(self):
         for scenario in self.scenarios_in_run:
             for model in self.models_in_run:
+                LOGGER.debug('Adding ' + str(scenario) + ' and ' + str(model) + ' outputs to map viewer.')
                 # NOTE: I manually decided which reports are actually interesting outputs. Have this be programatic.
                 # And link to the "generate_report_ready_object()" functionality here to fix this.
                 uris_to_add = []
                 current_folder = os.path.join(self.run_folder, scenario.name, model.name)
                 if model.name == 'carbon':
                     uris_to_add.append(os.path.join(current_folder, 'tot_c_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_above_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_below_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_dead_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_soil_cur.tif'))
                 if model.name == 'hydropower_water_yield':
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
-                #if model.name == 'nutrient':
-                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_export_.tif'))
-                #    uris_to_add.append(os.path.join(current_folder, 'output', 'n_retention_.tif'))
-                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_export_.tif'))
-                #    uris_to_add.append(os.path.join(current_folder, 'output', 'p_retention_.tif'))
+                if model.name == 'ndr':
+                   uris_to_add.append(os.path.join(current_folder, 'n_export.tif'))
+                   uris_to_add.append(os.path.join(current_folder, 'p_export.tif'))
+                   uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_n.tif'))
+                   uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_p.tif'))
                 if model.name == 'pollination':
                     uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
                 if model.name == 'sdr':
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'rkls.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'sed_export.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'sed_retention_index.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'usle.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'rkls.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_export.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
                 if model.name == 'nutrition':
                     for i in os.listdir(os.path.join(current_folder)):
                         # NEXT RELEASE I currently save a shitton of files that are duplicate and take space. Perhaps create a data_stash folder to share across runs?

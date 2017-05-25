@@ -6,13 +6,19 @@ import hazelbean as hb
 ag_dir = 'C:\\OneDrive\\base_data\\publications\\ag_tradeoffs\\land_econ'
 project_dir = 'input/Baseline'
 
+output_dir = 'output'
+
 
 def calc_caloric_production_from_lulc(input_lulc_uri):
     # Data from Johnson et al 2016.
+
+
     calories_per_cell_uri  = os.path.join(ag_dir, 'calories_per_cell.tif')
     calories_per_cell = nd.ArrayFrame(calories_per_cell_uri)
 
     ndv = calories_per_cell.no_data_value
+
+    # print('calories_per_cell', calories_per_cell.sum())
 
     # Project the full global to robinson (to match volta projeciton and also to allow np.clip_by_shape)
     calories_per_cell_projected_uri  = os.path.join(project_dir, 'calories_per_cell_projected.tif')
@@ -20,6 +26,8 @@ def calc_caloric_production_from_lulc(input_lulc_uri):
         calories_per_cell_projected = nd.reproject(calories_per_cell, calories_per_cell_projected_uri, epsg_code=54030, no_data_value=ndv)
     else:
         calories_per_cell_projected = nd.ArrayFrame(calories_per_cell_projected_uri)
+
+    # print('calories_per_cell_projected', calories_per_cell_projected.sum())
 
     # Polygon of the Volta (also in Robinson projection)
     aoi_uri = 'input/Baseline/aoi.shp'
@@ -31,15 +39,23 @@ def calc_caloric_production_from_lulc(input_lulc_uri):
     else:
         clipped_calories_per_5m_cell = nd.ArrayFrame(clipped_calories_per_5m_cell_uri)
 
+    print('clipped_calories_per_5m_cell', clipped_calories_per_5m_cell.sum())
+
     # Load the baseline lulc for adjustment factor calculation and as a match_af
     lulc_uri = 'input/Baseline/lulc.tif'
     lulc = nd.ArrayFrame(lulc_uri)
-    lulc_ndv = lulc.no_data_value
+
+    input_lulc = nd.ArrayFrame(input_lulc_uri)
+
+    # Resample to the intput_lulc (a slight size change happens with the scenario generator)
+    lulc = lulc.resample(input_lulc)
+
+
 
     # resample to LULC's resolution. Note that this will change the sum of calories.
     calories_resampled_uri = 'input/Baseline/calories_resampled.tif'
-    if not os.path.exists(calories_per_cell_projected_uri):
-        calories_resampled = clipped_calories_per_5m_cell.resample(lulc, output_uri=calories_resampled_uri, no_data_value=ndv)
+    if not os.path.exists(calories_resampled_uri):
+        calories_resampled = clipped_calories_per_5m_cell.resample(input_lulc, output_uri=calories_resampled_uri, no_data_value=ndv)
     else:
         calories_resampled = nd.ArrayFrame(calories_resampled_uri)
 
@@ -62,21 +78,24 @@ def calc_caloric_production_from_lulc(input_lulc_uri):
         baseline_calories = unscaled_calories_baseline * adjustment_factor
         baseline_calories_uri = 'input/Baseline/baseline_calories.tif'
         # NOTE, this uses numdal in a weired way because it has THREE inputs (of which the last is jammed into kwargs).
-        baseline_calories_af = nd.ArrayFrame(baseline_calories, lulc, output_uri=baseline_calories_uri, data_type=6, no_data_value=ndv)
+        baseline_calories_af = nd.ArrayFrame(baseline_calories, input_lulc, output_uri=baseline_calories_uri, data_type=6, no_data_value=ndv)
 
     input_lulc = nd.ArrayFrame(input_lulc_uri)
+
+
     unscaled_calories_input_lulc = np.where(input_lulc.data == 12, calories_resampled.data, 0)
     unscaled_calories_input_lulc = np.where(input_lulc.data == 14, 0.5 * calories_resampled.data, unscaled_calories_input_lulc)
 
     output_calories = unscaled_calories_input_lulc * adjustment_factor
 
-    output_calories_uri = os.path.join(project_dir, 'calories_in_' + nd.explode_uri(input_lulc_uri)['file_root'] + '.tif')
-    output_calories_af = nd.ArrayFrame(output_calories, lulc, data_type=7, no_data_value=ndv, output_uri=output_calories_uri)
+    output_calories_uri = os.path.join(output_dir, 'calories_in_' + nd.explode_uri(input_lulc_uri)['parent_directory_no_suffix'] + '.tif').replace(' ', '_')
+    output_calories_af = nd.ArrayFrame(output_calories, input_lulc, data_type=7, no_data_value=ndv, output_uri=output_calories_uri)
     # output_calories_af.save(output_uri=output_calories_uri)
     sum_calories = output_calories_af.sum()
-    print('Calories from ' + input_lulc_uri + ': ' + str(sum_calories))
 
-    return sum_calories
+    print('sum_calories', sum_calories)
+
+    return sum_calories, output_calories_af
 
 def calc_caloric_production_on_uri_list(input_uri_list, output_csv_uri):
     first_lulc = True
@@ -84,17 +103,17 @@ def calc_caloric_production_on_uri_list(input_uri_list, output_csv_uri):
 
     output = []
 
+    af_list = []
     for uri in input_uri_list:
         row = []
         row.append(nd.explode_uri(uri)['file_root'])
 
         af = nd.ArrayFrame(uri)
-        # nd.pp(nd.enumerate_array_as_odict(af.data))
-
-        sum_calories = calc_caloric_production_from_lulc(uri)
-
+        sum_calories, af = calc_caloric_production_from_lulc(uri)
         row.append(str(sum_calories))
 
+        # af.show()
+        af_list.append(af)
         if first_lulc:
             baseline_calories = sum_calories
             first_lulc = False
@@ -105,10 +124,23 @@ def calc_caloric_production_on_uri_list(input_uri_list, output_csv_uri):
 
     hb.python_object_to_csv(output, output_csv_uri)
 
+    return af_list
+
 # Example usage
 if __name__=='__main__':
 
-    lulc_uris_to_consider = ['input/Baseline/lulc.tif', 'input/exu/lulc_exu.tif', 'input/exc/lulc_exc.tif' , 'input/texu/lulc_texu.tif', 'input/texc/lulc_texc.tif']
-    output_csv_uri = 'input/ag_production_output.csv'
-    calc_caloric_production_on_uri_list(lulc_uris_to_consider, output_csv_uri)
+    scenarios = [
+                 'BAU',
+                 'No Deforestation',
+                 'ES Prioritized',
+                 'ES and Slope Prioritized',
+                 'Both Strategies',
+                 'No Deforestation ES and Slope Prioritized']
+
+    input_dir = 'input'
+    lulc_uris_to_consider = [os.path.join(input_dir, i, 'lulc.tif') for i in scenarios]
+
+    output_csv_uri = 'output/ag_production_output.csv'
+    af_list = calc_caloric_production_on_uri_list(lulc_uris_to_consider, output_csv_uri)
+
 
