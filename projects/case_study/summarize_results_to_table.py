@@ -10,7 +10,7 @@ import hazelbean
 
 
 def create_scenario_calorie_csv(input_dir, output_uri):
-    scenario_results = [['', 'carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'caloric_production']]
+    scenario_results = [['', 'carbon', 'wy', 'n_export', 'p_export', 'sed_export', 'caloric_production']]
 
     for scenario in scenarios:
         scenario_result = []
@@ -19,22 +19,22 @@ def create_scenario_calorie_csv(input_dir, output_uri):
 
         carbon_result_uri = os.path.join(runs_folder, run_name, scenario, 'carbon/tot_c_cur.tif')
         carbon = nd.ArrayFrame(carbon_result_uri)
-        carbon.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'tot_c_cur.png'))
+        # carbon.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'tot_c_cur.png'))
 
         wy = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'hydropower_water_yield/output/per_pixel/wyield.tif'))
-        wy.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'wyield.png'))
+        # wy.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'wyield.png'))
 
         n_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/n_export.tif'))
-        n_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'n_export.png'))
+        # n_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'n_export.png'))
 
         p_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/p_export.tif'))
-        p_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'p_export.png'))
+        # p_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'p_export.png'))
 
         sed_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'sdr/sed_export.tif' ))
-        sed_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'sed_export.png'))
+        # sed_export.show(output_uri=os.path.join(runs_folder, run_name, scenario, 'sed_export.png'))
 
         calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif' ))
-        calories.show(output_uri=os.path.join(input_dir, scenario, 'caloric_production.png'))
+        # calories.show(output_uri=os.path.join(input_dir, scenario, 'caloric_production.png'))
 
 
         scenario_result.append(str(float(carbon.sum())))
@@ -75,7 +75,8 @@ results_names = ['carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'calor
 
 run_name = 'r1'
 
-scenarios = ['BAU',
+scenarios = ['Baseline',
+             'BAU',
              'No Deforestation',
              'ES Prioritized',
              'ES and Slope Prioritized',
