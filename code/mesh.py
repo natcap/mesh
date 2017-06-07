@@ -2248,7 +2248,12 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         # self.scroll_upper_vbox = QVBoxLayout()
         # self.scroll_widget.scroll_layout.addLayout(self.scroll_upper_vbox)
         self.elements_vbox = QVBoxLayout()
+        self.elements_vbox.setAlignment(Qt.AlignTop)
+
         self.scroll_widget.scroll_layout.addLayout(self.elements_vbox)
+
+
+        self.scroll_widget.scroll_layout.setAlignment(Qt.AlignTop)
 
         self.no_reports_l = QLabel()
         self.no_reports_l.setText('No reports yet created.')
@@ -3010,6 +3015,7 @@ class MapCanvasHolderWidget(MeshAbstractObject, QWidget):
 
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
+        self.main_layout.setAlignment(Qt.AlignTop)
 
         self.title_l = QLabel()
         self.title_l.setText('View Input and Output Maps')
@@ -4125,7 +4131,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
 
-        self.draw_scenario_model_pairs_gridlayout()
+        self.draw_scenario_model_pairs_scrollbox()
 
         self.run_cancel_hbox = QHBoxLayout()
         self.main_layout.addLayout(self.run_cancel_hbox)
@@ -4152,13 +4158,20 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.root_app.threads.append(runner)
         runner.start()
 
-    def draw_scenario_model_pairs_gridlayout(self):
+    def draw_scenario_model_pairs_scrollbox(self):
         try:
             self.scenario_model_pairs_gridlayout.setParent(None)
         except:
-            LOGGER.debug('scenario_model_pairs_gridlayout Does not exist')
+            LOGGER.debug('Attempted to draw_scenario_model_pairs_scrollbox but scenario_model_pairs_gridlayout Does not exist')
         self.scenario_model_pairs_gridlayout = QGridLayout()
-        self.main_layout.addLayout(self.scenario_model_pairs_gridlayout)
+
+        self.scenario_model_pairs_scroll = ScrollWidget()
+        self.main_layout.addWidget(self.scenario_model_pairs_scroll)
+        self.scenario_model_pairs_scroll.scroll_layout.setAlignment(Qt.AlignTop)
+        self.scenario_model_pairs_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scenario_model_pairs_scroll.scroll_layout.setStretch(1, 1)
+        self.scenario_model_pairs_scroll.setMinimumHeight(150)
+        self.scenario_model_pairs_scroll.scroll_layout.addLayout(self.scenario_model_pairs_gridlayout)
 
         self.scenario_model_pairs_labels = []
         self.scenarios_in_run = self.root_app.scenarios_dock.scenarios_widget.get_checked_elements()
@@ -4184,7 +4197,8 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.main_layout.addWidget(self.run_scroll)
         self.run_scroll.scroll_layout.setAlignment(Qt.AlignTop)
         self.run_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.run_scroll.scroll_layout.setStretch(44, 1)
+        self.run_scroll.scroll_layout.setStretch(1, 1)
+        self.run_scroll.setMinimumHeight(200)
 
         self.run_details = QLabel('Ready to run.')
         self.run_scroll.scroll_layout.addWidget(self.run_details)
