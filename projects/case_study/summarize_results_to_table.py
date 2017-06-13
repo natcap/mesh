@@ -140,7 +140,7 @@ def create_percent_difference_from_baseline_bar_chart(csv_uri, output_uri):
     difference_from_baseline_df.plot.bar()
 
     ax = plt.gca()
-    ax.set_ylabel('Percent change from Baseline', rotation=90, fontsize=20, labelpad=20)
+    ax.set_ylabel('Proportion change from Baseline', rotation=90, fontsize=20, labelpad=20)
     ax.set_xlabel('Scenario', rotation=0, fontsize=20, labelpad=20)
 
     ax.legend(labels=outcome_labels, loc=9, ncol=2) #mode="expand", bbox_to_anchor=(0., 1.02, 1., .102), , borderaxespad=0.
@@ -196,7 +196,7 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
     difference_from_bau_df.plot.bar()
 
     ax = plt.gca()
-    ax.set_ylabel('Percent difference from BAU', rotation=90, fontsize=20, labelpad=20)
+    ax.set_ylabel('Proportion difference from BAU', rotation=90, fontsize=20, labelpad=20)
     ax.set_xlabel('Scenario', rotation=0, fontsize=20, labelpad=20)
 
     ax.legend(labels=outcome_labels, loc=9, ncol=2) #mode="expand", bbox_to_anchor=(0., 1.02, 1., .102), , borderaxespad=0.
