@@ -12,7 +12,7 @@ import hazelbean as hb
 project_dir = ''
 base_data_dir = 'c:/onedrive/base_data'
 bulk_data_dir = 'c:/bulk_data'
-external_bulk_data_folder = 'E:/bulk_data/'
+external_bulk_data_dir = 'E:/bulk_data/'
 
 input_folder = project_dir + 'input/Baseline'
 output_folder = project_dir + 'input/Baseline'
