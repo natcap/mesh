@@ -181,7 +181,7 @@ LangString BASE_DATA ${LANG_ENGLISH} "Base Data"
 Section "-$(BASE_DATA)" BaseDataPage
 AddSize "1500000"
 ; Parameter 2 is the location (relative to the installation directory) where the data should be unzipped.
-!insertmacro DownloadIfEmpty "$basedataFile" "$INSTDIR" "http://data.naturalcapitalproject.org/mesh-releases/mesh_base_data_2016-08-11.zip" "basedata.zip"
+!insertmacro DownloadIfEmpty "$basedataFile" "$INSTDIR" "http://data.naturalcapitalproject.org/mesh-releases/0.8.6/base_data_0.8.6.zip" "basedata.zip"
 SectionEnd
 
 LangString BASE_DATA_LABEL ${LANG_ENGLISH} "Select an option to download base data"
