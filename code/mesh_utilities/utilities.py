@@ -230,7 +230,7 @@ def python_object_to_csv(input_iterable, output_uri, csv_type=None, verbose=Fals
                     else:
                         to_write += ','
                     if isinstance(value2, list):
-                        to_write += '<^>'.join(value2)
+                        to_write += '<^>'.join(value2) # LOL WTF. Ran out of time and got creative. Catears.
                     else:
                         to_write += str(value2)
                 to_write += '\n'

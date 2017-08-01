@@ -1833,6 +1833,8 @@ class Model(MeshAbstractObject, QWidget):
         self.parent.setup_waterworld_model(self.name)
 
 
+
+
 class ModelRunsWidget(MeshAbstractObject, QWidget):
     """
     Widget that can be displayed as the centraWidget of MeshApplication. Contains manyt Runs. Presents information on
@@ -2160,6 +2162,7 @@ class ModelRun(MeshAbstractObject, QWidget):
     # Instead I just used some placeholder, hardcoded BS for time-sake.
     def use_run_to_load_choose_report_dialog(self):
         self.choose_report_type_dialog = ChooseReportTypeDialog(self.root_app, self)
+
         # NOTE for next release add in the report generator code from next release
 
     def data_explorer_signal_wrapper(self):
@@ -2177,6 +2180,26 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         self.root_app.reports_widget.update_ui()
         self.root_app.create_report_qaction.trigger()
+
+
+    def get_result_by_name(self, scenario, model, result_name):
+        """Return a result that matches type. Defined in settings/model_output_mapping.csv.
+        e.g. to be used to fit in a comparison table."""
+
+        self.output_mapping_uri = os.path.join('../settings/default_setup_files',
+                                              model.name + '_output_mapping.csv')
+        output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+
+        if result_name in output_mapping:
+            if output_mapping[result_name]['result_type'] == 'raster_sum':
+                raster_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name, output_mapping[result_name]['input_file_uri_relative_to_model_root'])
+                result_sum = utilities.get_raster_sum(raster_uri)
+                to_return = result_sum
+        else:
+            LOGGER.warning('Attempted to access a model result that has not yet been defined for ' + self.name)
+
+        return to_return
+
 
 
 class ReportsWidget(MeshAbstractObject, QWidget):
@@ -2557,7 +2580,7 @@ class Report(MeshAbstractObject, QFrame):
                 scenarios_string += ' and ' + scenarios_list[i].long_name
         return scenarios_string
 
-    def build_results_table(self):
+    def build_results_table_original(self):
         st = ''
         models_list = self.build_models_list()
         scenarios_list = self.build_scenarios_list()
@@ -2591,6 +2614,120 @@ class Report(MeshAbstractObject, QFrame):
                             if os.path.splitext(filename)[1] == '.png':
                                 st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
 
+
+        return st
+
+    def build_results_table(self):
+        st = ''
+
+        models_list = self.build_models_list()
+        scenarios_list = self.build_scenarios_list()
+
+        output_odict = OrderedDict()
+
+
+
+        for scenario in scenarios_list:
+            for model in models_list:
+                output_odict[scenario.name] = OrderedDict()
+                for model in models_list:
+                    r = self.parent.get_result_by_name(scenario, model, 'carbon_storage_sum')
+                    results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, scenario.name, model.name)
+                    output_odict[scenario.name][model.name] = r
+
+        print('output_odict', output_odict)
+        utilities.python_object_to_csv(output_odict, os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, 'scenario_comparison_table.csv'), csv_type='2d_indexed_odict')
+        # print(output_odict)
+        # carbon_result_uri = os.path.join(runs_folder, run_name, scenario, 'carbon/tot_c_cur.tif')
+        # carbon = nd.ArrayFrame(carbon_result_uri)
+        # wy = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'hydropower_water_yield/output/per_pixel/wyield.tif'))
+        # n_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/n_export.tif'))
+        # p_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/p_export.tif'))
+        # sed_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'sdr/sed_export.tif'))
+        # calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif'))
+        #
+
+
+
+        # def create_scenario_calorie_csv(input_dir, output_uri):
+        #     scenario_results = [['', 'carbon', 'wy', 'n_export', 'p_export', 'sed_export', 'caloric_production',
+        #                          'carbon_diff_from_baseline', 'wy_diff_from_baseline', 'n_export_diff_from_baseline', 'p_export_diff_from_baseline', 'sed_export_diff_from_baseline', 'caloric_production_diff_from_baseline',
+        #                          'carbon_percent_diff_from_baseline', 'wy_percent_diff_from_baseline', 'n_export_percent_diff_from_baseline', 'p_export_percent_diff_from_baseline', 'sed_export_percent_diff_from_baseline', 'caloric_production_percent_diff_from_baseline',
+        #                          'carbon_diff_from_baseline', 'wy_diff_from_baseline', 'n_export_diff_from_baseline', 'p_export_diff_from_baseline', 'sed_export_diff_from_baseline', 'caloric_production_diff_from_baseline',
+        #                          'carbon_percent_diff_from_bau', 'wy_percent_diff_from_bau', 'n_export_percent_diff_from_bau', 'p_export_percent_diff_from_bau', 'sed_export_percent_diff_from_bau', 'caloric_production_percent_diff_from_bau', ]]
+        #
+        #     # Calculate Sum
+        #     baseline_results = []
+        #     bau_results = []
+        #     for scenario in scenarios:
+        #         scenario_result = []
+        #         scenario_results.append(scenario_result)
+        #         scenario_result.append(scenario)
+        #
+        #         carbon_result_uri = os.path.join(runs_folder, run_name, scenario, 'carbon/tot_c_cur.tif')
+        #         carbon = nd.ArrayFrame(carbon_result_uri)
+        #         wy = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'hydropower_water_yield/output/per_pixel/wyield.tif'))
+        #         n_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/n_export.tif'))
+        #         p_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/p_export.tif'))
+        #         sed_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'sdr/sed_export.tif'))
+        #         calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif'))
+        #
+        #         if scenario == 'Baseline':
+        #             baseline_results.append(carbon.sum())
+        #             baseline_results.append(wy.sum())
+        #             baseline_results.append(n_export.sum())
+        #             baseline_results.append(p_export.sum())
+        #             baseline_results.append(sed_export.sum())
+        #             baseline_results.append(calories.sum())
+        #
+        #         elif scenario == 'BAU':
+        #             bau_results.append(carbon.sum())
+        #             bau_results.append(wy.sum())
+        #             bau_results.append(n_export.sum())
+        #             bau_results.append(p_export.sum())
+        #             bau_results.append(sed_export.sum())
+        #             bau_results.append(calories.sum())
+        #
+        #         scenario_result.append(str(float(carbon.sum())))
+        #         scenario_result.append(str(float(wy.sum())))
+        #         scenario_result.append(str(float(n_export.sum())))
+        #         scenario_result.append(str(float(p_export.sum())))
+        #         scenario_result.append(str(float(sed_export.sum())))
+        #         scenario_result.append(str(float(calories.sum())))
+        #
+        #         if scenario not in ['Baseline']:
+        #             scenario_result.append(str(float(carbon.sum() - baseline_results[0])))
+        #             scenario_result.append(str(float(wy.sum() - baseline_results[1])))
+        #             scenario_result.append(str(float(n_export.sum() - baseline_results[2])))
+        #             scenario_result.append(str(float(p_export.sum() - baseline_results[3])))
+        #             scenario_result.append(str(float(sed_export.sum() - baseline_results[4])))
+        #             scenario_result.append(str(float(calories.sum() - baseline_results[5])))
+        #
+        #             scenario_result.append(str(float((carbon.sum() - baseline_results[0]) / baseline_results[0])))
+        #             scenario_result.append(str(float((wy.sum() - baseline_results[1]) / baseline_results[1])))
+        #             scenario_result.append(str(float((n_export.sum() - baseline_results[2]) / baseline_results[2])))
+        #             scenario_result.append(str(float((p_export.sum() - baseline_results[3]) / baseline_results[3])))
+        #             scenario_result.append(str(float((sed_export.sum() - baseline_results[4]) / baseline_results[4])))
+        #             scenario_result.append(str(float((calories.sum() - baseline_results[5]) / baseline_results[5])))
+        #
+        #         if scenario not in ['Baseline', 'BAU']:
+        #             scenario_result.append(str(float(carbon.sum() - bau_results[0])))
+        #             scenario_result.append(str(float(wy.sum() - bau_results[1])))
+        #             scenario_result.append(str(float(n_export.sum() - bau_results[2])))
+        #             scenario_result.append(str(float(p_export.sum() - bau_results[3])))
+        #             scenario_result.append(str(float(sed_export.sum() - bau_results[4])))
+        #             scenario_result.append(str(float(calories.sum() - bau_results[5])))
+        #
+        #             scenario_result.append(str(float((carbon.sum() - bau_results[0]) / bau_results[0])))
+        #             scenario_result.append(str(float((wy.sum() - bau_results[1]) / bau_results[1])))
+        #             scenario_result.append(str(float((n_export.sum() - bau_results[2]) / bau_results[2])))
+        #             scenario_result.append(str(float((p_export.sum() - bau_results[3]) / bau_results[3])))
+        #             scenario_result.append(str(float((sed_export.sum() - bau_results[4]) / bau_results[4])))
+        #             scenario_result.append(str(float((calories.sum() - bau_results[5]) / bau_results[5])))
+        #
+        #     nd.pp(scenario_results)
+        #
+        #     hazelbean.python_object_to_csv(scenario_results, os.path.join(output_uri))
 
         return st
 
@@ -3221,8 +3358,9 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
         self.how_to_add_images.setWordWrap(True)
         self.main_layout.addWidget(self.how_to_add_images)
 
-        self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
-                             'Full Technical Report']
+        # self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
+        #                      'Full Technical Report']
+        self.report_types = ['Executive Summary', 'Scenario Comparison Table']
         # NOTE FLAW: This should use the approach i used for the other things, like scenario generators,
         # of having this be an external file, though, i am not sure that was the best choice anyhow.
         # I also didn't follow the OrderedDict.name, .longname notation
@@ -3233,12 +3371,13 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
             self.main_layout.addWidget(self.pbs[report_type])
 
         self.pbs['Executive Summary'].clicked.connect(self.create_executive_summary)
-        self.pbs['Policy Brief'].clicked.connect(self.create_policy_brief)
-        self.pbs['Policy Brief'].setEnabled(False)
-        self.pbs['In-depth Scenario Comparison'].clicked.connect(self.create_in_depth_scenario_comparison)
-        self.pbs['In-depth Scenario Comparison'].setEnabled(False)
-        self.pbs['Full Technical Report'].clicked.connect(self.create_full_technical_report)
-        self.pbs['Full Technical Report'].setEnabled(False)
+        self.pbs['Scenario Comparison Table'].clicked.connect(self.create_scenario_comparison_table)
+        # self.pbs['Policy Brief'].clicked.connect(self.create_policy_brief)
+        # self.pbs['Policy Brief'].setEnabled(False)
+        # self.pbs['In-depth Scenario Comparison'].clicked.connect(self.create_in_depth_scenario_comparison)
+        # self.pbs['In-depth Scenario Comparison'].setEnabled(False)
+        # self.pbs['Full Technical Report'].clicked.connect(self.create_full_technical_report)
+        # self.pbs['Full Technical Report'].setEnabled(False)
 
         self.additional_reports_l = QLabel('\n\nAdditional report types can be added as plugins.')
         self.additional_reports_l.setFont(config.italic_font)
@@ -3257,6 +3396,16 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
             selected_model_name = str(self.parent.runs_available_combobox.currentText())
             selected_model = self.root_app.model_runs_widget.elements[selected_model_name]
             selected_model.create_report_from_this_run('executive_summary')
+
+        self.close()
+
+    def create_scenario_comparison_table(self):
+        if isinstance(self.parent, ModelRun):
+            self.parent.create_report_from_this_run('scenario_comparison_table')
+        elif isinstance(self.parent, ReportsWidget):
+            selected_model_name = str(self.parent.runs_available_combobox.currentText())
+            selected_model = self.root_app.model_runs_widget.elements[selected_model_name]
+            selected_model.create_report_from_this_run('scenario_comparison_table')
 
         self.close()
 
