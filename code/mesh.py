@@ -2203,19 +2203,48 @@ class ModelRun(MeshAbstractObject, QWidget):
         uri = os.path.join(run_dir, 'scenario_and_model_sums.csv')
         utilities.python_object_to_csv(scenario_and_model_sums, uri, csv_type='dd')
 
+        uri = os.path.join(run_dir, 'differences_from_baseline.csv')
+        self.calculate_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, uri)
+
+        uri = os.path.join(run_dir, 'percent_differences_from_baseline.csv')
+        self.calculate_percent_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, uri)
+
+        # Baseline is guaranteed to be in a run, BAU is not, so check
+        if 'BAU' in [i.name for i in self.scenarios_in_run]:
+            uri = os.path.join(run_dir, 'differences_from_bau.csv')
+            self.calculate_difference_between_all_scenarios_and_target('BAU', [i for i in self.scenarios_in_run if i.name not in ['Baseline', 'BAU']], scenario_and_model_sums, uri)
+
+            uri = os.path.join(run_dir, 'percent_differences_from_bau.csv')
+            self.calculate_percent_difference_between_all_scenarios_and_target('BAU', [i for i in self.scenarios_in_run if i.name not in ['Baseline', 'BAU']], scenario_and_model_sums, uri)
+
+
+    def calculate_difference_between_all_scenarios_and_target(self, target_scenario_name, list_of_scenarios_to_compare, data_odict, output_uri):
         # Second, compare sums agains baseline
-        differences_from_baseline = OrderedDict()
-        for scenario in self.scenarios_in_run:
-            if scenario.name != 'Baseline':
-                differences_from_baseline[scenario.name] = OrderedDict()
+        differences = OrderedDict()
+        for scenario in list_of_scenarios_to_compare:
+            if scenario.name != target_scenario_name:
+                differences[scenario.name] = OrderedDict()
                 for model in self.models_in_run:
                     self.output_mapping_uri = os.path.join('../settings/default_setup_files', model.name + '_output_mapping.csv')
                     output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
                     for result_name, v in output_mapping.items():
                         if v['result_type'] == 'primary_objective_sum':
-                            differences_from_baseline[scenario.name][result_name] = float(scenario_and_model_sums[scenario.name][result_name]) - float(scenario_and_model_sums['Baseline'][result_name])
-        uri = os.path.join(run_dir, 'differences_from_baseline.csv')
-        utilities.python_object_to_csv(differences_from_baseline, uri, csv_type='dd')
+                            differences[scenario.name][result_name] = float(data_odict[scenario.name][result_name]) - float(data_odict[target_scenario_name][result_name])
+        utilities.python_object_to_csv(differences, output_uri, csv_type='dd')
+
+    def calculate_percent_difference_between_all_scenarios_and_target(self, target_scenario_name, list_of_scenarios_to_compare, data_odict, output_uri):
+        # Second, compare sums agains baseline
+        percent_differences = OrderedDict()
+        for scenario in list_of_scenarios_to_compare:
+            if scenario.name != target_scenario_name:
+                percent_differences[scenario.name] = OrderedDict()
+                for model in self.models_in_run:
+                    self.output_mapping_uri = os.path.join('../settings/default_setup_files', model.name + '_output_mapping.csv')
+                    output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+                    for result_name, v in output_mapping.items():
+                        if v['result_type'] == 'primary_objective_sum':
+                            percent_differences[scenario.name][result_name] = (float(data_odict[scenario.name][result_name]) - float(data_odict[target_scenario_name][result_name])) / float(data_odict[target_scenario_name][result_name])
+        utilities.python_object_to_csv(percent_differences, output_uri, csv_type='dd')
 
 
 
