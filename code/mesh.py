@@ -2186,8 +2186,6 @@ class ModelRun(MeshAbstractObject, QWidget):
         self.process_model_output_mappings()
 
     def process_model_output_mappings(self):
-
-
         output_odict = OrderedDict()
         for scenario in self.scenarios_in_run:
             output_odict[scenario.name] = OrderedDict()
@@ -2197,15 +2195,13 @@ class ModelRun(MeshAbstractObject, QWidget):
                 LOGGER.debug('Beginning to process_model_output_mappings based on contents of ' + self.output_mapping_uri)
                 output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
 
-
                 for result_name, v in output_mapping.items():
-                    print(scenario.name, model.name, result_name, v)
                     r = self.get_result_by_name(scenario, model, result_name)
-                    print('r', r)
-                    results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name)
+                    scenario_model_output_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name)
                     output_odict[scenario.name][result_name] = r
 
-        print(output_odict)
+        modelrun_output_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name)
+        utilities.python_object_to_csv(output_odict, os.path.join(modelrun_output_dir, self.name + '_scenario_and_model_results.csv'), csv_type='dd')
 
 
     def get_result_by_name(self, scenario, model, result_name):
@@ -2620,42 +2616,6 @@ class Report(MeshAbstractObject, QFrame):
                 scenarios_string += ' and ' + scenarios_list[i].long_name
         return scenarios_string
 
-    def build_results_table_original(self):
-        st = ''
-        models_list = self.build_models_list()
-        scenarios_list = self.build_scenarios_list()
-        num_rows = len(scenarios_list) + 1
-        num_cols = len(models_list)
-        row = 0
-        col = 0
-
-        for scenario in scenarios_list:
-            st += '<h2>Scenario: ' + scenario.long_name + '</h2>'
-            scenario_folder = os.path.join(self.root_app.project_folder, 'output/runs/', self.run_name, scenario.name)
-            for model in models_list:
-                st += '<h3>Model: ' + model.long_name + '</h3>'
-                model_output_folder = os.path.join(scenario_folder, model.name, 'output')
-                if model.name == 'carbon':
-                    output_uri = os.path.join(model_output_folder, 'tot_C_cur.tif')
-                    if os.path.exists(output_uri):
-                        value = str(utilities.get_raster_sum(output_uri))
-                        st += '<p>Tons of carbon storage: ' + value + '</p>'
-                        for filename in os.listdir(model_output_folder):
-                            if os.path.splitext(filename)[1] == '.png':
-
-                                st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
-
-                if model.name == 'hydropower_water_yield':
-                    output_uri = os.path.join(model_output_folder, 'per_pixel/wyield.tif')
-                    if os.path.exists(output_uri):
-                        value = str(utilities.get_raster_sum(output_uri))
-                        st += '<p>Total water yield: ' + value
-                        for filename in os.listdir(model_output_folder):
-                            if os.path.splitext(filename)[1] == '.png':
-                                st += '<p><img src=\"' + os.path.join(model_output_folder, filename) + '\" width=\"600\"></p>'
-
-
-        return st
 
     def build_results_table(self):
         st = ''
@@ -2663,46 +2623,15 @@ class Report(MeshAbstractObject, QFrame):
         models_list = self.build_models_list()
         scenarios_list = self.build_scenarios_list()
 
-        output_odict = OrderedDict()
+        # Regenerate all of the model output based on the output_mapping csv. This may eventually be a performance problem.
+        self.parent.process_model_output_mappings()
 
+        results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name)
+        filename = self.parent.name + '_scenario_and_model_results.csv'
+        csv_uri = os.path.join(results_dir, filename)
+        html_string = utilities.convert_csv_to_html_table_string(csv_uri)
 
-
-        for scenario in scenarios_list:
-            for model in models_list:
-                output_odict[scenario.name] = OrderedDict()
-                if model.name == 'carbon':
-                    # TODO THOUGHT Should i just have all the outputs be generated when a report is run, based on the output_mapping, and then a report just assembles them?
-                    r = self.parent.get_result_by_name(scenario, model, 'carbon_storage_sum')
-                    results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, scenario.name, model.name)
-                    output_odict[scenario.name][model.name] = r
-                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_above_cur.tif'))
-                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_below_cur.tif'))
-                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_dead_cur.tif'))
-                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_soil_cur.tif'))
-                elif model.name == 'hydropower_water_yield':
-                    5
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
-                if model.name == 'ndr':
-                    uris_to_add.append(os.path.join(current_folder, 'n_export.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'p_export.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_n.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_p.tif'))
-                if model.name == 'pollination':
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
-                if model.name == 'sdr':
-                    uris_to_add.append(os.path.join(current_folder, 'rkls.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'sed_export.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
-                    uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
-
-        print(output_odict)
-        utilities.python_object_to_csv(output_odict, os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, 'scenario_comparison_table.csv'), csv_type='2d_odict')
-
-
+        return html_string
 
         # print(output_odict)
         # carbon_result_uri = os.path.join(runs_folder, run_name, scenario, 'carbon/tot_c_cur.tif')
@@ -2799,49 +2728,6 @@ class Report(MeshAbstractObject, QFrame):
         return st
 
 
-        # for row in range(num_rows):
-        #     if row == 0:
-        #         table += '<tr><td></td>'  # Blank UL cell
-        #     else:
-        #         table += '<tr>'
-        #     for col in range(num_cols):
-        #         if row == 0:
-        #             table += '<td>' + models_list[col - 1].long_name + '</td>'
-        #         else:
-        #             if col == 0:
-        #                 table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
-        #             else:
-        #                 value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
-        #                 table += '<td>' + value_to_record + '</td>'
-        #     table += '</tr>'
-        # table += '</table>'
-        # return table
-
-    def build_results_table_REAL(self):
-        table = '<table>'
-        models_list = self.build_models_list()
-        scenarios_list = self.build_scenarios_list()
-        num_rows = len(scenarios_list) + 1
-        num_cols = len(models_list)
-        row = 0
-        col = 0
-        for row in range(num_rows):
-            if row == 0:
-                table += '<tr><td></td>'  # Blank UL cell
-            else:
-                table += '<tr>'
-            for col in range(num_cols):
-                if row == 0:
-                    table += '<td>' + models_list[col - 1].long_name + '</td>'
-                else:
-                    if col == 0:
-                        table += '<td>' + scenarios_list[row - 1].long_name + '</td>'
-                    else:
-                        value_to_record = self.get_value_from_scenario_model_pair(scenarios_list[row - 1], models_list[row - 1])
-                        table += '<td>' + value_to_record + '</td>'
-            table += '</tr>'
-        table += '</table>'
-        return table
 
     def get_value_from_scenario_model_pair(self, scenario, model, value_to_get=None):
         if model.name == 'carbon':

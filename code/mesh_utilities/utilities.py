@@ -245,6 +245,39 @@ def python_object_to_csv(input_iterable, output_uri, csv_type=None, verbose=Fals
                     else:
                         to_write += str(value2)
                 to_write += '\n'
+    elif data_type == 'dd':
+        # To ensure i didnt bork 2d_odict reading, i created this conditional to mimic (partially) the advances made in hazelbean library.
+        if isinstance(input_iterable, list):
+            to_write += ','.join(input_iterable)
+        else:
+            for key, value in input_iterable.items():
+                if first_row:
+                    # On the first row, we need to write BOTH th efirst and second rows for col_headers and data respecitvely.
+                    first_row = False
+                    if any(character in key for character in protected_characters) or any(character in value for character in protected_characters):
+                        raise NameError('Protected character found in the string-ed version of the iterable.')
+
+                    # NOTE THE MASSIVE DIFFERENCE that comes from the leading comma. This differs from 2cd_odict.
+                    to_write += ',' + ','.join(value.keys()) + '\n' # Note the following duplication of keys, values to address the nature of first row being keys.
+                if any(character in key for character in protected_characters) or any(character in value for character in protected_characters):
+                    raise NameError('Protected character found in the string-ed version of the iterable.')
+                first_col = True
+                for key2, value2 in value.items():
+                    if first_col:
+                        to_write += str(key) + ','
+                        first_col = False
+                        if isinstance(value2, list):
+                            to_write += '<^>'.join(value2)  # LOL WTF. Ran out of time and got creative. Catears.
+                        else:
+                            to_write += str(value2)
+                    else:
+                        to_write += ','
+                        if isinstance(value2, list):
+                            to_write += '<^>'.join(value2)  # LOL WTF. Ran out of time and got creative. Catears.
+                        else:
+                            to_write += str(value2)
+
+                to_write += '\n'
     else:
         raise NameError('Not sure how to handle that data_type.')
 
@@ -588,6 +621,31 @@ def determine_data_type_and_dimensions_for_read(file_uri):
                             else:
                                 data_type = '2d_list'
         return data_type, num_rows, num_cols
+
+def convert_csv_to_html_table_string(csv_uri):
+    reader = csv.reader(open(csv_uri))
+
+    to_write = ''
+
+    rownum = 0
+    to_write += '<table>'
+    for row in reader:  # Read a single row from the CSV file
+        if rownum == 0:
+            to_write += '<tr>'  # write <tr> tag
+            for column in row:
+                to_write += '<th>' + column + '</th>'
+            to_write += '</tr>'
+        else:
+            to_write += '<tr>'
+            for column in row:
+                to_write += '<td>' + column + '</td>'
+            to_write += '</tr>'
+        rownum += 1
+    to_write += '</table>'
+
+    return to_write
+
+
 
 def convert_to_bool(input):
     return str(input).lower() in ("yes", "true", "t", "1")
