@@ -2045,7 +2045,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         self.data_explorer_pb.clicked.connect(self.data_explorer_signal_wrapper)
 
         self.create_outputs_pb = QPushButton('')
-        self.create_outputs_pb.setToolTip('Create outputs from the model results.\n\nThis can include scenario comparison tables, maps, etc.')
+        self.create_outputs_pb.setToolTip('Create outputs from the model results.\n\nThis is automatically done after running your model,\nbut can be manually re-run here. This generates outputs\nsuch as scenario comparison tables, maps, etc.')
         self.create_outputs_icon = QIcon()
         self.create_outputs_icon.addPixmap(QPixmap('icons/accessories-calculator-3.png'), QIcon.Normal, QIcon.Off)
         self.create_outputs_pb.setIcon(self.create_outputs_icon)
@@ -2186,22 +2186,39 @@ class ModelRun(MeshAbstractObject, QWidget):
         self.process_model_output_mappings()
 
     def process_model_output_mappings(self):
-        output_odict = OrderedDict()
+        LOGGER.debug('Beginning to process_model_output_mappings.')
+        run_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name)
+
+        # FIRST, process all primary objective raster sums and calculate difference among key scenarios.
+        scenario_and_model_sums = OrderedDict()
         for scenario in self.scenarios_in_run:
-            output_odict[scenario.name] = OrderedDict()
+            scenario_and_model_sums[scenario.name] = OrderedDict()
             for model in self.models_in_run:
-                self.output_mapping_uri = os.path.join('../settings/default_setup_files',
-                                                       model.name + '_output_mapping.csv')
-                LOGGER.debug('Beginning to process_model_output_mappings based on contents of ' + self.output_mapping_uri)
+                self.output_mapping_uri = os.path.join('../settings/default_setup_files', model.name + '_output_mapping.csv')
                 output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
-
                 for result_name, v in output_mapping.items():
-                    r = self.get_result_by_name(scenario, model, result_name)
-                    scenario_model_output_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name)
-                    output_odict[scenario.name][result_name] = r
+                    if v['result_type'] == 'primary_objective_sum':
+                        r = self.get_result_by_name(scenario, model, result_name)
+                        scenario_and_model_sums[scenario.name][result_name] = r
+        uri = os.path.join(run_dir, 'scenario_and_model_sums.csv')
+        utilities.python_object_to_csv(scenario_and_model_sums, uri, csv_type='dd')
 
-        modelrun_output_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name)
-        utilities.python_object_to_csv(output_odict, os.path.join(modelrun_output_dir, self.name + '_scenario_and_model_results.csv'), csv_type='dd')
+        # Second, compare sums agains baseline
+        differences_from_baseline = OrderedDict()
+        for scenario in self.scenarios_in_run:
+            if scenario.name != 'Baseline':
+                differences_from_baseline[scenario.name] = OrderedDict()
+                for model in self.models_in_run:
+                    self.output_mapping_uri = os.path.join('../settings/default_setup_files', model.name + '_output_mapping.csv')
+                    output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+                    for result_name, v in output_mapping.items():
+                        if v['result_type'] == 'primary_objective_sum':
+                            differences_from_baseline[scenario.name][result_name] = float(scenario_and_model_sums[scenario.name][result_name]) - float(scenario_and_model_sums['Baseline'][result_name])
+        uri = os.path.join(run_dir, 'differences_from_baseline.csv')
+        utilities.python_object_to_csv(differences_from_baseline, uri, csv_type='dd')
+
+
+
 
 
     def get_result_by_name(self, scenario, model, result_name):
@@ -2213,7 +2230,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
 
         if result_name in output_mapping:
-            if output_mapping[result_name]['result_type'] == 'raster_sum':
+            if output_mapping[result_name]['result_type'] == 'primary_objective_sum':
                 raster_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name, output_mapping[result_name]['input_file_uri_relative_to_model_root'])
                 result_sum = utilities.get_raster_sum(raster_uri)
                 to_return = result_sum
@@ -2624,10 +2641,10 @@ class Report(MeshAbstractObject, QFrame):
         scenarios_list = self.build_scenarios_list()
 
         # Regenerate all of the model output based on the output_mapping csv. This may eventually be a performance problem.
-        self.parent.process_model_output_mappings()
+        # self.parent.process_model_output_mappings()
 
         results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name)
-        filename = self.parent.name + '_scenario_and_model_results.csv'
+        filename = self.parent.name + '_scenario_and_model_sums.csv'
         csv_uri = os.path.join(results_dir, filename)
         html_string = utilities.convert_csv_to_html_table_string(csv_uri)
 
@@ -4319,6 +4336,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
             self.update_run_details('\n\nStarting to generate output results.')
             model_run_object = self.parent.elements[self.name]
             model_run_object.process_model_output_mappings()
+            self.update_run_details('Finished generating output results.')
 
     def run(self):
         """
