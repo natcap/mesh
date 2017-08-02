@@ -7,6 +7,7 @@ import json
 import csv
 import platform
 import sys
+import shutil
 
 from osgeo import gdal, ogr
 from PyQt4.QtGui import *
@@ -19,6 +20,16 @@ initial_temp_env_var = None
 for temp_var in ['TMP', ' TEMP', 'TMPDIR']:
     if temp_var in os.environ:
         initial_temp_env_var = os.environ[temp_var]
+
+def open_dir(dir_path):
+    if platform.system() == "Windows":
+        os.startfile(dir_path)
+    elif platform.system() == "Linux":
+        subprocess.Popen(['xdg-open', dir_path])
+    else:
+        #for mac
+        os.system('open "%s"' % dir_path)
+
 
 def get_user_natcap_folder():
     """Return the file location of the user's settings folder.  This folder

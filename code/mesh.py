@@ -2008,7 +2008,6 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
             self.faded_logo_l.setVisible(False)
             self.runs_scrollbox.setVisible(True)
 
-
 class ModelRun(MeshAbstractObject, QWidget):
     """
     Contains the name and link to outputted results. Is displayed by the Runs_widget in the central column.
@@ -2037,22 +2036,32 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         self.image_size = QSize(16, 16)
 
-        self.data_explorer_pb = QPushButton('Data Explorer')
+        self.data_explorer_pb = QPushButton('')
+        self.data_explorer_pb.setToolTip('Open directory that contains this run\'s results.')
         self.data_explorer_icon = QIcon()
         self.data_explorer_icon.addPixmap(QPixmap('icons/emblem-package.png'), QIcon.Normal, QIcon.Off)
         self.data_explorer_pb.setIcon(self.data_explorer_icon)
         self.main_layout.addWidget(self.data_explorer_pb)
-        self.data_explorer_pb.setEnabled(False)
         self.data_explorer_pb.clicked.connect(self.data_explorer_signal_wrapper)
 
-        self.add_run_to_map_viewer_pb = QPushButton('Map')
+        self.create_outputs_pb = QPushButton('')
+        self.create_outputs_pb.setToolTip('Create outputs from the model results.\n\nThis can include scenario comparison tables, maps, etc.')
+        self.create_outputs_icon = QIcon()
+        self.create_outputs_icon.addPixmap(QPixmap('icons/accessories-calculator-3.png'), QIcon.Normal, QIcon.Off)
+        self.create_outputs_pb.setIcon(self.create_outputs_icon)
+        self.main_layout.addWidget(self.create_outputs_pb)
+        self.create_outputs_pb.clicked.connect(self.create_outputs_signal_wrapper)
+
+        self.add_run_to_map_viewer_pb = QPushButton('')
+        self.add_run_to_map_viewer_pb.setToolTip('Add maps from this run to the map viewer.')
         self.add_run_to_map_viewer_icon = QIcon()
         self.add_run_to_map_viewer_icon.addPixmap(QPixmap('icons/arrow-right.png'), QIcon.Normal, QIcon.Off)
         self.add_run_to_map_viewer_pb.setIcon(self.add_run_to_map_viewer_icon)
         self.main_layout.addWidget(self.add_run_to_map_viewer_pb)
         self.add_run_to_map_viewer_pb.clicked.connect(self.add_run_to_map_viewer_signal_wrapper)
 
-        self.use_run_to_create_report_pb = QPushButton('Report')
+        self.use_run_to_create_report_pb = QPushButton('')
+        self.use_run_to_create_report_pb.setToolTip('Create a report based on the contents of this run.')
         self.use_run_to_create_report_icon = QIcon()
         self.use_run_to_create_report_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.use_run_to_create_report_pb.setIcon(self.use_run_to_create_report_icon)
@@ -2112,6 +2121,8 @@ class ModelRun(MeshAbstractObject, QWidget):
         del self.parent.elements[self.name]
         self.setParent(None)
 
+
+
     # --- Element specific UI functions
     def add_run_to_map_viewer_signal_wrapper(self):
         for scenario in self.scenarios_in_run:
@@ -2166,7 +2177,55 @@ class ModelRun(MeshAbstractObject, QWidget):
         # NOTE for next release add in the report generator code from next release
 
     def data_explorer_signal_wrapper(self):
-        self.data_explorer_dialog = DataExplorerDialog(self.root_app, self)
+        ## NYI Full dialog. For now, just have it open the file explorer.
+        # self.data_explorer_dialog = DataExplorerDialog(self.root_app, self)
+        model_run_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name)
+        utilities.open_dir(model_run_dir)
+
+    def create_outputs_signal_wrapper(self):
+        self.process_model_output_mappings()
+
+    def process_model_output_mappings(self):
+
+
+        output_odict = OrderedDict()
+        for scenario in self.scenarios_in_run:
+            output_odict[scenario.name] = OrderedDict()
+            for model in self.models_in_run:
+                self.output_mapping_uri = os.path.join('../settings/default_setup_files',
+                                                       model.name + '_output_mapping.csv')
+                LOGGER.debug('Beginning to process_model_output_mappings based on contents of ' + self.output_mapping_uri)
+                output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+
+
+                for result_name, v in output_mapping.items():
+                    print(scenario.name, model.name, result_name, v)
+                    r = self.get_result_by_name(scenario, model, result_name)
+                    print('r', r)
+                    results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name)
+                    output_odict[scenario.name][result_name] = r
+
+        print(output_odict)
+
+
+    def get_result_by_name(self, scenario, model, result_name):
+        """Return a result that matches type. Defined in settings/model_output_mapping.csv.
+        e.g. to be used to fit in a comparison table."""
+
+        self.output_mapping_uri = os.path.join('../settings/default_setup_files',
+                                               model.name + '_output_mapping.csv')
+        output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+
+        if result_name in output_mapping:
+            if output_mapping[result_name]['result_type'] == 'raster_sum':
+                raster_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name, output_mapping[result_name]['input_file_uri_relative_to_model_root'])
+                result_sum = utilities.get_raster_sum(raster_uri)
+                to_return = result_sum
+        else:
+            LOGGER.warning('Attempted to access a model result that has not yet been defined for ' + self.name)
+
+        return to_return
+
 
     def create_report_from_this_run(self, report_type):
         args = OrderedDict()
@@ -2180,25 +2239,6 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         self.root_app.reports_widget.update_ui()
         self.root_app.create_report_qaction.trigger()
-
-
-    def get_result_by_name(self, scenario, model, result_name):
-        """Return a result that matches type. Defined in settings/model_output_mapping.csv.
-        e.g. to be used to fit in a comparison table."""
-
-        self.output_mapping_uri = os.path.join('../settings/default_setup_files',
-                                              model.name + '_output_mapping.csv')
-        output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
-
-        if result_name in output_mapping:
-            if output_mapping[result_name]['result_type'] == 'raster_sum':
-                raster_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name, output_mapping[result_name]['input_file_uri_relative_to_model_root'])
-                result_sum = utilities.get_raster_sum(raster_uri)
-                to_return = result_sum
-        else:
-            LOGGER.warning('Attempted to access a model result that has not yet been defined for ' + self.name)
-
-        return to_return
 
 
 
@@ -2630,13 +2670,40 @@ class Report(MeshAbstractObject, QFrame):
         for scenario in scenarios_list:
             for model in models_list:
                 output_odict[scenario.name] = OrderedDict()
-                for model in models_list:
+                if model.name == 'carbon':
+                    # TODO THOUGHT Should i just have all the outputs be generated when a report is run, based on the output_mapping, and then a report just assembles them?
                     r = self.parent.get_result_by_name(scenario, model, 'carbon_storage_sum')
                     results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, scenario.name, model.name)
                     output_odict[scenario.name][model.name] = r
+                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_above_cur.tif'))
+                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_below_cur.tif'))
+                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_dead_cur.tif'))
+                    # uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_soil_cur.tif'))
+                elif model.name == 'hydropower_water_yield':
+                    5
+                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
+                if model.name == 'ndr':
+                    uris_to_add.append(os.path.join(current_folder, 'n_export.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'p_export.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_n.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_p.tif'))
+                if model.name == 'pollination':
+                    uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
+                if model.name == 'sdr':
+                    uris_to_add.append(os.path.join(current_folder, 'rkls.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_export.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
+                    uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
 
-        print('output_odict', output_odict)
-        utilities.python_object_to_csv(output_odict, os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, 'scenario_comparison_table.csv'), csv_type='2d_indexed_odict')
+        print(output_odict)
+        utilities.python_object_to_csv(output_odict, os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name, 'scenario_comparison_table.csv'), csv_type='2d_odict')
+
+
+
         # print(output_odict)
         # carbon_result_uri = os.path.join(runs_folder, run_name, scenario, 'carbon/tot_c_cur.tif')
         # carbon = nd.ArrayFrame(carbon_result_uri)
@@ -4361,28 +4428,34 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         self.output_scrollbar = self.run_scroll.scroll_area.verticalScrollBar()
         self.output_scrollbar.setValue(self.output_scrollbar.maximum())
 
+        # TODOO NOTE That I hijacked the update_run_details function to start a subsequent process rather than setting up a signla slot relationship. not sure if this is bad design.
+        if str_to_add == '\n\nAll scenario model pairs finished!':
+            self.update_run_details('\n\nStarting to generate output results.')
+            model_run_object = self.parent.elements[self.name]
+            model_run_object.process_model_output_mappings()
+
     def run(self):
         """
         Main Entrance into iteratively running all combos of models
         """
         # Create a unique name based on input, or a modified version of the input if that name had already been used.
-        name = str(self.parent.run_name_le.text())
+        self.name = str(self.parent.run_name_le.text())
         run_id = utilities.pretty_time()
-        if name == '':
-            name = 'run_at_' + run_id
-        elif name in self.parent.elements:
-            name = name + '_at_' + run_id
+        if self.name == '':
+            self.name = 'run_at_' + run_id
+        elif self.name in self.parent.elements:
+            self.name = self.name + '_at_' + run_id
 
         # HACK IUI tempfile fix
         utilities.correct_temp_env(self.root_app)
 
-        args = self.root_app.model_runs_widget.create_default_element_args(name)
+        args = self.root_app.model_runs_widget.create_default_element_args(self.name)
         args['run_id'] = run_id
         args['run_folder'] = os.path.join(self.root_app.project_folder, 'output/runs',
-                                          name)  # self.parent.elements[run_name].run_folder
+                                          self.name)  # self.parent.elements[run_self.name].run_folder
         args['scenarios_in_run'] = [i.name for i in self.scenarios_in_run]
         args['models_in_run'] = [i.name for i in self.models_in_run]
-        self.parent.create_element(name, args)
+        self.parent.create_element(self.name, args)
         self.root_app.args_queue = OrderedDict()
 
         setup_run_args = {}
@@ -4444,7 +4517,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                     args = setup_run_args.copy()
 
                     args['workspace_dir'] = os.path.join(
-                        self.parent.elements[name].run_folder, scenario.name, model.name)
+                        self.parent.elements[self.name].run_folder, scenario.name, model.name)
                     if not os.path.isdir(setup_run_args['workspace_dir']):
                         os.makedirs(args['workspace_dir'])
 
@@ -4455,7 +4528,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                                                   model.name + '_setup_file.json')
                     setup_run_args = utilities.file_to_python_object(setup_file_uri)
                     args = setup_run_args.copy()
-                    args['workspace_dir'] = os.path.join(self.parent.elements[name].run_folder, scenario.name,
+                    args['workspace_dir'] = os.path.join(self.parent.elements[self.name].run_folder, scenario.name,
                                                          model.name)
 
                     if scenario.name != 'Baseline':
