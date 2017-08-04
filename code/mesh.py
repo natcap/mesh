@@ -790,7 +790,7 @@ class ScenariosWidget(ScrollWidget):
         self.load_scenario_pb.setIcon(self.load_scenario_icon)
         self.load_scenario_pb.clicked.connect(self.load_element_from_file_select_dialog)
         self.add_scenarios_hbox.addWidget(self.load_scenario_pb)
-        self.info = InformationButton('Creating Scenarios', 'Set up the baseline scenario based on the inputs used in the "Setup Run." Alternate scenarios are defined by adding inputs or parameters to replace those in the baseline. Any input not replaced is assumed to be the same as the baseline scenario.')
+        self.info = InformationButton('Creating Scenarios', 'Set up the baseline scenario based on the inputs used in the "Setup Run." Alternate scenarios are defined by adding inputs or parameters to replace those in the baseline. Any input not replaced is assumed to be the same as the baseline scenario.<h4>Special scenario names</h4>There are two specical scenario names: Baseline and BAU (must be all caps). Baseline is required and is used to define what is different in alternate scenarios (as discussed above). BAU is special because many reports are designed to compare different scenarios (e.g. different conservation options) against the BAU scenario to show how a policy might affect future ecosystem service provision.')
         self.add_scenarios_hbox.addWidget(self.info)
 
         # NOTE, this is separate from the validation of invest setup runs.
@@ -2435,6 +2435,8 @@ class ModelRun(MeshAbstractObject, QWidget):
 class ReportsWidget(MeshAbstractObject, QWidget):
     """
     Central widget that shows the currently generated report and provides IO options.
+    
+    NOTE: Saving is not yet supported outside of having the external files created.
     """
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -2536,10 +2538,10 @@ class ReportsWidget(MeshAbstractObject, QWidget):
     def load_element(self, name, args):
         if not name:
             pass
-            #LOGGER.warn('Asked to load an element with a blank name.')
+            # LOGGER.warn('Asked to load an element with a blank name.')
         elif name in self.elements:
             pass
-            #LOGGER.warn('Attempted to add element that already exists.')
+            # LOGGER.warn('Attempted to add element that already exists.')
         elif name not in args:
             pass
             # warnings.warn("Warning, run name not in loaded CSV.")
@@ -2620,6 +2622,8 @@ class Report(MeshAbstractObject, QFrame):
         self.name = name
         self.args = args
 
+        self.uri = None
+
         self.initialize_from_args()
         self.create_ui()
         self.update_ui()
@@ -2628,6 +2632,7 @@ class Report(MeshAbstractObject, QFrame):
         self.run_name = self.args['run_name']
         self.long_name = self.args['long_name']
         self.markdown_uri = self.args['markdown_uri']
+        self.uri = self.args.get('uri', None)
         self.report_type = self.args['report_type']
 
         self.markdown_lines = []
@@ -2678,7 +2683,7 @@ class Report(MeshAbstractObject, QFrame):
         self.view_or_edit_report_pb.clicked.connect(self.view_or_edit_report)
 
 
-        self.save_report_as_html_pb = QPushButton('Save report')
+        self.save_report_as_html_pb = QPushButton('Save as html')
         self.save_report_as_html_icon = QIcon()
         self.save_report_as_html_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
         self.save_report_as_html_pb.setIcon(self.save_report_as_html_icon)
@@ -2686,19 +2691,19 @@ class Report(MeshAbstractObject, QFrame):
         self.save_report_as_html_pb.clicked.connect(self.save_report_as_html)
 
 
-        # self.save_report_as_text_document_pb = QPushButton('Save report as doc')
-        # self.save_report_as_text_document_icon = QIcon()
-        # self.save_report_as_text_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
-        # self.save_report_as_text_document_pb.setIcon(self.save_report_as_text_document_icon)
-        # self.report_actions_hbox.addWidget(self.save_report_as_text_document_pb)
-        # self.save_report_as_text_document_pb.clicked.connect(self.save_report_as_text_document)
+        self.save_report_as_word_document_pb = QPushButton('Save as Word')
+        self.save_report_as_word_document_icon = QIcon()
+        self.save_report_as_word_document_icon.addPixmap(QPixmap('icons/document-new-6.png'), QIcon.Normal, QIcon.Off)
+        self.save_report_as_word_document_pb.setIcon(self.save_report_as_word_document_icon)
+        self.report_actions_hbox.addWidget(self.save_report_as_word_document_pb)
+        self.save_report_as_word_document_pb.clicked.connect(self.save_report_as_word_document)
         #
-        self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
-        self.save_report_as_pdf_icon = QIcon()
-        self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
-        self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
-        self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
-        self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
+        # self.save_report_as_pdf_pb = QPushButton('Save report as PDF')
+        # self.save_report_as_pdf_icon = QIcon()
+        # self.save_report_as_pdf_icon.addPixmap(QPixmap('icons/document-new-3.png'), QIcon.Normal, QIcon.Off)
+        # self.save_report_as_pdf_pb.setIcon(self.save_report_as_pdf_icon)
+        # self.report_actions_hbox.addWidget(self.save_report_as_pdf_pb)
+        # self.save_report_as_pdf_pb.clicked.connect(self.save_report_as_pdf)
 
         self.clear_pb = QPushButton()
         self.clear_pb.clicked.connect(self.remove_self)
@@ -2731,7 +2736,9 @@ class Report(MeshAbstractObject, QFrame):
                         if not dynamic_content:
                             dynamic_content = ' '
                         modified_line += dynamic_content
-                html.append(modified_line)
+                html.append(modified_line.encode('ascii', 'ignore'))
+
+
         return html
 
     def split_tags_and_content_from_line(self, line):
@@ -2838,6 +2845,7 @@ class Report(MeshAbstractObject, QFrame):
     def add_png_to_report(self, filename, dir=None, width=None):
         if not dir:
             results_dir = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name)
+            # results_dir = os.path.join('../runs', self.parent.name)
         else:
             results_dir = dir
 
@@ -2846,8 +2854,8 @@ class Report(MeshAbstractObject, QFrame):
         png_uri = os.path.join(results_dir, filename)
 
         ## Deactivated because QT image scaling sucked.
-        # html_string = '<img src=\"' + png_uri + '\" width=\"' + str(width) + '\">'
-        html_string = '<img src=\"' + png_uri + '\">'
+        html_string = '<img src=\"' + png_uri + '\" width=\"' + str(width) + '\">'
+        #html_string = '<img src=\"' + png_uri + '\">'
 
         return html_string
 
@@ -2880,6 +2888,7 @@ class Report(MeshAbstractObject, QFrame):
         args['run_name'] = self.run_name
         args['long_name'] = self.long_name
         args['markdown_uri'] = self.markdown_uri
+        args['report_uri'] = self.uri
         args['report_type'] = self.report_type
         return args
 
@@ -2900,7 +2909,6 @@ class Report(MeshAbstractObject, QFrame):
                 self.add_image_to_report_by_uri(os.path.join(reports_folder, qt_object + '.png'), 650)
 
     def remove_self(self):
-        print(33, self.root_app.reports_widget.elements)
         del self.root_app.reports_widget.elements[self.name]
         self.setParent(None)
 
@@ -2914,15 +2922,47 @@ class Report(MeshAbstractObject, QFrame):
         self.editor.show()
 
     def save_report_as_html(self):
-        to_write = str(self.html)
-        dst = os.path.join(self.root_app.project_folder, 'output/reports', 'report_at_' + utilities.pretty_time() + '.html')
-        open(dst, 'w').write(to_write)
+        to_write = '\n'.join([i for i in self.html])
+        to_write = to_write.replace('\\\\', '/').replace('\\', '/')
+
+        # For htmls, relative path needs to be to report dir, not project dir.
+        project_relative_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name).replace('\\\\', '/').replace('\\', '/')
+        report_relative_uri = os.path.join('../runs', self.parent.name).replace('\\\\', '/').replace('\\', '/')
+        to_write = to_write.replace(project_relative_uri, report_relative_uri)
+
+        _default_path = os.path.join(self.root_app.project_folder, 'output/reports', self.name + '_report_at_' + utilities.pretty_time() + '.html')
+
+       # Open a file dialogue and let the user select where to save
+        out_path = QFileDialog.getSaveFileName(
+            self, 'Save File', _default_path, "*.html")
+
+        self.uri = out_path
+
+        # So that the mesh file saves it.
+        open(out_path, 'w').write(to_write)
+
+    def save_report_as_word_document(self):
+        to_write = '\n'.join([i for i in self.html])
+        to_write = to_write.replace('\\\\', '/').replace('\\', '/')
+
+        # For htmls, relative path needs to be to report dir, not project dir.
+        project_relative_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.parent.name).replace('\\\\', '/').replace('\\', '/')
+        report_relative_uri = os.path.join('../runs', self.parent.name).replace('\\\\', '/').replace('\\', '/')
+        to_write = to_write.replace(project_relative_uri, report_relative_uri)
+
+        _default_path = os.path.join(self.root_app.project_folder, 'output/reports', self.name + '_report_at_' + utilities.pretty_time() + '.doc')
+        # Open a file dialogue and let the user select where to save
+        out_path = QFileDialog.getSaveFileName(
+            self, 'Save File', _default_path, "*.doc")
+
+
+        open(out_path, 'w').write(to_write)
+
+        # So that the mesh file saves it.
+        self.uri = out_path
 
     def save_report_as_pdf(self):
-        """Save the generated html report from 'self.html' as a PDF file.
-
-        Returns:
-            Nothing
+        """UNUSED because didnt scale pngs correctly. Just use html as doc.
         """
         # Default path for where the user "should" save the report
         # Copied from how HTML reports paths are hardcoded
@@ -2934,7 +2974,8 @@ class Report(MeshAbstractObject, QFrame):
         pdf_out_path = QFileDialog.getSaveFileName(
             self, 'Save File', pdf_default_path, "*.pdf")
 
-        html = str(self.html)
+        html = '\n'.join([i for i in self.html])
+        # html = str(self.html)
 
         doc = QTextDocument()
         doc.setHtml(html)
@@ -3154,12 +3195,12 @@ class Map(MeshAbstractObject, QWidget):
         self.edit_pb.clicked.connect(self.edit)
         self.main_hbox.addWidget(self.edit_pb)
 
-        self.use_pb = QPushButton()
-        self.use_icon = QIcon(QPixmap('icons/bookmark.png'))
-        self.use_pb.setIcon(self.use_icon)
-        self.use_pb.setIconSize(self.icon_size)
-        self.use_pb.clicked.connect(self.use)
-        self.main_hbox.addWidget(self.use_pb)
+        # self.use_pb = QPushButton()
+        # self.use_icon = QIcon(QPixmap('icons/bookmark.png'))
+        # self.use_pb.setIcon(self.use_icon)
+        # self.use_pb.setIconSize(self.icon_size)
+        # self.use_pb.clicked.connect(self.use)
+        # self.main_hbox.addWidget(self.use_pb)
 
         self.remove_pb = QPushButton()
         self.remove_icon = QIcon(QPixmap('icons/edit-delete-2.png'))
@@ -3548,6 +3589,8 @@ class BaselinePopulatorDialog(MeshAbstractObject, QDialog):
 
     def __init__(self, root_app=None, parent=None):
         super(BaselinePopulatorDialog, self).__init__(root_app, parent)
+        self.root_app = root_app
+        self.parent = parent
         self.main_layout = QVBoxLayout()
         default_size = (int(self.root_app.application_window_starting_size[0] * .6), int(self.root_app.application_window_starting_size[1] * .6))
         self.resize(default_size[0], default_size[1])
@@ -3737,6 +3780,8 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
 
     def __init__(self, root_app=None, parent=None):
         super(ScenarioPopulatorDialog, self).__init__(root_app, parent)
+        self.root_app = root_app
+        self.parent = parent
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
         self.setWindowTitle('Define scenario')
@@ -3760,7 +3805,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
                 self.pbs[scenario_generation_method['name']].setText(
                     str(self.pbs[scenario_generation_method['name']].text()) + ' *')
 
-        self.asterisk_l = QLabel('\n\n* Click "Update InVEST Parameters" after running this model to add it.')
+        self.asterisk_l = QLabel('\n\n* After creation of new LULC maps, must still add them via "User Defined File" or "Update InVEST Parameters" after running this model to add it. If using "User Defined File", you must rename the new LULC map to be the same as your baseline.' )
         self.main_layout.addWidget(self.asterisk_l)
 
         self.additional_generators_l = QLabel(
@@ -3793,7 +3838,7 @@ class ScenarioPopulatorDialog(MeshAbstractObject, QDialog):
 
 
     def populate_with_existing_file(self):
-        source_uri = str(QFileDialog.getOpenFileName(self, 'Select map file to attach', self.root_app.project_folder))
+        source_uri = str(QFileDialog.getOpenFileName(self, 'Select map file to attach', os.path.join(self.root_app.project_folder, 'input', self.parent.name)))
         if source_uri:
             source_name = os.path.split(source_uri)[1]
 
@@ -4693,7 +4738,9 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0:
+
+                # NOTE NYI Only will trigger for carbon and hydropower.
+                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield']:
                     for key, value in input_mapping.items():
                         if utilities.convert_to_bool(value['enabled']):
                             if utilities.convert_to_bool(value['required']):
