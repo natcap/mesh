@@ -45,7 +45,7 @@ from mesh_utilities import data_creation
 from mesh_utilities import config
 from mesh_utilities import utilities
 from mesh_models import mesh_scenario_generator
-from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener
+from base_classes import MeshAbstractObject, ScrollWidget, ProcessingThread, NamedSpecifyButton, Listener, InformationButton
 from natcap.invest.iui import modelui
 import natcap.invest.iui
 
@@ -790,6 +790,8 @@ class ScenariosWidget(ScrollWidget):
         self.load_scenario_pb.setIcon(self.load_scenario_icon)
         self.load_scenario_pb.clicked.connect(self.load_element_from_file_select_dialog)
         self.add_scenarios_hbox.addWidget(self.load_scenario_pb)
+        self.info = InformationButton('Creating Scenarios', 'Set up the baseline scenario based on the inputs used in the "Setup Run." Alternate scenarios are defined by adding inputs or parameters to replace those in the baseline. Any input not replaced is assumed to be the same as the baseline scenario.')
+        self.add_scenarios_hbox.addWidget(self.info)
 
         # NOTE, this is separate from the validation of invest setup runs.
         # pearhaps i should get rid of it or use it with the archive_args
@@ -1172,42 +1174,53 @@ class ModelsWidget(ScrollWidget):
     default_element_args['model_type'] = ''
     default_element_args['model_args'] = ''
     default_element_args['checked'] = ''
+    default_element_args['release_state'] = ''
 
     default_state = OrderedDict()
-    default_state['ndr'] = default_element_args.copy()
-    default_state['ndr']['name'] = 'ndr'
-    default_state['ndr']['long_name'] = 'Nutrient Retention *'
-    default_state['ndr']['model_type'] = 'InVEST Model'
-
     default_state['hydropower_water_yield'] = default_element_args.copy()
     default_state['hydropower_water_yield']['name'] = 'hydropower_water_yield'
     default_state['hydropower_water_yield']['long_name'] = 'Hydropower Water Yield'
     default_state['hydropower_water_yield']['model_type'] = 'InVEST Model'
+    default_state['hydropower_water_yield']['release_state'] = 'finished'
 
     default_state['carbon'] = default_element_args.copy()
     default_state['carbon']['name'] = 'carbon'
     default_state['carbon']['long_name'] = 'Carbon Storage'
     default_state['carbon']['model_type'] = 'InVEST Model'
+    default_state['carbon']['release_state'] = 'finished'
 
-    default_state['pollination'] = default_element_args.copy()
-    default_state['pollination']['name'] = 'pollination'
-    default_state['pollination']['long_name'] = 'Pollination *'
-    default_state['pollination']['model_type'] = 'InVEST Model'
+
+    default_state['ndr'] = default_element_args.copy()
+    default_state['ndr']['name'] = 'ndr'
+    default_state['ndr']['long_name'] = 'Nutrient Retention'
+    default_state['ndr']['model_type'] = 'InVEST Model'
+    default_state['ndr']['release_state'] = 'missing_base_data_generation'
+
 
     default_state['sdr'] = default_element_args.copy()
     default_state['sdr']['name'] = 'sdr'
     default_state['sdr']['long_name'] = 'Sediment Delivery'
     default_state['sdr']['model_type'] = 'InVEST Model'
+    default_state['sdr']['release_state'] = 'missing_base_data_generation'
 
-    default_state['crop_production'] = default_element_args.copy()
-    default_state['crop_production']['name'] = 'crop_production'
-    default_state['crop_production']['long_name'] = 'Crop Production **'
-    default_state['crop_production']['model_type'] = 'InVEST Model'
+    default_state['pollination'] = default_element_args.copy()
+    default_state['pollination']['name'] = 'pollination'
+    default_state['pollination']['long_name'] = 'Pollination'
+    default_state['pollination']['model_type'] = 'InVEST Model'
+    default_state['pollination']['release_state'] = 'missing_base_data_generation_and_reporting'
 
     default_state['globio'] = default_element_args.copy()
     default_state['globio']['name'] = 'globio'
-    default_state['globio']['long_name'] = 'Globio (biodiversity) **'
+    default_state['globio']['long_name'] = 'Globio (biodiversity)'
     default_state['globio']['model_type'] = 'InVEST Model'
+    default_state['globio']['release_state'] = 'missing_base_data_generation_and_reporting'
+
+    default_state['crop_production'] = default_element_args.copy()
+    default_state['crop_production']['name'] = 'crop_production'
+    default_state['crop_production']['long_name'] = 'Crop Production'
+    default_state['crop_production']['model_type'] = 'InVEST Model'
+    default_state['crop_production']['release_state'] = 'unstable_release'
+
 
 
     def __init__(self, root_app=None, parent=None):
@@ -1262,6 +1275,8 @@ class ModelsWidget(ScrollWidget):
         self.choose_set_aoi_method_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.choose_set_aoi_method_pb.setIcon(self.choose_set_aoi_method_icon)
         self.project_aoi_hbox.addWidget(self.choose_set_aoi_method_pb)
+        self.info = InformationButton('Creating Inputs from the Base Data', 'Here and elsewhere, this icon indicates that you have an option of generating your input data automatically from the base-data in MESH.')
+        self.project_aoi_hbox.addWidget(self.info)
         self.choose_set_aoi_method_pb.clicked.connect(self.root_app.choose_set_aoi_method)
 
         self.creation_hbox = QHBoxLayout()
@@ -1310,12 +1325,12 @@ class ModelsWidget(ScrollWidget):
 
         self.scroll_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
 
-        self.asterisk_nyi_l = QLabel('* Almost finished. May lack features such as automatic data generation or report creation.\n\n'
-                                     '** Model is still in development. Check the InVEST forums for details.\n\n'
-                                     'These features, and other greyed-out buttons, will be fully implemented in the forthcoming MESH 1.0 release.\n\n')
-        self.asterisk_nyi_l.setWordWrap(True)
-        self.asterisk_nyi_l.setFont(config.italic_font)
-        self.scroll_layout.addWidget(self.asterisk_nyi_l)
+        # self.asterisk_nyi_l = QLabel('* Finished, but missing base-data creation.\n'
+        #                              '** Finished , but missing base-data creation and report generation.\n'
+        #                              '*** Model still in unstable alpha release.\n\n')
+        # self.asterisk_nyi_l.setWordWrap(True)
+        # self.asterisk_nyi_l.setFont(config.italic_font)
+        # self.scroll_layout.addWidget(self.asterisk_nyi_l)
 
 
         self.additional_models_l = QLabel('\nAdditional models can be added as plugins.')
@@ -1646,13 +1661,38 @@ class Model(MeshAbstractObject, QWidget):
         self.cb.toggled.connect(self.toggle_model)
         # Left in as example of how to add action on a toggle. self.cb.toggled.connect(self.parent.toggle? not sure if i need any action on toggle.)
         self.main_layout.addWidget(self.cb)
+
         self.main_layout.addItem(QSpacerItem(0, 0, QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
-        self.model_status_image_l = QLabel()
-        self.model_status_image_l.setVisible(False)
-        self.main_layout.addWidget(self.model_status_image_l)
+
         self.model_status_l = QLabel()
         self.model_status_l.setVisible(False)
         self.main_layout.addWidget(self.model_status_l)
+        self.model_status_image_l = QLabel()
+        self.model_status_image_l.setVisible(False)
+        self.main_layout.addWidget(self.model_status_image_l)
+
+        # HACK because i cant have commas in my csvs.
+        model_notes = OrderedDict()
+        model_notes['hydropower_water_yield'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/reservoirhydropowerproduction.html for full model documentation.<h4>Model Overview:</h4>Hydropower accounts for twenty percent of worldwide energy production, most of which is generated by reservoir systems. InVEST estimates the annual average quantity and value of hydropower produced by reservoirs, and identifies how much water yield or value each part of the landscape contributes annually to hydropower production. The model has three components: water yield, water consumption, and hydropower valuation. The first two components use data on average annual precipitation, annual reference evapotranspiration and a correction factor for vegetation type, root restricting layer depth, plant available water content, land use and land cover, root depth, elevation, saturated hydraulic conductivity, and consumptive water use. The valuation model uses data on hydropower market value and production costs, the remaining lifetime of the reservoir, and a discount rate. The biophysical models do not consider surface – ground water interactions or the temporal dimension of water supply. The valuation model assumes that energy pricing is static over time.'
+        model_notes['carbon'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/carbonstorage.html for full model documentation.<h4>Model Overview:</h4>Terrestrial ecosystems, which store more carbon than the atmosphere, are vital to influencing carbon dioxide-driven climate change. The InVEST model uses maps of land use and stocks in four carbon pools (aboveground biomass, belowground biomass, soil, dead organic matter) to estimate the amount of carbon currently stored in a landscape or the amount of carbon sequestered over time. Additional data on the market or social value of sequestered carbon and its annual rate of change, and a discount rate can be used in an optional model that estimates the value of this ecosystem service to society. Limitations of the model include an oversimplified carbon cycle, an assumed linear change in carbon sequestration over time, and potentially inaccurate discounting rates.'
+        model_notes['ndr'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/ndr.html for full model documentation.<h4>Model Overview:</h4>The objective of the InVEST nutrient delivery model is to map nutrient sources from watersheds and their transport to the stream. This spatial information can be used to assess the service of nutrient retention by natural vegetation. The retention service is of particular interest for surface water quality issues and can be valued in economic or social terms (e.g. avoided treatment costs, improved water security through access to clean drinking water).The main differences between the NDR model and the InVEST v3.1 Nutrient retention model are: - The routing of nutrient from a pixel to the stream was modified to reduce the sensitivity to grid resolution and facilitate the selection of LULC-specific retention coefficient; - It is now possible to calibrate the model based on one (non-physical) parameter; note that calibration preserves the spatial distribution of nutrient sinks and sources, increasing confidence in spatially explicit outputs; - The flexible model structure allows advanced users to represent more complex processes such as direct nutrient discharges (for example, tile drainage), or instream retention (work in progress)'
+        model_notes['sdr'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/sdr.html for full model documentation.<h4>Model Overview:</h4>The objective of the InVEST sediment delivery model is to map overland sediment generation and delivery to the stream. In a context of global change, such information can be used to study the service of sediment retention in a catchment. This is of particular interest for reservoir management and instream water quality, both of which may be economically valued.'
+        model_notes['pollination'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html for full model documentation.<h4>Model Overview:</h4>The InVEST pollination model focuses on wild bees as a key animal pollinator. It uses estimates of the availability of nest sites and floral resources within bee flight ranges to derive an index of the abundance of bees nesting on each cell on a landscape (i.e., pollinator supply). It then uses floral resources, and be foraging activity and flight range information to estimate an index of the abundance of bees visiting each cell. If desired, the model then calculates a simple index of the contribution of these bees to agricultural production, based on bee abundance and crop dependence on pollination The results can be used to understand changes in crop pollination and crop yield with changes in land use and agricultural management practices. Required inputs include a land use and land cover map, land cover attributes, guilds or species of pollinators present, and their flight ranges. To estimate wild pollinator contributions to crop production requires information on farms of interest, the crops grown there, and the abundance of managed pollinators. The model’s limitations include not accounting for pollinator persistence over time or the effects of land parcel size.'
+        model_notes['globio'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/globio.html for full model documentation.<h4>Model Overview:</h4>The GLOBIO model provides an index of biodiversity according to mean species abundance (MSA), the average population-level response across a range of species, to different stressors, including land-use change, fragmentation, and infrastructure. The model can be used as a static assessment of how far below a pristine state the current environment is or to estimate how a change in any of the stressors would lead to a stress in biodiversity or ecosystem integrity, as indicated by MSA.'
+        model_notes['crop_production'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/crop_production.html for full model documentation.<h4>Model Overview:</h4>Expanding agricultural production and closing yield gaps is a key strategy for many governments and development agencies focused on poverty alleviation and achieving food security. However, conversion of natural habitats to agricultural production sites impacts other ecosystem services that are key to sustaining the economic benefits that agriculture provides to local communities. Intensive agricultural practices can add to pollution loads in water sources, often necessitating future costly water purification methods. Overuse of water also threatens the supply available for hydropower or other services. Still, crop production is essential to human well-being and livelihoods.'
+
+        self.info_notes = model_notes[self.name]
+
+        if self.release_state == 'missing_base_data_generation':
+            self.info_notes = '<h4>Release Notes:</h4>This model is finished but lacks automatic data generation. ' + self.info_notes
+        elif self.release_state == 'missing_base_data_generation_and_reporting':
+            self.info_notes = '<h4>Release Notes:</h4>This model is finished but lacks automatic data generation and does not automatically create reports (though you can still access the results and make your own reports in the project directory).' + self.info_notes
+        elif self.release_state == 'unstable_release':
+            self.info_notes = '<h4>Release Notes:</h4>This is an unstable, alpha release model. Check the users\' guide for usage caveats.' + self.info_notes
+
+        self.model_info = InformationButton('Model Details', self.info_notes)
+        self.main_layout.addWidget(self.model_info)
+
         self.check_if_ready_pb = QPushButton('Check if ready')
         self.unvalidated_icon = QIcon(QPixmap('icons/dialog-cancel-2.png'))
         self.check_if_ready_pb.setIcon(self.unvalidated_icon)
@@ -1664,6 +1704,14 @@ class Model(MeshAbstractObject, QWidget):
         self.setup_model_icon.addPixmap(QPixmap('icons/system-run-3.png'), QIcon.Normal, QIcon.Off)
         self.setup_model_pb.setIcon(self.setup_model_icon)
         self.main_layout.addWidget(self.setup_model_pb)
+
+        self.add_setup_run_results_to_map_viewer_pb = QPushButton()
+        self.add_setup_run_results_to_map_viewer_icon = QIcon()
+        self.add_setup_run_results_to_map_viewer_icon.addPixmap(QPixmap('icons/arrow-right.png'), QIcon.Normal, QIcon.Off)
+        self.add_setup_run_results_to_map_viewer_pb.setIcon(self.add_setup_run_results_to_map_viewer_icon)
+        self.main_layout.addWidget(self.add_setup_run_results_to_map_viewer_pb)
+        self.add_setup_run_results_to_map_viewer_pb.clicked.connect(self.add_setup_run_results_to_map_viewer_signal_wrapper)
+
         if self.model_type == 'InVEST Model':
             self.setup_model_pb.clicked.connect(self.setup_invest_model_signal_wrapper)
         elif self.model_type == 'MESH Model':
@@ -1676,6 +1724,9 @@ class Model(MeshAbstractObject, QWidget):
         self.long_name = self.args['long_name']
         self.model_type = self.args['model_type']
         self.model_args = self.args['model_args']
+        # TODO Consider adding defaults like this to enable cross-release compatibility.
+        self.release_state = self.args.get('release_state', '')
+        self.info_notes = self.args.get('info_notes', '')
 
     def set_state_from_args(self):
         if utilities.convert_to_bool(self.args['checked']):
@@ -1837,7 +1888,48 @@ class Model(MeshAbstractObject, QWidget):
         self.place_check_if_ready_button()
         self.parent.setup_waterworld_model(self.name)
 
+    def add_setup_run_results_to_map_viewer_signal_wrapper(self):
+        LOGGER.debug('Adding setup run results to map viewer.')
+        # NOTE: I manually decided which reports are actually interesting outputs. Have this be programatic.
+        # And link to the "generate_report_ready_object()" functionality here to fix this.
+        uris_to_add = []
+        current_folder = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', self.name)
+        if self.name == 'carbon':
+            uris_to_add.append(os.path.join(current_folder, 'tot_c_cur.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_above_cur.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_below_cur.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_dead_cur.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/c_soil_cur.tif'))
+        if self.name == 'hydropower_water_yield':
+            uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'aet.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'fractp.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'output/per_pixel', 'wyield.tif'))
+        if self.name == 'ndr':
+            uris_to_add.append(os.path.join(current_folder, 'n_export.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'p_export.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_n.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'intermediate_outputs/effective_retention_p.tif'))
+        if self.name == 'pollination':
+            uris_to_add.append(os.path.join(current_folder, 'output', 'frm_avg_cur.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'output', 'sup_tot_cur.tif'))
+        if self.name == 'sdr':
+            uris_to_add.append(os.path.join(current_folder, 'rkls.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'sed_export.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
+            uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
+        if self.name == 'nutrition':
+            for i in os.listdir(os.path.join(current_folder)):
+                # NEXT RELEASE I currently save a shitton of files that are duplicate and take space. Perhaps create a data_stash folder to share across runs?
+                if i.endswith('.tif'):
+                    uris_to_add.append(os.path.join(current_folder, i))
 
+        for uri in uris_to_add:
+            name_of_map_to_add = self.name + '_setup_run ' + os.path.split(uri)[
+                1]
+            args = self.root_app.map_widget.create_default_element_args(name_of_map_to_add)
+            args['source_uri'] = uri
+            self.root_app.map_widget.create_element(name_of_map_to_add, args)
 
 
 class ModelRunsWidget(MeshAbstractObject, QWidget):
@@ -2400,6 +2492,8 @@ class ReportsWidget(MeshAbstractObject, QWidget):
         self.load_existing_report_pb.setIcon(self.load_existing_report_icon)
         self.create_or_load_hbox.addWidget(self.load_existing_report_pb)
         self.load_existing_report_pb.clicked.connect(self.load_existing_report_from_file_dialog)
+        self.info = InformationButton('Report Generation', 'Create reports specific to runs that you have completed. These reports analyze the files generated by models that were run for each scenario (these files can be found in your project directory in the ouput/runs folder).')
+        self.create_or_load_hbox.addWidget(self.info)
 
         # self.selected_run_hbox = QHBoxLayout()
         # self.main_layout.addLayout(self.selected_run_hbox)
@@ -2450,7 +2544,8 @@ class ReportsWidget(MeshAbstractObject, QWidget):
             pass
             # warnings.warn("Warning, run name not in loaded CSV.")
         else:
-            model_run = self.root_app.model_runs_widget.elements[args['run_name']]
+            # model_run = self.root_app.model_runs_widget.elements[args['run_name']]
+            model_run = self.root_app.model_runs_widget.elements[self.name]
             element = Report(name, args, self.root_app, model_run)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
@@ -2805,6 +2900,7 @@ class Report(MeshAbstractObject, QFrame):
                 self.add_image_to_report_by_uri(os.path.join(reports_folder, qt_object + '.png'), 650)
 
     def remove_self(self):
+        print(33, self.root_app.reports_widget.elements)
         del self.root_app.reports_widget.elements[self.name]
         self.setParent(None)
 
@@ -2934,6 +3030,8 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         self.add_maps_hbox.addWidget(self.clear_maps_pb)
         self.clear_maps_icon = QIcon(QPixmap('icons/dialog-cancel-5.png'))
         self.clear_maps_pb.setIcon(self.clear_maps_icon)
+        self.info = InformationButton('Map Creation', 'Use this tool to view and format maps. To use a map in a report, click the save icon on the map, which will save your formatted map to the project directory in the reports/images folder.<br/><br/>Additionally, the right-arrow icon used throughout MESH will automatically add maps to the map viewer.')
+        self.add_maps_hbox.addWidget(self.info)
 
 
 

@@ -1,4 +1,7 @@
+#Executive Summary
 ##<^report_type^> for run <^run_name^> in project <^project_name^>
 The ecosystem service provision for <^models_string^> was calculated for <^project_name^> under several scenarios. Comparing these indicates which sceanrio(s) provides greater or smaller impacts on human wellbeing. Prioritizing conservation to the high value areas will result in more effective conservation of ecosystem service. Conversely, directing agricultural expansion (or other drivers of land-use change) towards the areas of low value will minimize the tradeoffs between conservation and development. This report provides a summary of the key results from each ecosystem service model run.
+###Fig 1. Absolute model outputs
 <^model_results_table^>
-<^model_primary_indicator_map^>
+###Fig 2. Proportion difference from BAU scenario chart
+<^proportion_differences_from_bau_bar_chart^>

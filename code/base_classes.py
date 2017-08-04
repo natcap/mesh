@@ -257,3 +257,69 @@ class NamedSpecifyButton(MeshAbstractObject, QWidget):
             text = str(input_text)
 
 
+class InformationButton(QPushButton):
+    """This class represents the information that a user will see when pressing
+        the information button.  This specific class simply represents an object
+        that has a couple of string attributes that may be changed at will, and
+        then constructed into a cohesive string by calling self.build_contents.
+
+        Note that this class supports the presentation of an error message.  If
+        the error message is to be shown to the end user, it must be set after
+        the creation of the InformationPopup instance by calling
+        self.set_error().
+        """
+    def __init__(self, title, body_text=''):
+        """This function initializes the InformationPopup class.
+            title - a python string.  The title of the element.
+            body_text - a python string.  The body of the text
+
+            returns nothing."""
+
+        QPushButton.__init__(self)
+        self.title = title
+        self.body_text = body_text
+        self.pressed.connect(self.show_info_popup)
+        self.setFlat(True)
+        self.setIcon(QIcon(os.path.join('icons', 'info.png')))
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # If the user has set "helpText": null in JSON, deactivate.
+        if body_text == None:
+            self.deactivate()
+
+    def show_info_popup(self):
+        """Show the information popup.  This manually (programmatically) enters
+            What's This? mode and spawns the tooltip at the location of trigger,
+            the element that triggered this function.
+            """
+
+        self.setWhatsThis(self.build_contents())  # set popup text
+        QWhatsThis.enterWhatsThisMode()
+        QWhatsThis.showText(self.pos(), self.whatsThis(), self)
+
+    def deactivate(self):
+        """Visually disable the button: set it to be flat, disable it, and clear
+            its icon."""
+        self.setFlat(True)
+        self.setEnabled(False)
+        self.setIcon(QIcon(''))
+
+    def set_title(self, title_text):
+        """Set the title of the InformationPopup text.  title_text is a python
+            string."""
+        self.title = title_text
+
+    def set_body(self, body_string):
+        """Set the body of the InformationPopup.  body_string is a python
+            string."""
+        self.body_text = body_string
+
+    def build_contents(self):
+        """Take the python string components of this instance of
+            InformationPopup, wrap them up in HTML as necessary and return a
+            single string containing HTML markup.  Returns a python string."""
+        width_table = '<table style="width:400px"></table>'
+        title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
+        body = '<div style="color:black">%s</div>' % (self.body_text)
+
+        return title + body + width_table
