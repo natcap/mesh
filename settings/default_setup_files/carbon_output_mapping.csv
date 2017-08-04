@@ -1,0 +1,2 @@
+name,model_name,long_name,result_type,result_method,input_file_uri_relative_to_model_root
+carbon_storage_lost_sum,carbon,Total carbon storage lost (Mg),primary_negative_objective_sum,raster_sum,tot_c_cur.tif

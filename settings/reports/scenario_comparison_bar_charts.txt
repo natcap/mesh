@@ -1,0 +1,5 @@
+##<^report_type^> for run <^run_name^> in project <^project_name^>
+###Fig 4. Proportion difference from baseline scenario chart
+<^proportion_differences_from_baseline_bar_chart^>
+###Fig 5. Proportion difference from BAU scenario chart
+<^proportion_differences_from_bau_bar_chart^>

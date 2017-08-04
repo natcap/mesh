@@ -1,0 +1,2 @@
+name,model_name,long_name,result_type,result_method,input_file_uri_relative_to_model_root
+water_yield_lost_sum,hydropower_water_yield,Total water yield (mm) lost per year,primary_negative_objective_sum,raster_sum,output/per_pixel/wyield.tif

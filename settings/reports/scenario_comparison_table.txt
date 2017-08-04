@@ -1,0 +1,7 @@
+##<^report_type^> for run <^run_name^> in project <^project_name^>
+###Fig 1. Absolute model outputs
+<^model_results_table^>
+###Fig 2. Proportion difference from baseline scenario
+<^proportion_differences_from_baseline_table^>
+###Fig 3. Proportion difference from BAU scenario
+<^proportion_differences_from_bau_table^>

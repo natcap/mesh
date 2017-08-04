@@ -1,0 +1,3 @@
+##<^report_type^> 
+###Run <^run_name^> in project <^project_name^>
+<^pngs_in_images_dir^>

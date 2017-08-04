@@ -1,0 +1,2 @@
+name,model_name,long_name,result_type,result_method,input_file_uri_relative_to_model_root
+pollination_supply_sum,pollination,Total pollination index,primary_objective_sum,raster_sum,sup_tot_cur.tif
