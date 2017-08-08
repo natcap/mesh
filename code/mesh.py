@@ -3108,7 +3108,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
         else:
             # MINOR HACK: If this is set before the project folder is set it fails. Thus, i put it here
             # on the bad assumption that the user wouldn't add a map before naming the pjrect.
-            rcParams["savefig.directory"] = os.path.join(self.project_folder, 'output/images')
+            rcParams["savefig.directory"] = os.path.join(self.root_app.project_folder, 'output/images')
             element = Map(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
