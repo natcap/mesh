@@ -1276,7 +1276,7 @@ class ModelsWidget(ScrollWidget):
         self.choose_set_aoi_method_icon.addPixmap(QPixmap('icons/db_add.png'), QIcon.Normal, QIcon.Off)
         self.choose_set_aoi_method_pb.setIcon(self.choose_set_aoi_method_icon)
         self.project_aoi_hbox.addWidget(self.choose_set_aoi_method_pb)
-        self.info = InformationButton('Creating Inputs from the Base Data', 'Here and elsewhere, this icon indicates that you have an option of generating your input data automatically from the base-data in MESH.')
+        self.info = InformationButton('Creating Inputs from the Base Data', 'Here and elsewhere, the icon to the left indicates that you have an option of generating your input data automatically from the base-data in MESH.')
         self.project_aoi_hbox.addWidget(self.info)
         self.choose_set_aoi_method_pb.clicked.connect(self.root_app.choose_set_aoi_method)
 
