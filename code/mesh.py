@@ -36,9 +36,18 @@ from pprint import pformat as ps
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
+from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
+
+# INITIAL STATE for first install.
+initial_project_folder = 'c:/temp'
+
+# MINOR HACK: If this is set before the project folder is set it fails. Thus, i put it here
+# on the bad assumption that the user wouldn't add a map before naming the pjrect.
+rcParams["savefig.directory"] = initial_project_folder
+
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
-from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
+
 from mpl_toolkits.basemap import Basemap
 
 from mesh_utilities import data_creation
@@ -52,6 +61,7 @@ import natcap.invest.iui
 LOGGER = config.LOGGER  # I store all variables that need to be used across modules in config
 LOGGER.setLevel(logging.WARN)
 rcParams.update({'figure.autolayout': True})  # This line makes matplotlib automatically change the fig size according to legends, labels etc.
+
 
 
 class MeshApplication(MeshAbstractObject, QMainWindow):
@@ -75,8 +85,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
         self.program_launch_time = time.time()
 
-        # INITIAL STATE for first install.
-        self.project_folder = '../projects'
+
 
         # Project state variables
         self.decision_contexts = OrderedDict()
@@ -359,6 +368,10 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.project_settings_folder = os.path.join(self.project_folder, 'settings')
         self.project_settings_file_uri = os.path.join(self.project_settings_folder, 'project_settings.csv')
         self.project_to_load_on_launch = self.project_name
+
+        # MINOR HACK: If this is set before the project folder is set it fails. Thus, i put it here
+        # on the bad assumption that the user wouldn't add a map before naming the pjrect.
+        rcParams["savefig.directory"] = self.project_name
 
         if os.path.exists(self.project_settings_file_uri):
             self.project_args = utilities.file_to_python_object(self.project_settings_file_uri)
@@ -1741,10 +1754,15 @@ class Model(MeshAbstractObject, QWidget):
         to_return['long_name'] = self.long_name
         to_return['model_type'] = self.model_type
         to_return['model_args'] = self.model_args
+
+
         if self.cb.isChecked():
             to_return['checked'] = 'True'
         else:
             to_return['checked'] = 'False'
+
+        to_return['release_state'] = self.release_state
+
         return to_return
 
     def remove_self(self):
@@ -2040,7 +2058,29 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
                 for default_key, default_value in default_args.items():
                     if default_key not in args or not args[default_key]:
                         args[default_key] = default_value
+
                 self.load_element(name, args)
+        self.update_runs_table()
+
+
+    def load_single_run_from_disk(self, run_name):
+        self.save_uri = self.root_app.project_args['model_runs_settings_uri']
+        loaded_object = utilities.file_to_python_object(self.save_uri)
+
+        if run_name not in loaded_object:
+            self.warning = WarningPopupWidget('Unable to load run. Are you sure that was the run folder (and are you sure it has the right contents in it)?')
+
+        if isinstance(loaded_object, list):
+            self.elements = OrderedDict()
+        else:
+            for name, args in loaded_object.items():
+                if name == run_name:
+                    default_args = self.create_default_element_args(name)
+                    for default_key, default_value in default_args.items():
+                        if default_key not in args or not args[default_key]:
+                            args[default_key] = default_value
+
+                    self.load_element(name, args)
         self.update_runs_table()
 
     def load_element(self, name, args):
@@ -2074,8 +2114,11 @@ class ModelRunsWidget(MeshAbstractObject, QWidget):
         if selected_uri:
             name = os.path.splitext(os.path.split(selected_uri)[1])[0]
             name_just_folder = os.path.split(name)[1]
-            self.create_element(name_just_folder)
-            self.update_runs_table()
+            # self.create_element(name_just_folder)
+            # self.load_element(name_just_folder)
+            # self.update_runs_table()
+            self.load_single_run_from_disk(name_just_folder)
+
 
     def unload_elements(self):
         for element in self.elements.values():
@@ -2201,7 +2244,8 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         self.models_in_run = []
         for model_name in self.models_in_run_names:
-            self.models_in_run.append(self.root_app.models_dock.models_widget.elements[model_name])
+            if model_name in self.root_app.models_dock.models_widget.elements:
+                self.models_in_run.append(self.root_app.models_dock.models_widget.elements[model_name])
 
     def set_state_from_args(self):
         """NYI but is hook for report creation stuff"""
@@ -2281,9 +2325,9 @@ class ModelRun(MeshAbstractObject, QWidget):
         utilities.open_dir(model_run_dir)
 
     def create_outputs_signal_wrapper(self):
-        self.process_model_output_mappings()
+        self.process_model_output_mappings(show_after_creation=True)
 
-    def process_model_output_mappings(self):
+    def process_model_output_mappings(self, show_after_creation=False):
         """ After a run has been completed, or when triggered manually by a user (if eg they manually changed something), this function
         converts outputs from the models and makes comparison calculations among scenarios and models. The behavior is defined
         in a set of model-specific output_mapping csvs in the settings folder. There currently are two types of calculations, positive sums and
@@ -2306,16 +2350,16 @@ class ModelRun(MeshAbstractObject, QWidget):
         scenario_and_model_sums_uri = differences_from_baseline_uri = os.path.join(run_dir, 'scenario_and_model_sums.csv')
         utilities.python_object_to_csv(scenario_and_model_sums, scenario_and_model_sums_uri, csv_type='dd')
 
-        differences_from_baseline_uri = os.path.join(run_dir, 'differences_from_baseline.csv')
-        self.calculate_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, differences_from_baseline_uri)
+        # Baseline is guaranteed to be in a run, but we can only do comparison differences if there are other scenarios.
+        if 'Baseline' in [i.name for i in self.scenarios_in_run] and len(self.scenarios_in_run) >= 2:
+            differences_from_baseline_uri = os.path.join(run_dir, 'differences_from_baseline.csv')
+            self.calculate_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, differences_from_baseline_uri)
 
-        proportion_differences_from_baseline_uri = os.path.join(run_dir, 'proportion_differences_from_baseline.csv')
-        self.calculate_proportion_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, proportion_differences_from_baseline_uri)
+            proportion_differences_from_baseline_uri = os.path.join(run_dir, 'proportion_differences_from_baseline.csv')
+            self.calculate_proportion_difference_between_all_scenarios_and_target('Baseline', [i for i in self.scenarios_in_run if i not in ['Baseline']], scenario_and_model_sums, proportion_differences_from_baseline_uri)
 
-        proportion_difference_from_baseline_bar_chart_uri = os.path.join(run_dir, 'proportion_differences_from_baseline_bar_chart.png')
-        self.create_proportion_difference_from_baseline_bar_chart(proportion_differences_from_baseline_uri, proportion_difference_from_baseline_bar_chart_uri)
-
-
+            proportion_difference_from_baseline_bar_chart_uri = os.path.join(run_dir, 'proportion_differences_from_baseline_bar_chart.png')
+            self.create_proportion_difference_from_baseline_bar_chart(proportion_differences_from_baseline_uri, proportion_difference_from_baseline_bar_chart_uri, show_after_creation)
 
         # Baseline is guaranteed to be in a run, BAU is not, so check
         if 'BAU' in [i.name for i in self.scenarios_in_run]:
@@ -2326,7 +2370,7 @@ class ModelRun(MeshAbstractObject, QWidget):
             self.calculate_proportion_difference_between_all_scenarios_and_target('BAU', [i for i in self.scenarios_in_run if i.name not in ['Baseline', 'BAU']], scenario_and_model_sums, proportion_differences_from_bau_uri)
 
             proportion_difference_from_bau_bar_chart_uri = os.path.join(run_dir, 'proportion_differences_from_bau_bar_chart.png')
-            self.create_proportion_difference_from_baseline_bar_chart(proportion_differences_from_bau_uri, proportion_difference_from_bau_bar_chart_uri)
+            self.create_proportion_difference_from_bau_bar_chart(proportion_differences_from_bau_uri, proportion_difference_from_bau_bar_chart_uri, show_after_creation)
 
 
     def calculate_difference_between_all_scenarios_and_target(self, target_scenario_name, list_of_scenarios_to_compare, data_odict, output_uri):
@@ -2362,7 +2406,7 @@ class ModelRun(MeshAbstractObject, QWidget):
 
         utilities.python_object_to_csv(proportion_differences, output_uri, csv_type='dd')
 
-    def create_proportion_difference_from_baseline_bar_chart(self, csv_uri, output_uri):
+    def create_proportion_difference_from_baseline_bar_chart(self, csv_uri, output_uri, show_after_creation=False):
         matplotlib.style.use('ggplot')
 
         df = pd.read_csv(csv_uri, index_col=0)
@@ -2398,7 +2442,48 @@ class ModelRun(MeshAbstractObject, QWidget):
         plt.xticks(list(range(len(baseline_col_labels))), baseline_col_labels, rotation=0)
 
         plt.tight_layout()
-        plt.show()
+        if show_after_creation:
+            plt.show()
+        fig.savefig(output_uri)
+
+    def create_proportion_difference_from_bau_bar_chart(self, csv_uri, output_uri, show_after_creation=False):
+        matplotlib.style.use('ggplot')
+
+        df = pd.read_csv(csv_uri, index_col=0)
+
+        models_odict = OrderedDict()
+        for model in self.models_in_run:
+            models_odict[model.name] = model
+
+        row_labels = []
+        for k, model in models_odict.items():
+            self.output_mapping_uri = os.path.join('../settings/default_setup_files', model.name + '_output_mapping.csv')
+            output_mapping = utilities.file_to_python_object(self.output_mapping_uri)
+            for result_name, v in output_mapping.items():
+                if v['result_type'] in ['primary_objective_sum', 'primary_negative_objective_sum']:
+                    row_labels.append(v['long_name'])
+
+        col_labels = df.index.values
+
+        plt.rcParams['figure.figsize'] = (14, 9)
+
+        df.plot.bar()
+
+        ax = plt.gca()
+        ax.set_ylabel('Proportion change from BAU', rotation=90, fontsize=20, labelpad=20)
+        ax.set_xlabel('Scenario', rotation=0, fontsize=20, labelpad=20)
+
+        ax.legend(labels=row_labels, loc=9, ncol=2)  # mode="expand", bbox_to_anchor=(0., 1.02, 1., .102), , borderaxespad=0.
+
+        fig = plt.gcf()
+        # fig.set_size_inches(18.5, 10.5)
+        baseline_col_labels = col_labels
+
+        plt.xticks(list(range(len(baseline_col_labels))), baseline_col_labels, rotation=0)
+
+        plt.tight_layout()
+        if show_after_creation:
+            plt.show()
         fig.savefig(output_uri)
 
     def get_result_by_name(self, scenario, model, result_name):
@@ -3106,9 +3191,6 @@ class MapWidget(MeshAbstractObject, QDockWidget):
             pass
             #LOGGER.warn('Attempted to add element that already exists.')
         else:
-            # MINOR HACK: If this is set before the project folder is set it fails. Thus, i put it here
-            # on the bad assumption that the user wouldn't add a map before naming the pjrect.
-            rcParams["savefig.directory"] = os.path.join(self.root_app.project_folder, 'output/images')
             element = Map(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
@@ -3154,6 +3236,7 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
     def map_cb_toggle(self, state):
         toggled_signal = str(self.sender().text())
+        matplotlib.style.use('default')
         if state:
             self.name_of_toggled = toggled_signal
             self.root_app.set_visible_matrix_by_name(self.name_of_toggled)
@@ -4512,7 +4595,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
         if str_to_add == '\n\nAll scenario model pairs finished!':
             self.update_run_details('\n\nStarting to generate output results.')
             model_run_object = self.parent.elements[self.name]
-            model_run_object.process_model_output_mappings()
+            model_run_object.process_model_output_mappings(show_after_creation=False)
             self.update_run_details('Finished generating output results.')
 
     def run(self):
