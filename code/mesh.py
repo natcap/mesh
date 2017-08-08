@@ -75,6 +75,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.initialization_preferences_uri = os.path.join(self.settings_folder, 'initialization_preferences.csv')  # This file is the main input/initialization points of it all.
         self.program_launch_time = time.time()
 
+        # INITIAL STATE for first install.
+        self.project_folder = '../projects'
 
         # Project state variables
         self.decision_contexts = OrderedDict()
@@ -98,7 +100,6 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         else:
             self.new_project_widget.setVisible(True)
 
-        rcParams["savefig.directory"] = os.path.join(self.project_folder, 'output/images')
 
     def load_or_create_application_settings_files(self):
         # Create project-independent settings
@@ -3105,6 +3106,9 @@ class MapWidget(MeshAbstractObject, QDockWidget):
             pass
             #LOGGER.warn('Attempted to add element that already exists.')
         else:
+            # MINOR HACK: If this is set before the project folder is set it fails. Thus, i put it here
+            # on the bad assumption that the user wouldn't add a map before naming the pjrect.
+            rcParams["savefig.directory"] = os.path.join(self.project_folder, 'output/images')
             element = Map(name, args, self.root_app, self)
             self.elements[name] = element
             self.elements_vbox.addWidget(element)
