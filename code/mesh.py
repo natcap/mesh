@@ -2407,7 +2407,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         utilities.python_object_to_csv(proportion_differences, output_uri, csv_type='dd')
 
     def create_proportion_difference_from_baseline_bar_chart(self, csv_uri, output_uri, show_after_creation=False):
-        matplotlib.style.use('ggplot')
+        # matplotlib.style.use('ggplot')
 
         df = pd.read_csv(csv_uri, index_col=0)
 
@@ -2447,7 +2447,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         fig.savefig(output_uri)
 
     def create_proportion_difference_from_bau_bar_chart(self, csv_uri, output_uri, show_after_creation=False):
-        matplotlib.style.use('ggplot')
+        # matplotlib.style.use('ggplot')
 
         df = pd.read_csv(csv_uri, index_col=0)
 
@@ -3236,7 +3236,8 @@ class MapWidget(MeshAbstractObject, QDockWidget):
 
     def map_cb_toggle(self, state):
         toggled_signal = str(self.sender().text())
-        matplotlib.style.use('default')
+        # matplotlib.style.use('default')
+        plt.rcParams.update(plt.rcParamsDefault)
         if state:
             self.name_of_toggled = toggled_signal
             self.root_app.set_visible_matrix_by_name(self.name_of_toggled)
