@@ -5,7 +5,7 @@ import numpy as np
 import numdal as nd
 import hazelbean
 
-context = """Taken from calc_es_marginal_value_protection_mask.py from volta case_study."""
+context = """Taken from calc_es_marginal_value_protection_mask_and_lulc.py from volta case_study."""
 
 input_folder = 'input'
 output_folder = 'output'

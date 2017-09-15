@@ -2496,6 +2496,7 @@ class ModelRun(MeshAbstractObject, QWidget):
         if output_mapping[result_name]['result_method'] == 'raster_sum':
             raster_uri = os.path.join(self.root_app.project_folder, 'output/runs', self.name, scenario.name, model.name, output_mapping[result_name]['input_file_uri_relative_to_model_root'])
             result_sum = utilities.get_raster_sum(raster_uri)
+
             to_return = result_sum
         else:
             LOGGER.warning('Attempted to access a model result that has not yet been defined for ' + self.name)

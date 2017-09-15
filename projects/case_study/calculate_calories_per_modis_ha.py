@@ -3,7 +3,7 @@ import numdal as nd
 import numpy as np
 import hazelbean as hb
 
-ag_dir = 'C:\\OneDrive\\base_data\\publications\\ag_tradeoffs\\land_econ'
+ag_dir = 'C:\\OneDrive\\Projects\\base_data\\publications\\ag_tradeoffs\\land_econ'
 project_dir = 'input/Baseline'
 
 output_dir = 'output'
