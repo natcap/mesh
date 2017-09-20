@@ -9,6 +9,7 @@ the ES models, and reporting/visualization of the results.
 
 import sys
 import time
+import math
 import os
 import logging
 from collections import OrderedDict
@@ -562,13 +563,17 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         rows = ds.RasterYSize
         size = cols * rows
 
-        if size > 5000000:
-            max_side_length = 2048
-            # NOTE: did not write a memory robust plotting method. However, I've implemented this elsewhere so
-            # it can be added easily in the next release.
+        max_size = 5000000
+        if size > max_size:
+            # Use gdal ReadAsArray to only resample to a small enough raster.
+            scale_factor = float(max_size) / float(size)
+            render_cols = int(cols * scale_factor)
+            render_rows = int(rows * scale_factor)
+
             LOGGER.critical(
                 'Attempting to load very large array. May not display correctly or fail. Array set to the top left 2048 by 2048 cells.')
-            self.visible_matrix = band.ReadAsArray(0, 0, max_side_length, max_side_length)
+            # self.visible_matrix = band.ReadAsArray(0, 0, max_side_length, max_side_length)
+            self.visible_matrix = band.ReadAsArray(0, 0, cols, rows, render_cols, render_rows)
         else:
             self.visible_matrix = band.ReadAsArray()
         self.visible_map = self.map_widget.elements[name]
