@@ -72,6 +72,7 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Globio Model.')
             if self.model_name == 'nutritional_adequacy':
                 self.update_run_log('\nStarting Nutritional Adequacy Model.')
+                print('self.args', self.args)
                 execute_nutritional_adequacy_model(self.args, self) # NOTE different importing of self
                 self.update_run_log('Finished Nutritional Adequacy Model.')
 
