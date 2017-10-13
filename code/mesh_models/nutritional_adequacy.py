@@ -211,11 +211,12 @@ def get_scenario_names_from_input_dir(input_dir):
 
     return scenarios
 
-def calc_caloric_production_from_lulc_uri(input_lulc_uri, output_uri, **kw):
+def calc_caloric_production_from_lulc_uri(input_lulc_uri, **kw):
     # First check that the required files exist, creating them if not.
     # Data from Johnson et al 2016.
 
     aoi_uri = kw['aoi_uri']
+    output_uri = kw['workspace_dir']
     working_dir = os.path.split(os.path.split(input_lulc_uri)[0])[0]
     baseline_dir = os.path.join(working_dir, 'Baseline')
     scenario_dir = os.path.split(input_lulc_uri)[0]
@@ -375,6 +376,12 @@ def execute(kw, ui):
         'already there'
 
     ui.update_run_log('Calculating crop-specific production')
+
+
+
+    if not kw.get('model_base_data_dir'):
+        kw['model_base_data_dir'] = os.path.join(ui.root_app.base_data_folder, 'models', 'nutritional_adequacy')
+
 
 
     bounding_box = data_creation.get_datasource_bounding_box(ui.root_app.project_aoi)
@@ -662,7 +669,7 @@ def execute(kw, ui):
         input_dir = 'input'
         # calc_calorie_production_from_input_dir(input_dir)
         caloric_production_uri = os.path.join(kw['workspace_dir'], 'caloric_production.tif')
-        calc_caloric_production_from_lulc_uri(kw['lulc_uri'], kw['aoi_uri'], output_uri=caloric_production_uri, **kw)
+        calc_caloric_production_from_lulc_uri(kw['lulc_uri'], **kw)
 
     return overall_ratio
 

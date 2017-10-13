@@ -9,14 +9,13 @@ import platform
 import sys
 import shutil
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from PyQt4.QtGui import *
 import xlrd
 import pygeoprocessing.geoprocessing
 import numpy
 import config
 import numpy as np
-from gdal import osr
 
 initial_temp_env_var = None
 for temp_var in ['TMP', ' TEMP', 'TMPDIR']:
