@@ -34,6 +34,9 @@ import zipfile
 from pprint import pprint as pp
 from pprint import pformat as ps
 
+from mesh_models import nutritional_adequacy
+from mesh_models import nutritional_adequacy_ui
+
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
 
@@ -1186,6 +1189,8 @@ class ModelsDock(MeshAbstractObject, QDockWidget):
 class ModelsWidget(ScrollWidget):
     """
     Widget to choose which models should run and set them up for the baseline.
+    
+    It may have been better to have this be an application-level save object and have a corresponding csv, but meh.
     """
     default_element_args = OrderedDict()
     default_element_args['name'] = ''
@@ -1239,6 +1244,12 @@ class ModelsWidget(ScrollWidget):
     default_state['crop_production']['long_name'] = 'Crop Production'
     default_state['crop_production']['model_type'] = 'InVEST Model'
     default_state['crop_production']['release_state'] = 'unstable_release'
+
+    default_state['nutritional_adequacy'] = default_element_args.copy()
+    default_state['nutritional_adequacy']['name'] = 'nutritional_adequacy'
+    default_state['nutritional_adequacy']['long_name'] = 'Nutritional Adequacy'
+    default_state['nutritional_adequacy']['model_type'] = 'MESH Model'
+    default_state['nutritional_adequacy']['release_state'] = 'unstable_release'
 
 
 
@@ -1614,11 +1625,12 @@ class ModelsWidget(ScrollWidget):
         if os.path.exists(last_run_uri):
             override_args = utilities.file_to_python_object(last_run_uri)
         else:
-            override_args = None
+            override_args = nutritional_adequacy.generate_default_kw_from_ui(self.root_app)
 
-        if model_name == 'nutrition':
+        if model_name == 'nutritional_adequacy':
+            print('override_args', override_args)
             self.running_setup_uis.append(
-                nutrition_ui.NutritionModelDialog(self.root_app, self, last_run_override=override_args))
+                nutritional_adequacy_ui.NutritionModelDialog(self.root_app, self, last_run_override=override_args))
 
     def setup_waterworld_model(self, model_name):
         """
@@ -1699,6 +1711,7 @@ class Model(MeshAbstractObject, QWidget):
         model_notes['pollination'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/croppollination.html for full model documentation.<h4>Model Overview:</h4>The InVEST pollination model focuses on wild bees as a key animal pollinator. It uses estimates of the availability of nest sites and floral resources within bee flight ranges to derive an index of the abundance of bees nesting on each cell on a landscape (i.e., pollinator supply). It then uses floral resources, and be foraging activity and flight range information to estimate an index of the abundance of bees visiting each cell. If desired, the model then calculates a simple index of the contribution of these bees to agricultural production, based on bee abundance and crop dependence on pollination The results can be used to understand changes in crop pollination and crop yield with changes in land use and agricultural management practices. Required inputs include a land use and land cover map, land cover attributes, guilds or species of pollinators present, and their flight ranges. To estimate wild pollinator contributions to crop production requires information on farms of interest, the crops grown there, and the abundance of managed pollinators. The model’s limitations include not accounting for pollinator persistence over time or the effects of land parcel size.'
         model_notes['globio'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/globio.html for full model documentation.<h4>Model Overview:</h4>The GLOBIO model provides an index of biodiversity according to mean species abundance (MSA), the average population-level response across a range of species, to different stressors, including land-use change, fragmentation, and infrastructure. The model can be used as a static assessment of how far below a pristine state the current environment is or to estimate how a change in any of the stressors would lead to a stress in biodiversity or ecosystem integrity, as indicated by MSA.'
         model_notes['crop_production'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/crop_production.html for full model documentation.<h4>Model Overview:</h4>Expanding agricultural production and closing yield gaps is a key strategy for many governments and development agencies focused on poverty alleviation and achieving food security. However, conversion of natural habitats to agricultural production sites impacts other ecosystem services that are key to sustaining the economic benefits that agriculture provides to local communities. Intensive agricultural practices can add to pollution loads in water sources, often necessitating future costly water purification methods. Overuse of water also threatens the supply available for hydropower or other services. Still, crop production is essential to human well-being and livelihoods.'
+        model_notes['nutritional_adequacy'] = '<h4>Model Documentation:</h4>See http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/crop_production.html for full model documentation.<h4>Model Overview:</h4>Expanding agricultural production and closing yield gaps is a key strategy for many governments and development agencies focused on poverty alleviation and achieving food security. However, conversion of natural habitats to agricultural production sites impacts other ecosystem services that are key to sustaining the economic benefits that agriculture provides to local communities. Intensive agricultural practices can add to pollution loads in water sources, often necessitating future costly water purification methods. Overuse of water also threatens the supply available for hydropower or other services. Still, crop production is essential to human well-being and livelihoods.'
 
         self.info_notes = model_notes[self.name]
 
@@ -1942,7 +1955,7 @@ class Model(MeshAbstractObject, QWidget):
             uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
             uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
             uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
-        if self.name == 'nutrition':
+        if self.name == 'nutritional_adequacy':
             for i in os.listdir(os.path.join(current_folder)):
                 # NEXT RELEASE I currently save a shitton of files that are duplicate and take space. Perhaps create a data_stash folder to share across runs?
                 if i.endswith('.tif'):
@@ -2303,7 +2316,7 @@ class ModelRun(MeshAbstractObject, QWidget):
                     uris_to_add.append(os.path.join(current_folder, 'sed_retention_index.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'sed_retention.tif'))
                     uris_to_add.append(os.path.join(current_folder, 'usle.tif'))
-                if model.name == 'nutrition':
+                if model.name == 'nutritional_adequacy':
                     for i in os.listdir(os.path.join(current_folder)):
                         # NEXT RELEASE I currently save a shitton of files that are duplicate and take space. Perhaps create a data_stash folder to share across runs?
                         if i.endswith('.tif'):
@@ -4832,10 +4845,12 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+                print(input_mapping)
 
                 # NOTE NYI Only will trigger for carbon and hydropower.
-                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield']:
+                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield', 'nutritional_adequacy']:
                     for key, value in input_mapping.items():
+                        print(key, value)
                         if utilities.convert_to_bool(value['enabled']):
                             if utilities.convert_to_bool(value['required']):
                                 self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,

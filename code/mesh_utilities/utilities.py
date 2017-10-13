@@ -15,6 +15,8 @@ import xlrd
 import pygeoprocessing.geoprocessing
 import numpy
 import config
+import numpy as np
+from gdal import osr
 
 initial_temp_env_var = None
 for temp_var in ['TMP', ' TEMP', 'TMPDIR']:
@@ -650,10 +652,278 @@ def convert_csv_to_html_table_string(csv_uri):
 def convert_to_bool(input):
     return str(input).lower() in ("yes", "true", "t", "1")
 
+def get_bounding_box(dataset_uri, return_in_basemap_order=False):
+    """Get bounding box where coordinates are in projected units.
+
+    Args:
+        dataset_uri (string): a uri to a GDAL dataset
+
+    Returns:
+        bounding_box (list):
+            [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
+            projected coordinates
+    """
+    dataset = gdal.Open(dataset_uri)
+
+    geotransform = dataset.GetGeoTransform()
+    n_cols = dataset.RasterXSize
+    n_rows = dataset.RasterYSize
+
+    bounding_box = [geotransform[0],
+                    geotransform[3],
+                    geotransform[0] + n_cols * geotransform[1],
+                    geotransform[3] + n_rows * geotransform[5]]
+
+    # Close and cleanup dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+
+    if return_in_basemap_order:
+        bounding_box = [
+            bounding_box[3], # llcrnrlat
+            bounding_box[1], # urcrnrlat
+            bounding_box[0], # llcrnrlon
+            bounding_box[2], # urcrnrlon
+        ]
+        return bounding_box
+    return bounding_box
+
+def get_cell_size_from_uri(dataset_uri):
+    """Get the cell size of a dataset in units of meters.
+
+    Raises an exception if the raster is not square since this'll break most of
+    the pygeoprocessing algorithms.
+
+    Args:
+        dataset_uri (string): uri to a gdal dataset
+
+    Returns:
+        size_meters: cell size of the dataset in meters
+    """
+
+    srs = osr.SpatialReference()
+    dataset = gdal.Open(dataset_uri)
+    if dataset is None:
+        raise IOError(
+            'File not found or not valid dataset type at: %s' % dataset_uri)
+    srs.SetProjection(dataset.GetProjection())
+    linear_units = srs.GetLinearUnits()
+    geotransform = dataset.GetGeoTransform()
+    # take absolute value since sometimes negative widths/heights
+    try:
+        numpy.testing.assert_approx_equal(
+            abs(geotransform[1]), abs(geotransform[5]))
+        size_meters = abs(geotransform[1]) * linear_units
+    except AssertionError as e:
+        L.warn(e)
+        size_meters = (
+                          abs(geotransform[1]) + abs(geotransform[5])) / 2.0 * linear_units
+
+    # Close and clean up dataset
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+
+    return size_meters
+
+
+
 
 def pretty_time():
     # Returns a nicely formated string of YEAR-MONTH-DAY_HOURS-MIN-SECONDS based on the the linux timestamp
     return str(datetime.datetime.now()).replace(" ","_").replace(":","-").split(".")[0]
+
+def as_array(uri, return_all_parts = False, verbose = False): #use GDAL to laod uri. By default only returns the array"
+    # Simplest function for loading a geotiff as an array. returns only the array by defauls, ignoring the DS and BAND unless return_all_parts = True.
+    ds = gdal.Open(uri)
+    band = ds.GetRasterBand(1)
+    try:
+        array = band.ReadAsArray()
+    except:
+        warnings.warn('Failed to load all of the array. It may be too big for memory.')
+        array = None
+
+    # Close and clean up dataset
+    if return_all_parts:
+        return ds, band, array
+    else:
+        band = None
+        gdal.Dataset.__swig_destroy__(ds)
+        ds = None
+        return array
+
+def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match=None, band_to_match=None,
+                          optimize_data_type=True, data_type_override=None, no_data_value_override=None,
+                          geotransform_override=None, projection_override=None, n_cols_override=None,
+                          n_rows_override=None, compression_method=None, verbose=None, set_inf_to_no_data_value=True):
+    '''
+    Saves an array as a geotiff at uri_out. Attempts to correctly deal with many possible data flaws, such as
+    assigning a datatype to the geotiff that matches the required pixel depth. Also determines the best (according to me)
+    no_data_value to use based on the dtype and range of the data
+    '''
+    execute_in_python = True
+
+    n_cols = array.shape[1]
+    n_rows = array.shape[0]
+    geotransform = None
+    projection = None
+    data_type = None
+    no_data_value = None
+
+    if geotiff_uri_to_match != None:
+        ds_to_match = gdal.Open(geotiff_uri_to_match)
+        band_to_match = ds_to_match.GetRasterBand(1)
+
+    # ideally, the function is passed a gdal dataset (ds) and the gdal band.
+    if ds_to_match and band_to_match:
+        n_cols = ds_to_match.RasterXSize
+        n_rows = ds_to_match.RasterYSize
+        data_type = band_to_match.DataType
+        no_data_value = band_to_match.GetNoDataValue()
+        geotransform = ds_to_match.GetGeoTransform()
+        projection = ds_to_match.GetProjection()
+
+    # Determine optimal data type and no_data_value. Note that it is best to calculate this anew to avoid inheriting a
+    # too-small data type that clips data, and thus optimize_data_type is true by default.
+    if optimize_data_type and False:  # TODOO Deactivated optimize_data_type due to unexpected crashes
+        temp_data_type, temp_no_data_value = determine_optimal_data_type_and_no_data_value(array)
+        if data_type_override:
+            if temp_data_type == data_type_override:
+                data_type = data_type_override
+            else:
+                warnings.warn('You specified an data_type_override but its not the same as the optimized data_type. Ensure this is correct')
+                data_type = data_type_override
+        else:
+            data_type = temp_data_type
+        if no_data_value_override:
+            if temp_no_data_value == no_data_value_override:
+                no_data_value = no_data_value_override
+            else:
+                warnings.warn('You specified an no_data_value_override but its not the same as the optimized no_data_value. Ensure this is correct')
+                no_data_value = no_data_value_override
+        else:
+            no_data_value = temp_no_data_value
+    elif data_type_override or no_data_value_override:
+        if data_type_override:
+            data_type = data_type_override
+        else:
+            data_type = 7  # set to largest bitsize
+        if no_data_value_override:
+            no_data_value = no_data_value_override
+        else:
+            no_data_value = 9223372036854775807
+    else:
+        data_type = 6
+        no_data_value = -9999
+
+    if not data_type:
+        data_type = 7
+
+    array = array.astype(gdal_number_to_numpy_type[data_type])
+
+    if geotransform_override:
+        if type(geotransform_override) is str:
+            geotransform = config.common_geotransforms[geotransform_override]
+        else:
+            geotransform = geotransform_override
+
+    if not geotransform:
+        raise NameError('You must have a geotransform set, either in the geotiff_to_match, or manually as a 6-long list. '
+                        'e.g. geotransform = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333) to '
+                        'set to global extent with 5min cells or via a common keyword (defined in config).')
+
+    if geotransform_override:
+        if type(geotransform_override) is str:
+            geotransform = config.common_geotransforms[geotransform_override]
+        else:
+            geotransform = geotransform_override
+
+    if projection_override:
+        if type(projection_override) is str:
+            projection_override = config.common_epsg_codes_by_name[projection_override]
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(int(projection_override))
+            projection = srs.ExportToWkt()
+
+        else:
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(int(projection_override))
+            projection = srs.ExportToWkt()
+
+    if n_cols_override:
+        n_cols = n_cols_override
+    if n_rows_override:
+        n_rows = n_rows_override
+
+    if not projection:
+        raise NameError('You must have a projection set, either in the geotiff_to_match, or manually via projection_override')
+
+    # Process out_uri
+    folder_uri, filename = os.path.split(out_uri)
+    basename, file_extension = os.path.splitext(filename)
+    if file_extension != '.tif':
+        file_extension = '.tif'
+        L.info('No file_extension specified. Assuming .tif.')
+    if os.path.exists(folder_uri) or not folder_uri:
+        'Everything is fine.'
+    elif geotiff_uri_to_match:
+        warnings.warn('Folder did not exist, assuming you want the same as the geotiff_uri_to_match.')
+        folder_uri = os.path.split(geotiff_uri_to_match)[0]
+        if not os.path.exists(folder_uri):
+            raise NameError('Folder in geotiff_uri_to_match did not exist.')
+    else:
+        try:
+            os.mkdir(folder_uri)
+        except:
+            raise NameError('Not able to create required folder for ' + folder_uri)
+
+    processed_out_uri = os.path.join(folder_uri, basename + file_extension)
+
+    dst_options = ['BIGTIFF=IF_SAFER', 'TILED=YES']
+    if compression_method:
+        dst_options.append('COMPRESS=' + compression_method)
+        if compression_method == 'lzw':
+            dst_options.append('PREDICTOR=2')
+
+            # OUTDATED BUT HILARIOUS NOTE: When I compress an image with gdalwarp the result is often many times larger than the original!
+            # By default gdalwarp operates on chunks that are not necessarily aligned with the boundaries of the blocks/tiles/strips of the output format, so this might cause repeated compression/decompression of partial blocks, leading to lost space in the output format.
+            # Another possibility is to use gdalwarp without compression and then follow up with gdal_translate with compression:
+
+    if set_inf_to_no_data_value:
+        array[(array == np.inf) | (np.isneginf(array))] = no_data_value
+
+    if execute_in_python:
+        driver = gdal.GetDriverByName('GTiff')
+        dst_ds = driver.Create(processed_out_uri, n_cols, n_rows, 1, data_type, dst_options)
+        dst_ds.SetGeoTransform(geotransform)
+        dst_ds.SetProjection(projection)
+        dst_ds.GetRasterBand(1).SetNoDataValue(no_data_value)
+        dst_ds.GetRasterBand(1).WriteArray(array)
+    # else:
+    #     command_line_gdal_translate(array, processed_out_uri, tiled=True, compression_method=compression_method)
+
+
+
+    if not os.path.exists(processed_out_uri):
+        raise NameError('Failed to create geotiff ' + processed_out_uri + '.')
+
+    if verbose:
+        L.info('Saved ' + processed_out_uri + ' which had stats: ' + desc(array))
+
+gdal_number_to_numpy_type = {
+    1: numpy.uint8,
+    2: numpy.uint16,
+    3: numpy.int16,
+    4: numpy.uint32,
+    5: numpy.int32,
+    6: numpy.float32,
+    7: numpy.float64,
+    8: numpy.complex64,
+    9: numpy.complex64,
+    10: numpy.complex64,
+    11: numpy.complex128
+}
+
+
 
 # Eventually expand this. probably all work but i want to check.
 gdal_readable_formats = '''.tif

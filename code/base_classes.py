@@ -18,6 +18,8 @@ from natcap.invest.sdr import execute as execute_sdr_model
 from natcap.invest.crop_production.crop_production import execute as execute_crop_production_model # NOTE Inconsistent double naming here.
 from natcap.invest.globio import execute as execute_globio
 
+from mesh_models.nutritional_adequacy import execute as execute_nutritional_adequacy_model
+
 
 class ProcessingThread(QThread):
     """
@@ -33,16 +35,13 @@ class ProcessingThread(QThread):
         self.root_app = root_app
         self.parent = parent
         self.json_file_name = json_file_name
-        self.parent.listener.connect_slots(self)
+        if hasattr(self.parent, 'listener'):
+        # if isinstance(self.parent.listener, Listener):
+            self.parent.listener.connect_slots(self)
         sys.excepthook(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) # Required to have the logger/IDE pick up error messages from other threads.
 
     def run(self):
         try:
-            ## Example of custom MESH model not from InVEST
-            # if self.model_name == 'nutrition':
-            #     self.update_run_log('Starting Food Security and Nutrition Model.')
-            #     nutrition.execute(self.args, self)
-            #     self.update_run_log('Finished Food Security and Nutrition Model.')
             if self.model_name == 'ndr':
                 self.update_run_log('\nStarting Delivery Ratio Model.')
                 execute_nutrient_model(self.args)
@@ -65,12 +64,16 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Sediment Delivery Ratio Model.')
             if self.model_name == 'crop_production':
                 self.update_run_log('\nStarting Crop Production Model.')
-                execute_sdr_model(self.args)
+                execute_crop_production_model(self.args)
                 self.update_run_log('Finished Crop Production Model.')
             if self.model_name == 'globio':
                 self.update_run_log('\nStarting Globio Model.')
-                execute_sdr_model(self.args)
+                execute_globio(self.args)
                 self.update_run_log('Finished Globio Model.')
+            if self.model_name == 'nutritional_adequacy':
+                self.update_run_log('\nStarting Nutritional Adequacy Model.')
+                execute_nutritional_adequacy_model(self.args, self) # NOTE different importing of self
+                self.update_run_log('Finished Nutritional Adequacy Model.')
 
 
 

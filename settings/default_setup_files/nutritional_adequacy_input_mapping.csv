@@ -1,0 +1,7 @@
+name,type,required,enabled,invest_3_0_name,long_name,model_name,load_method,save_location,default_value
+lulc_uri,raster,TRUE,TRUE,,Land-Use/Land-Cover,nutritional_adequacy,clip_from_global,input/Baseline/lulc.tif,lulc/lulc_modis_2012.tif
+crop_maps_folder,parameter,TRUE,TRUE,,Crop Data Directory,nutritional_adequacy,reference_only,models/crop_production/global_dataset/observed_yield,models/crop_production/global_dataset/observed_yield
+nutritional_content_table_uri,table,TRUE,TRUE,,Nutritional Contents Table,nutritional_adequacy,copy_default,input/Baseline/nutritional_contents.csv,models/nutritional_adequacy/nutritional_contents.csv
+nutritional_requirements_table_uri,table,TRUE,TRUE,,Nutritional Requirements Table,nutritional_adequacy,copy_default,input/Baseline/nutritional_requirements_by_demographics.csv,models/nutritional_adequacy/nutritional_requirements_by_demographics.csv
+population_uri,raster,TRUE,TRUE,,Population,nutritional_adequacy,clip_from_global,input/Baseline/population.tif,ciesin/pop_30s.tif
+economic_value_table_uri,table,TRUE,TRUE,,Economic Value Table,nutritional_adequacy,copy_default,input/Baseline/economic_data.csv,models/nutritional_adequacy/economic_data.csv
