@@ -212,6 +212,8 @@ def create_scenario_outputs_csv(**kw):
             scenario_result.append(str(float((sed_export.sum() - bau_results[4]) / bau_results[4]) * -1.0 * 100))
             scenario_result.append(str(float((calories.sum() - bau_results[5]) / bau_results[5]) * 100))
 
+    scenario_result.to_file
+
     return kw
 
 def create_percent_difference_from_baseline_bar_chart(**kw):
@@ -362,7 +364,7 @@ def execute(**kw):
     kw['bau_scenario_name'] = 'Trend2030'
     kw = finalize_kw(kw)
 
-    kw = calc_calorie_production_from_input_dir(**kw)
+    # kw = calc_calorie_production_from_input_dir(**kw)
     kw = create_scenario_outputs_csv(**kw)
     kw = create_percent_difference_from_baseline_bar_chart(**kw)
     kw = create_percent_difference_from_bau_bar_chart(**kw)

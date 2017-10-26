@@ -35,33 +35,11 @@ def clip_geotiff_from_base_data_gdal(input_shape_uri, base_data_uri, output_geot
     gdal_command = 'gdalwarp -cutline ' + input_shape_uri + ' -crop_to_cutline -overwrite -s_srs EPSG:4326 -t_srs EPSG:54030 -of GTiff ' + base_data_uri + ' ' + output_geotiff_uri
     os.system(gdal_command)
 
-def clip_geotiff_from_base_data(input_shape_uri, base_data_uri, output_geotiff_uri, base_data_dir):
-    # Start by getting reproject shape out of command line.
-    default_dataset_uri = os.path.join(base_data_dir, 'models', 'default', 'default_raster.tif')
-
-    wgs84_wkt = get_dataset_projection_wkt_uri(base_data_uri)
-    input_shape_wgs84_uri = input_shape_uri.replace('.shp', '_wgs84.shp')
-    reproject_datasource_uri(input_shape_uri, wgs84_wkt, input_shape_wgs84_uri)
-
-    temp_1_uri = temporary_filename('.tif')
-
-    clip_dataset_uri(base_data_uri, input_shape_wgs84_uri, temp_1_uri,
-                     assert_projections=False, process_pool=None, all_touched=False)
-
-    pixel_spacing = get_cell_size_from_uri(default_dataset_uri)
-
-
-    output_wkt = get_dataset_projection_wkt_uri(default_dataset_uri)
-    resampling_method = 'nearest'
-
-
-
-
-    reproject_dataset_uri(temp_1_uri, pixel_spacing, output_wkt, resampling_method, output_geotiff_uri)
-
-    # resize_and_resample_dataset_uri(
-    #     original_dataset_uri, bounding_box, out_pixel_size, output_uri,
-    #     resample_method)
+def clip_geotiff_from_base_data(input_shape_uri, base_data_uri, output_geotiff_uri, base_data_dir, match_uri=None):
+    if match_uri == None or not os.path.exists(match_uri):
+        match_uri = os.path.join(base_data_dir, 'models', 'default', 'default_raster.tif')
+    print('Clipping with buffered intermediate for base_data_uri, input_shape_uri, output_geotiff_uri, match_uri: ', base_data_uri, input_shape_uri, output_geotiff_uri, match_uri)
+    utilities.clip_by_shape_with_buffered_intermediate_uri(base_data_uri, input_shape_uri, output_geotiff_uri, match_uri)
 
 def get_dataset_projection_wkt_uri(dataset_uri):
     """Get the projection of a GDAL dataset as well known text (WKT).
@@ -176,25 +154,38 @@ def reproject_dataset_uri(
     x_size = vrt.RasterXSize  # Raster xsize
     y_size = vrt.RasterYSize  # Raster ysize
 
+    print('geo_t', original_dataset_uri, geo_t, x_size, y_size)
+
     # Calculate the extents of the projected dataset. These values will be used
     # to properly set the resampled size for the output dataset
     (ulx, uly) = (geo_t[0], geo_t[3])
     (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
 
+    print(44, ulx, uly, lrx, lry)
+
     gdal_driver = gdal.GetDriverByName('GTiff')
+
+    x_size_new = int((lrx - ulx)/pixel_spacing)
+    y_size_new = int((uly - lry)/pixel_spacing)
 
     # Create the output dataset to receive the projected output, with the
     # proper resampled arrangement.
     output_dataset = gdal_driver.Create(
-        output_uri, int((lrx - ulx)/pixel_spacing),
-        int((uly - lry)/pixel_spacing), 1, output_type,
+        output_uri, x_size_new,
+        y_size_new, 1, output_type,
         options=['BIGTIFF=IF_SAFER'])
+
+    print(lrx, ulx, pixel_spacing,
+        int((lrx - ulx)/pixel_spacing),
+          int((uly - lry)/pixel_spacing))
 
     # Set the nodata value for the output dataset
     output_dataset.GetRasterBand(1).SetNoDataValue(float(out_nodata))
 
     # Calculate the new geotransform
     output_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
+
+    print('output_geo', output_geo)
 
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo)
@@ -220,6 +211,8 @@ def reproject_dataset_uri(
         original_dataset, output_dataset, original_wkt, output_wkt,
         resample_dict[resampling_method], 0, 0, reproject_callback,
         [output_uri])
+
+    print('output_dataset', output_dataset, original_wkt, output_wkt)
 
     output_dataset.FlushCache()
 
@@ -444,7 +437,7 @@ def reproject_shapefile_by_epsg(input_uri, output_uri, output_epsg_code):
 # def reproject_shapefile_by_wkt(input_uri, output_uri, output_wkt):
 #     reproject_datasource_uri(input_uri, output_wkt, )
 
-def save_shp_feature_by_attribute(shp_uri, attribute, output_shp_uri):
+def save_shp_feature_by_attribute(shp_uri, attribute, output_shp_uri, output_epsg_code=54030):
     input_shp = ogr.Open(shp_uri)
     input_layer = input_shp.GetLayer(0)
     driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -468,7 +461,7 @@ def save_shp_feature_by_attribute(shp_uri, attribute, output_shp_uri):
         #intermediate_feature.SetField("ws_id", "1")
         intermediate_feature.Destroy()
     intermediate_shp.Destroy()
-    output_epsg_code = 54030
+    output_epsg_code = 32662
 
     intermediate2_uri = os.path.splitext(output_shp_uri)[0] + 't2' + os.path.splitext(output_shp_uri)[1]
     reproject_shapefile_by_epsg(intermediate1_uri, intermediate2_uri, output_epsg_code)
@@ -881,7 +874,7 @@ def vectorize_datasets(
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
-    output_dataset = new_raster_from_base(
+    output_dataset = pg.new_raster_from_base(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out,
         datatype_out, dataset_options=dataset_options)
     output_band = output_dataset.GetRasterBand(1)
@@ -900,7 +893,7 @@ def vectorize_datasets(
     # If there's an AOI, mask it out
     if aoi_uri is not None:
         mask_uri = temporary_filename(suffix='.tif')
-        mask_dataset = new_raster_from_base(
+        mask_dataset = pg.new_raster_from_base(
             aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte,
             fill_value=0, dataset_options=dataset_options)
         mask_band = mask_dataset.GetRasterBand(1)

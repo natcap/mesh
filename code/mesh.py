@@ -334,6 +334,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.project_args = OrderedDict()
         self.project_args.update({'project_name': name})
         self.project_args.update({'project_aoi': ''})
+        self.project_args.update({'project_key_raster': os.path.join(self.project_folder, 'input', 'Baseline', 'lulc.tif')}) # This is a canonoical name that cannot currently be changed.
         self.project_args.update(
             {'scenarios_settings_uri': os.path.join(self.project_folder, 'settings/scenarios.csv')})
         self.project_args.update({'models_settings_uri': os.path.join(self.project_folder, 'settings/models.csv')})
@@ -369,6 +370,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         self.project_name = project_name
         self.project_folder = os.path.join('../projects/', self.project_name)
         config.global_folder = self.project_folder
+        self.project_key_raster = os.path.join(self.project_folder, 'input', 'Baseline', 'lulc.tif')# This is a canonoical name that cannot currently be changed.
         self.project_settings_folder = os.path.join(self.project_folder, 'settings')
         self.project_settings_file_uri = os.path.join(self.project_settings_folder, 'project_settings.csv')
         self.project_to_load_on_launch = self.project_name
@@ -395,6 +397,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
         for key, value in self.project_args.items():
             if key == 'project_aoi':
                 self.project_aoi = value
+            if key == 'project_key_raster':
+                self.project_key_raster = value
             if key.endswith('settings_uri'):
                 if not os.path.exists(value):
                     type_of_file_to_recreate = os.path.splitext(os.path.split(value)[1])[0]
@@ -489,6 +493,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
                     '..', 'projects', self.project_args['project_name'])
 
                 config.global_folder = self.project_folder
+                self.project_key_raster = os.path.join(self.project_folder, 'input', 'Baseline', 'lulc.tif')  # This is a canonoical name that cannot currently be changed.
 
                 self.make_default_project_folders_at_uri(self.project_folder)
 
@@ -520,6 +525,8 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
             self.project_name = os.path.split(project_uri)[1]
             self.project_folder = project_uri
             config.global_folder = self.project_folder
+            self.project_key_raster = os.path.join(self.project_folder, 'input', 'Baseline', 'lulc.tif')  # This is a canonoical name that cannot currently be changed.
+
             self.load_project_by_name(self.project_name)
         elif project_uri:
             self.message_box = QMessageBox(QMessageBox.Information, 'Error', 'Not a valid project folder.').exec_()
@@ -546,6 +553,7 @@ class MeshApplication(MeshAbstractObject, QMainWindow):
     def unload_project(self):
         self.project_name = ''
         self.project_folder = ''
+        self.project_key_raster = ''
         self.models_dock.models_widget.current_project_l.setText('--no project selected--')
         self.models_dock.models_widget.area_of_interest_l.setText('--no AOI selected--')
 
@@ -1129,18 +1137,23 @@ class Scenario(MeshAbstractObject, QWidget):
             self.validate_baseline_pb.setIcon(self.validated_icon)
             self.validate_baseline_pb.setText('Ready!')
 
-    def update_args_with_difference(self, input_args):
+    def update_args_with_difference(self, model_name, input_args):
         """
         Checks to see what about the (non-baseline) scenario is different from the baseline and then modifies the input_args
         (probably from the baseline args construction) to be a new args dict specific to the scenario run parameters.
         """
-        output_args = input_args
+        output_args = input_args.copy()
         baseline_sources = self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].elements
         for name, element in self.elements.items():
+
+            # HACK because sources doesn't say what the args dict key is.
             if element.name not in baseline_sources:
-                output_args['lulc_uri'] = element.uri
-                output_args['cur_lulc_raster'] = element.uri
-                output_args['lulc_cur_uri'] = element.uri
+                if 'lulc' in element.name:
+                    output_args['lulc_uri'] = element.uri
+                elif 'precip' in element.name:
+                    output_args['precip_uri'] = element.uri
+                # output_args['cur_lulc_raster'] = element.uri
+                # output_args['lulc_cur_uri'] = element.uri
         return output_args
 
     def update_archive_args(self, model_name, input_args):
@@ -1628,9 +1641,8 @@ class ModelsWidget(ScrollWidget):
             override_args = nutritional_adequacy.generate_default_kw_from_ui(self.root_app)
 
         if model_name == 'nutritional_adequacy':
-            print('override_args', override_args)
             self.running_setup_uis.append(
-                nutritional_adequacy_ui.NutritionModelDialog(self.root_app, self, last_run_override=override_args))
+                nutritional_adequacy_ui.NutritionalAdequacyModelDialog(self.root_app, self, last_run_override=override_args))
 
     def setup_waterworld_model(self, model_name):
         """
@@ -4702,7 +4714,7 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
 
                     args['workspace_dir'] = os.path.join(
                         self.parent.elements[self.name].run_folder, scenario.name, model.name)
-                    if not os.path.isdir(setup_run_args['workspace_dir']):
+                    if not os.path.isdir(args['workspace_dir']):
                         os.makedirs(args['workspace_dir'])
 
 
@@ -4710,11 +4722,13 @@ class RunMeshModelDialog(MeshAbstractObject, QDialog):
                 if model.model_type == 'MESH Model':
                     setup_file_uri = os.path.join(self.root_app.project_folder, 'output/model_setup_runs', model.name,
                                                   model.name + '_setup_file.json')
+
                     setup_run_args = utilities.file_to_python_object(setup_file_uri)
                     args = setup_run_args.copy()
                     args['workspace_dir'] = os.path.join(self.parent.elements[self.name].run_folder, scenario.name,
                                                          model.name)
-
+                    if not os.path.isdir(args['workspace_dir']):
+                        os.makedirs(args['workspace_dir'])
                     if scenario.name != 'Baseline':
                         args = self.root_app.scenarios_dock.scenarios_widget.elements[
                             scenario.name].update_args_with_difference(model.name, args)
@@ -4845,12 +4859,10 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
-                print(input_mapping)
 
                 # NOTE NYI Only will trigger for carbon and hydropower.
                 if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield', 'nutritional_adequacy']:
                     for key, value in input_mapping.items():
-                        print(key, value)
                         if utilities.convert_to_bool(value['enabled']):
                             if utilities.convert_to_bool(value['required']):
                                 self.required_specify_buttons[value['name']] = NamedSpecifyButton(value['name'], value,
@@ -4920,7 +4932,7 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
         if args['load_method'] == 'copy_default':
             data_creation.copy_from_base_data(default_value, save_location)
         if args['load_method'] == 'clip_from_global':
-            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location, self.root_app.base_data_folder)
+            data_creation.clip_geotiff_from_base_data(self.root_app.project_aoi, default_value, save_location, self.root_app.base_data_folder, self.root_app.project_key_raster)
         self.root_app.scenarios_dock.scenarios_widget.elements['Baseline'].load_element(save_location, save_location)
         self.root_app.statusbar.showMessage('Data created and saved to ' + save_location + '.')
 

@@ -42,7 +42,8 @@ def create_scenario_calorie_csv(input_dir, output_uri):
         n_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/n_export.tif'))
         p_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'ndr/p_export.tif'))
         sed_export = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'sdr/sed_export.tif' ))
-        calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif' ))
+        # calories = nd.ArrayFrame(os.path.join(input_dir, scenario, 'caloric_production.tif' ))
+        calories = nd.ArrayFrame(os.path.join(runs_folder, run_name, scenario, 'nutritional_adequacy/caloric_production.tif' ))
 
         if scenario == 'Baseline':
             baseline_results.append(carbon.sum()) #np.sum(carbon[carbon.data!=carbon.no_data_value])
@@ -52,8 +53,8 @@ def create_scenario_calorie_csv(input_dir, output_uri):
             baseline_results.append(sed_export.sum())
             baseline_results.append(calories.sum())
 
-        # TODO Generalize
-        elif scenario == 'Trend2030':
+        # TODO Generalize BAU
+        elif scenario == 'Trend':
             bau_results.append(carbon.sum())
             bau_results.append(wy.sum())
             bau_results.append(n_export.sum())
@@ -84,7 +85,7 @@ def create_scenario_calorie_csv(input_dir, output_uri):
             scenario_result.append(str(float((calories.sum() - baseline_results[5]) / baseline_results[5]) * 100))
 
 
-        if scenario not in ['Baseline', 'BAU']:
+        if scenario not in ['Baseline', 'BAU', 'Trend']:
             scenario_result.append(str(float(carbon.sum() - bau_results[0]) * 100))
             scenario_result.append(str(float(wy.sum() - bau_results[1]) * 100))
             scenario_result.append(str(float(n_export.sum() - bau_results[2]) * -1.0 * 100))
@@ -112,8 +113,9 @@ def create_percent_difference_from_baseline_bar_chart(csv_uri, output_uri):
 
     col_labels = [
         "Baseline",
-        "Trend2030",
-        "ILM2030",
+        "Trend",
+        "ILM",
+        "TAR",
     ]
 
     outcome_labels = [
@@ -133,7 +135,7 @@ def create_percent_difference_from_baseline_bar_chart(csv_uri, output_uri):
     difference_from_baseline_df = df[difference_from_baseline_cols]
 
     # TODO Generalize
-    num_scenarios = 3
+    num_scenarios = 4
     difference_from_baseline_df = difference_from_baseline_df.iloc[list(range(1, num_scenarios))] # Select the desired rows (scenarios)
 
     plt.rcParams['figure.figsize'] = (14, 9)
@@ -187,8 +189,9 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
 
     col_labels = [
         "Baseline",
-        "Trend2030",
-        "ILM2030",
+        "Trend",
+        "ILM",
+        "TAR"
     ]
 
 
@@ -210,7 +213,7 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
     difference_from_bau_df = df[difference_from_bau_cols]
 
     # TODO Generalize
-    num_scenarios = 3
+    num_scenarios = 4
     difference_from_bau_df = difference_from_bau_df.iloc[list(range(2, num_scenarios))] # Select the desired rows (scenarios)
 
 
@@ -250,19 +253,20 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
 
 
 
-
-input_dir = 'input'
-output_dir = 'output'
+project_dir = '../projects/Ghana01'
+input_dir = os.path.join(project_dir, 'input')
+output_dir = os.path.join(project_dir, 'output')
 runs_folder = os.path.join(output_dir, 'runs')
 
 
 results_names = ['carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'calories']
 
-run_name = 'r6'
+run_name = 'r3'
 
 scenarios = [    "Baseline",
-                 "Trend2030",
-                 "ILM2030",
+                 "Trend",
+                 "ILM",
+                 "TAR",
                  ]
 
 overall_results_dir = os.path.join(runs_folder, run_name)

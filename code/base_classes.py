@@ -72,18 +72,8 @@ class ProcessingThread(QThread):
                 self.update_run_log('Finished Globio Model.')
             if self.model_name == 'nutritional_adequacy':
                 self.update_run_log('\nStarting Nutritional Adequacy Model.')
-                print('self.args', self.args)
                 execute_nutritional_adequacy_model(self.args, self) # NOTE different importing of self
                 self.update_run_log('Finished Nutritional Adequacy Model.')
-
-
-
-
-            # This one is different because it's not calling the python library but the full modelui iui file.
-            #if self.model_name == 'scenario_generator':
-            #    modelui.main(self.json_file_name)
-            #if self.model_name == 'scenario_gen_proximity':
-            #    modelui.main(self.json_file_name)
 
             self.emit_finished()
         except:

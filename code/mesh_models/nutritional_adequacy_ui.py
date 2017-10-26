@@ -16,7 +16,7 @@ from base_classes import *
 
 
 
-class NutritionModelDialog(QDialog):
+class NutritionalAdequacyModelDialog(QDialog):
     """
     Creates dialog that sets up and runs the nutritional adequacy ratio model.
     """
@@ -26,7 +26,7 @@ class NutritionModelDialog(QDialog):
         # self.listener = Listener(self.root_app, self)  # Give the dialog it's OWN listener so that the run_in_next_queue fn can update the info box during run time.
         # self.listener.start()
 
-        super(NutritionModelDialog, self).__init__()
+        super(NutritionalAdequacyModelDialog, self).__init__()
         self.input_selectors = []
 
         # make folders
@@ -34,7 +34,7 @@ class NutritionModelDialog(QDialog):
         if not os.path.exists(self.setup_run_folder):
             os.makedirs(self.setup_run_folder)
 
-        self.setup_run_file_uri = os.path.join(self.setup_run_folder, 'nutrition_setup_file.json')
+        self.setup_run_file_uri = os.path.join(self.setup_run_folder, 'nutritional_adequacy_setup_file.json')
         if last_run_override:
             odict = last_run_override
         elif os.path.exists(self.setup_run_file_uri):
@@ -46,8 +46,8 @@ class NutritionModelDialog(QDialog):
         self.main_layout = QVBoxLayout()
         self.setMinimumSize(1000, 700)
         self.setLayout(self.main_layout)
-        self.setWindowTitle('Setup Food Security and Nutrition Model')
-        self.title_l = QLabel('Setup Food Security and Nutrition Model')
+        self.setWindowTitle('Setup Food Security and Nutritional Adequacy')
+        self.title_l = QLabel('Setup Food Security and Nutritional Adequacy')
         self.title_l.setFont(config.minor_heading_font)
         self.main_layout.addWidget(self.title_l)
 
