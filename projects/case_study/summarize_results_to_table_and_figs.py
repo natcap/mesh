@@ -320,6 +320,6 @@ if do_minor_alignment_nudge:
         nd.pp(nd.get_value_count_odict_from_array(af_aligned.data))
 plt.show()
 
-do_extract_lulc_from_input_to_zip = False
+do_extract_lulc_from_input_to_zip = 0
 if do_extract_lulc_from_input_to_zip:
     nd.zip_files_from_dir_by_filter(input_dir, 'inputted_lulc.zip', 'lulc_', '.tif', exclude_strings=['resample', 'old', 'with', 'lulc.tif'])
