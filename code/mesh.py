@@ -34,6 +34,26 @@ import zipfile
 from pprint import pprint as pp
 from pprint import pformat as ps
 
+# print(sys.path)
+# paths_to_remove = ['C:\\OneDrive\\Projects\\hazelbean\\tests',
+#                    'C:\\OneDrive\\Projects\\geoecon',
+#                    'C:\\OneDrive\\Projects',
+#                    'C:\\OneDrive\\Projects\\hazelbean',
+#                    'C:\\OneDrive\\Projects\\numdal']
+# print(paths_to_remove)
+# for path in sys.path:
+#     print(11, path)
+#     if path in paths_to_remove:
+#         print(22, path)
+#         sys.path.remove(path)
+#
+# sys.path.remove('C:\\OneDrive\\Projects\\geoecon')
+# sys.path.remove('C:\\OneDrive\\Projects\\hazelbean')
+#
+# print(sys.path)
+#
+
+
 from mesh_models import nutritional_adequacy
 from mesh_models import nutritional_adequacy_ui
 
@@ -3604,7 +3624,7 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
 
         # self.report_types = ['Executive Summary', 'Policy Brief', 'In-depth Scenario Comparison',
         #                      'Full Technical Report']
-        self.report_types = ['Executive Summary', 'Full Results', 'Scenario Comparison Bar Charts', 'Scenario Comparison Table', 'Custom Formatted Images', ]
+        self.report_types = ['Executive Summary', 'Full Results', 'Scenario Comparison Bar Charts', 'Scenario Comparison Table', 'Custom Formatted Images', 'Bonsucro Standards Compliance Report']
 
         self.pbs = OrderedDict()
         for report_type in self.report_types:
@@ -3616,6 +3636,7 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
         self.pbs['Scenario Comparison Bar Charts'].clicked.connect(self.create_scenario_comparison_bar_charts)
         self.pbs['Scenario Comparison Table'].clicked.connect(self.create_scenario_comparison_table)
         self.pbs['Custom Formatted Images'].clicked.connect(self.create_custom_formatted_images)
+        self.pbs['Bonsucro Standards Compliance Report'].clicked.connect(self.create_bonsucro_standards_compliance_report)
 
         # self.pbs['Policy Brief'].clicked.connect(self.create_policy_brief)
         # self.pbs['Policy Brief'].setEnabled(False)
@@ -3677,6 +3698,15 @@ class ChooseReportTypeDialog(MeshAbstractObject, QDialog):
             selected_model_name = str(self.parent.runs_available_combobox.currentText())
             selected_model = self.root_app.model_runs_widget.elements[selected_model_name]
             selected_model.create_report_from_this_run('custom_formatted_images')
+        self.close()
+
+    def create_bonsucro_standards_compliance_report(self):
+        if isinstance(self.parent, ModelRun):
+            self.parent.create_report_from_this_run('bonsucro_standards_compliance_report')
+        elif isinstance(self.parent, ReportsWidget):
+            selected_model_name = str(self.parent.runs_available_combobox.currentText())
+            selected_model = self.root_app.model_runs_widget.elements[selected_model_name]
+            selected_model.create_report_from_this_run('bonsucro_standards_compliance_report')
         self.close()
 
 
