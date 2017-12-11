@@ -1,0 +1,115 @@
+{
+  "id": "window",
+  "label": "Scenario Generator: Spatial Allocation",
+  "targetScript": "natcap.invest.scenario_gen_spatial_allocation",
+  "modelName": "scenario_gen_spatial_allocation",
+  "localDocURI": "../documentation/scenario_gen_spatial_allocation.html",
+  "height": 610,
+  "width": 610,
+  "elements": [
+    {
+      "id": "workspace_list",
+      "type": "list",
+      "elements": [
+        {
+          "id": "workspace",
+          "args_id": "workspace_dir",
+          "type": "folder",
+          "label": "Workspace",
+          "defaultValue": "~/Documents/scenario_proximity_workspace",
+          "required": true,
+          "helpText": "The selected folder is used as the workspace where all intermediate and output files will be written.<br><br>If the selected folder does not exist, it will be created.<br><br><b>If datasets already exist in the selected folder, they will be overwritten.</b>"
+        },
+        {
+          "id": "results_suffix",
+          "args_id": "results_suffix",
+          "type": "text",
+          "dataType": "string",
+          "label": "Results Suffix (Optional)",
+          "defaultValue": "",
+          "returns": {
+            "ifEmpty": "pass"
+          },
+          "required": false,
+          "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
+        },
+        {
+          "id": "base_lulc_path",
+          "args_id": "base_lulc_path",
+          "type": "file",
+          "label": "Base Land Use/Cover (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "defaultValue": "../scenario_proximity/scenario_proximity_lulc.tif"
+        },
+        {
+          "id": "aoi_path",
+          "args_id": "aoi_path",
+          "type": "file",
+          "label": "Area of interest (Vector) (optional)",
+          "defaultValue": "../scenario_proximity/scenario_proximity_aoi.shp",
+          "required": false,
+          "validateAs": {
+            "type": "OGR",
+            "layers": [
+              {
+                "name": {
+                  "inheritFrom": "file"
+                },
+                "type": "polygons"
+              }
+            ]
+          },
+          "helpText": "This is a set of polygons that will be used to aggregate carbon values at the end of the run if provided."
+        },
+        {
+          "id": "area_to_convert",
+          "args_id": "area_to_convert",
+          "type": "file",
+          "label": "Area to convert (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+            }
+        },
+        {
+          "id": "suitability_raster_path",
+          "args_id": "suitability_raster_path",
+          "type": "file",
+          "label": "Conversion suitability (Raster)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          }
+        },
+        {
+          "id": "attraction_repulsion_csv_path",
+          "args_id": "attraction_repulsion_csv_path",
+          "type": "file",
+          "label": "Attraction/repulsion (CSV)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "csv"
+          }
+        },
+
+        {
+          "id": "n_fragmentation_steps",
+          "args_id": "n_fragmentation_steps",
+          "type": "text",
+          "label": "Number of Steps in Conversion",
+          "defaultValue": "1",
+          "required": true,
+          "validText": "^[0-9]*$",
+          "helpText": "This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertible types."
+        }
+      ]
+    }
+  ]
+}

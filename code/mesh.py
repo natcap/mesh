@@ -56,6 +56,7 @@ from pprint import pformat as ps
 
 from mesh_models import nutritional_adequacy
 from mesh_models import nutritional_adequacy_ui
+# from mesh_models import scenario_gen_spatial_allocation_ui
 
 # EXE BUILD NOTE, THIS MAY NEED TO BE MANUALLY FOUND
 #os.environ['GDAL_DATA'] = 'C:/Anaconda2/Library/share/gdal'
@@ -1557,6 +1558,11 @@ class ModelsWidget(ScrollWidget):
                 LOGGER.debug('Last_run did not exist, modifying json_launch_dict[target_script] manually.')
                 json_launch_dict['targetScript'] = 'mesh_models.mesh_scenario_generator'
 
+            # If the model is the spatial allocation scenario generator, overwrite the target script value to the mesh version
+            if model_name == 'scenario_gen_spatial_allocation':
+                LOGGER.debug('Last_run did not exist, modifying json_launch_dict[target_script] manually.')
+                json_launch_dict['targetScript'] = 'mesh_models.scenario_gen_spatial_allocation'
+
             if not os.path.isdir(os.path.dirname(model_iui_file_uri)):
                 os.mkdir(os.path.dirname(model_iui_file_uri))
 
@@ -1663,6 +1669,10 @@ class ModelsWidget(ScrollWidget):
         if model_name == 'nutritional_adequacy':
             self.running_setup_uis.append(
                 nutritional_adequacy_ui.NutritionalAdequacyModelDialog(self.root_app, self, last_run_override=override_args))
+
+        if model_name == 'scenario_gen_spatial_allocation':
+            self.running_setup_uis.append(
+                scenario_gen_spatial_allocation_ui.ScenarioGenSpatialAllocationDialog(self.root_app, self, last_run_override=override_args))
 
     def setup_waterworld_model(self, model_name):
         """

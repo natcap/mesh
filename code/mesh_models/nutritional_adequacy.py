@@ -23,6 +23,8 @@ rcParams.update({'figure.autolayout': True}) # This line makes matplotlib automa
 import gdal
 import numpy as np
 
+# import hazelbean as hb
+
 import pandas as pd
 
 from mesh_utilities import config
@@ -193,6 +195,7 @@ def execute(kw, ui):
     if not kw:
         kw = create_default_kw(ui)
     kw['output_folder'] = kw['workspace_dir']
+
     ui.update_run_log('Calculating crop-specific production')
 
     baseline_lulc_uri = ui.root_app.project_key_raster
@@ -200,7 +203,7 @@ def execute(kw, ui):
     if not kw.get('model_base_data_dir'):
         kw['model_base_data_dir'] = os.path.join(ui.root_app.base_data_folder, 'models', 'nutritional_adequacy')
 
-    bounding_box = data_creation.get_datasource_bounding_box(ui.root_app.project_aoi)
+    bounding_box = hb.get_datasource_bounding_box(ui.root_app.project_aoi)
     ui.update_run_log('Loading input maps. Bounding box set to: ' + str(bounding_box))
 
     # TODO Unimplemented switch here.
@@ -211,19 +214,26 @@ def execute(kw, ui):
             os.remove(os.path.join(kw['output_folder'], 'crop_proportion_baseline_1km.tif'))
             os.remove(os.path.join(kw['output_folder'], 'crop_proportion_500m.tif'))
             os.remove(os.path.join(kw['output_folder'], 'crop_proportion_1km.tif'))
-
-
         except:
             'no'
 
         match_uri = kw['lulc_uri']
-        lulc_baseline = utilities.as_array(baseline_lulc_uri)
-        lulc_nan_mask = np.where(lulc_baseline >= 250, 1, 0)
-        crop_proportion_baseline_500m_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_baseline_500m.tif')
+
+        # Load the LULC array as the baseline
+        lulc_baseline = hb.as_array(baseline_lulc_uri)
+        no_data_value = hb.get_nodata_from_uri(baseline_lulc_uri)
+
+
+        # Extract the nan_mask for later
+        lulc_nan_mask = np.where(lulc_baseline == no_data_value, 1, 0).astype(np.int8)
+
+        # Calculate the proportion of the grid-cell that is in cultivation as a function of the LULC.
+        # For MODIS, this means 12 and 14 are 1.0 and 0.5 respectively.
         crop_proportion_baseline = np.where(lulc_baseline == 12, 1.0, 0.0)
         # TODO START HERE, i missed a nan mask and now the results have near infinite value. create a robust solution
         # crop_proportion_baseline[lulc_nan_mask] = np.nan
         crop_proportion_baseline = np.where(lulc_baseline == 14, .5, crop_proportion_baseline)
+
 
         # BUG If the files are not in the normal folder and onl linked to, it fails to find them.
         try:
@@ -241,6 +251,7 @@ def execute(kw, ui):
         except:
             'Dir already exists.'
 
+        crop_proportion_baseline_500m_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_baseline_500m.tif')
         utilities.save_array_as_geotiff(crop_proportion_baseline, crop_proportion_baseline_500m_uri, kw['lulc_uri'])
         crop_proportion_baseline_1km_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_baseline_1km.tif')
 
@@ -305,12 +316,11 @@ def execute(kw, ui):
                 clipped_yield_tons_per_ha_uri = os.path.join(clipped_dir, current_crop_name + '_YieldPerHectare.tif')
                 yield_tons_per_cell_uri = os.path.join(clipped_dir, current_crop_name + '_YieldTonsPerCell.tif')
 
-
-
-
                 if not os.path.exists(clipped_harvested_area_fraction_uri) or not os.path.exists(clipped_yield_tons_per_ha_uri) or not os.path.exists(yield_tons_per_cell_uri):
                     utilities.clip_by_shape_with_buffered_intermediate_uri(input_harvested_area_fraction_uri, kw['aoi_uri'], clipped_harvested_area_fraction_uri, match_uri, resampling_method='bilinear')
                     harvested_area_fraction_array = utilities.as_array(clipped_harvested_area_fraction_uri)
+
+                    # TODO START HERE, I mixed up using global and locally clipped. Replace all this code with a version that doesn't require resamping the whole thing.
                     utilities.clip_by_shape_with_buffered_intermediate_uri(input_yield_tons_per_ha_uri, kw['aoi_uri'], clipped_yield_tons_per_ha_uri, match_uri, resampling_method='bilinear')
                     yield_tons_per_ha_array = utilities.as_array(clipped_yield_tons_per_ha_uri)
 
@@ -335,11 +345,14 @@ def execute(kw, ui):
         # match_5min_uri = os.path.join(ui.root_app.base_data_folder, 'models/crop_production/global_dataset/observed_yield/rice_yield_map.tif')
         match_array = utilities.as_array(match_5min_uri)
 
+        # TODO Figure out if nans all right
         nan3 = utilities.get_nodata_from_uri(input_harvested_area_fraction_uri)
         array = utilities.as_array(input_harvested_area_fraction_uri)
-        nan_mask = np.where(array == nan3)
+        print(nan3)
+        nan_mask = np.where(array == nan3, True, False).astype(np.bool)
 
-        if not all([os.path.exists(i) for i in yield_tons_per_cell_filenames]):
+        # TODO Why default to run always?
+        if not all([os.path.exists(i) for i in yield_tons_per_cell_filenames]) or True:
         #if not os.path.exists(os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif') or True):
             Energy = np.zeros(match_array.shape).astype(np.float64)
             Energy[nan_mask] = nan3
@@ -382,11 +395,11 @@ def execute(kw, ui):
             Cu = np.zeros(match_array.shape).astype(np.float64)
             Cu[nan_mask] = nan3
 
-
             for i in range(len(yield_tons_per_cell_filenames)):
                 current_crop_name = os.path.splitext(os.path.split(harvested_area_fraction_filenames[i])[1])[0].split('_', 1)[0]
                 ui.update_run_log('Calculating nutritional contribution of ' + current_crop_name)
                 if current_crop_name in nutritional_content_odict.keys():
+                    print('adding Nutritional content of ' + current_crop_name)
                     Energy += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
                     # Fat += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Fat'])
                     Protein += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Protein'])
@@ -476,53 +489,56 @@ def execute(kw, ui):
             utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_1km.tif'), match_1km_uri)
 
 
-        # TODO FOR HONDURAS need to switch to a non-population-map derived resolution. Incorporate decision making unit map to set the desired resolution
-        ui.update_run_log('Calculating total nutrient demand')
-        overall_nutrient_sum = 0
-        overall_nutrient_requirement_sum = 0
-        overall_ratio_array = np.zeros(population.shape)
-        overall_ratio = 0
-        population_zero_normalized = np.where(population < 0, 0, population)
-        for nutrient in nutritional_requirements_odict:
-            nutrient_uri = os.path.join(kw['output_folder'], 'nutrient_production', nutrient + '_per_cell_1km.tif')
-            nutrient_array = utilities.as_array(nutrient_uri)
+        # calculate demand
+        calculate_demand = True
+        if calculate_demand:
+            # TODO FOR HONDURAS need to switch to a non-population-map derived resolution. Incorporate decision making unit map to set the desired resolution
+            ui.update_run_log('Calculating total nutrient demand')
+            overall_nutrient_sum = 0
+            overall_nutrient_requirement_sum = 0
+            overall_ratio_array = np.zeros(population.shape)
+            overall_ratio = 0
+            population_zero_normalized = np.where(population < 0, 0, population)
+            for nutrient in nutritional_requirements_odict:
+                nutrient_uri = os.path.join(kw['output_folder'], 'nutrient_production', nutrient + '_per_cell_1km.tif')
+                nutrient_array = utilities.as_array(nutrient_uri)
 
-            nutrient_requirement_array = population_zero_normalized * float(nutritional_requirements_odict[nutrient]['recommended_daily_allowance']) * 365.0
-            # nutrient_requirement_array[nan_mask] = np.nan
-            # nutrient_requirement_array[nutrient_requirement_array<=0] = np.nan
+                nutrient_requirement_array = population_zero_normalized * float(nutritional_requirements_odict[nutrient]['recommended_daily_allowance']) * 365.0
+                # nutrient_requirement_array[nan_mask] = np.nan
+                # nutrient_requirement_array[nutrient_requirement_array<=0] = np.nan
 
-            nutrient_provision_ratio = np.where((nutrient_array / nutrient_requirement_array > 0) & (nutrient_array / nutrient_requirement_array < 999999999999999999999999999999),
-                                                nutrient_array / nutrient_requirement_array,
-                                                0)
+                nutrient_provision_ratio = np.where((nutrient_array / nutrient_requirement_array > 0) & (nutrient_array / nutrient_requirement_array < 999999999999999999999999999999),
+                                                    nutrient_array / nutrient_requirement_array,
+                                                    0)
 
-            # nutrient_provision_ratio[nan_mask] = np.nan
+                # nutrient_provision_ratio[nan_mask] = np.nan
 
-            print(22, nutrient_provision_ratio)
-            print(np.nansum(nutrient_provision_ratio))
+                print(22, nutrient_provision_ratio)
+                print(np.nansum(nutrient_provision_ratio))
 
-            print(33, nutrient_array)
-            print(np.nansum(nutrient_array))
+                print(33, nutrient_array)
+                print(np.nansum(nutrient_array))
 
-            print(44, nutrient_requirement_array)
-            print(np.nansum(nutrient_requirement_array))
+                print(44, nutrient_requirement_array)
+                print(np.nansum(nutrient_requirement_array))
 
-            overall_ratio_array += nutrient_provision_ratio
-            nutrient_sum = np.nansum(nutrient_array)
-            overall_nutrient_sum += nutrient_sum
-            nutrient_requirement_sum = np.nansum(nutrient_requirement_array)
-            overall_nutrient_requirement_sum += nutrient_requirement_sum
-            output_string = 'Full landscape produced ' + str(nutrient_sum) + ' of ' + nutrient + ' compared to a national requirement of ' + str(nutrient_requirement_sum) + ', yielding nutritional adequacy ratio of ' + str(nutrient_sum / nutrient_requirement_sum) + '.'
+                overall_ratio_array += nutrient_provision_ratio
+                nutrient_sum = np.nansum(nutrient_array)
+                overall_nutrient_sum += nutrient_sum
+                nutrient_requirement_sum = np.nansum(nutrient_requirement_array)
+                overall_nutrient_requirement_sum += nutrient_requirement_sum
+                output_string = 'Full landscape produced ' + str(nutrient_sum) + ' of ' + nutrient + ' compared to a national requirement of ' + str(nutrient_requirement_sum) + ', yielding nutritional adequacy ratio of ' + str(nutrient_sum / nutrient_requirement_sum) + '.'
+                ui.update_run_log(output_string)
+                overall_ratio += nutrient_provision_ratio
+                utilities.save_array_as_geotiff(nutrient_provision_ratio, nutrient_uri.replace('_per_cell_1km.tif', '_adequacy_ratio.tif'), nutrient_uri)
+
+            overall_ratio_array *= 1.0 / 19.0
+            overall_ratio = (1.0 / 19.0) * (overall_nutrient_sum / overall_nutrient_requirement_sum)
+
+            output_string = 'Overall nutrion adequacy ratio: ' + str(overall_ratio) + '.'
             ui.update_run_log(output_string)
-            overall_ratio += nutrient_provision_ratio
-            utilities.save_array_as_geotiff(nutrient_provision_ratio, nutrient_uri.replace('_per_cell_1km.tif', '_adequacy_ratio.tif'), nutrient_uri)
-
-        overall_ratio_array *= 1.0 / 19.0
-        overall_ratio = (1.0 / 19.0) * (overall_nutrient_sum / overall_nutrient_requirement_sum)
-
-        output_string = 'Overall nutrion adequacy ratio: ' + str(overall_ratio) + '.'
-        ui.update_run_log(output_string)
-        overall_ratio_uri = os.path.join(kw['output_folder'], 'overall_adequacy_ratio.tif')
-        utilities.save_array_as_geotiff(overall_ratio_array, overall_ratio_uri, nutrient_uri)
+            overall_ratio_uri = os.path.join(kw['output_folder'], 'overall_adequacy_ratio.tif')
+            utilities.save_array_as_geotiff(overall_ratio_array, overall_ratio_uri, nutrient_uri)
 
     else:
         calc_caloric_production_from_lulc_uri(kw['lulc_uri'], ui=ui, **kw)

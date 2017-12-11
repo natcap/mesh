@@ -8,11 +8,23 @@ project_dir = 'input/Baseline'
 
 output_dir = 'output'
 
+note = """In ilm 
+for both ghana and honduras,
+
+55% from most intensive
+35% from mosaic
+10% agro
+
+honduras FOOD PRODUCTION grew by 16%
+ghana 45%
+
+
+IDEA Use monfreda, subset out perrenial trees, to get yield of agroforestry
+
+"""
 
 def calc_caloric_production_from_lulc(input_lulc_uri):
     # Data from Johnson et al 2016.
-
-
     calories_per_cell_uri  = os.path.join(ag_dir, 'calories_per_cell.tif')
     calories_per_cell = nd.ArrayFrame(calories_per_cell_uri)
 
