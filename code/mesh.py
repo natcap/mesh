@@ -63,6 +63,9 @@ from mesh_models import nutritional_adequacy_ui
 
 from matplotlib import rcParams  # Used below to make Matplotlib automatically adjust to window size.
 
+
+# TODO HACK
+
 # INITIAL STATE for first install.
 initial_project_folder = 'c:/temp'
 

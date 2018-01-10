@@ -23,7 +23,7 @@ rcParams.update({'figure.autolayout': True}) # This line makes matplotlib automa
 import gdal
 import numpy as np
 
-# import hazelbean as hb
+import hazelbean as hb
 
 import pandas as pd
 
@@ -35,11 +35,6 @@ from mesh_utilities import data_creation
 LOGGER = config.LOGGER
 LOGGER.setLevel(logging.INFO)
 ENCODING = sys.getfilesystemencoding()
-
-try:
-    import numdal as nd # TESTING ONLY
-except:
-    'you are on deplyment'
 
 def create_default_kw(calling_ui=None):
     if calling_ui:
@@ -88,26 +83,26 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
 
     # Get global 5m calories map from base data and project the full global map to projection of lulc, but keeping the global resolution
     global_calories_per_cell_projected_uri  = os.path.join(output_dir, 'global_calories_per_cell_projected.tif')
-    output_wkt = pg.get_dataset_projection_wkt_uri(input_lulc_uri)
+    output_wkt = hb.get_dataset_projection_wkt_uri(input_lulc_uri)
 
     # Set cell size based on size at equator. Need to fully think this through.
-    # cell_size = 111319.49079327358 * pg.get_cell_size_from_uri(global_calories_per_cell_uri)
-    cell_size = pg.get_cell_size_from_uri(global_calories_per_cell_uri)
+    # cell_size = 111319.49079327358 * hb.get_cell_size_from_uri(global_calories_per_cell_uri)
+    cell_size = hb.get_cell_size_from_uri(global_calories_per_cell_uri)
 
     # Reproject the global calorie data into lulc projection
-    pg.reproject_dataset_uri(global_calories_per_cell_uri,
+    hb.reproject_dataset_uri(global_calories_per_cell_uri,
                              cell_size,
                              output_wkt,
                              'bilinear',
                              global_calories_per_cell_projected_uri)
 
     # Clip the global data to the project aoi, but keep at 5 min for math summation reasons later
-    pg.clip_dataset_uri(
+    hb.clip_dataset_uri(
         global_calories_per_cell_projected_uri, aoi_uri, clipped_calories_per_5m_cell_uri,
-        assert_projections=True, process_pool=None, all_touched=False)
+        assert_projections=True, process_pool=None)
 
     # Now that it's clipped, it's small enough to resample to lulc resolution
-    pg.resize_and_resample_dataset_uri(clipped_calories_per_5m_cell_uri, pg.get_bounding_box(input_lulc_uri), pg.get_cell_size_from_uri(input_lulc_uri), calories_resampled_uri,
+    hb.resize_and_resample_dataset_uri(clipped_calories_per_5m_cell_uri, hb.get_bounding_box(input_lulc_uri), hb.get_cell_size_from_uri(input_lulc_uri), calories_resampled_uri,
                                        'bilinear')
 
     # Load both baseline lulc and scenario lulc. Even if only 1 scenario is being included, still must have the baseline calculated
@@ -115,7 +110,7 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
     baseline_lulc_uri = os.path.join(baseline_dir, 'lulc.tif')
     # baseline_resampled_uri = baseline_lulc_uri.replace('.tif', '_resampled.tif')
     baseline_resampled_uri = os.path.join(output_dir, 'lulc_resampled.tif')
-    pg.resize_and_resample_dataset_uri(baseline_lulc_uri, pg.get_bounding_box(input_lulc_uri), pg.get_cell_size_from_uri(input_lulc_uri), baseline_resampled_uri, 'nearest')
+    hb.resize_and_resample_dataset_uri(baseline_lulc_uri, hb.get_bounding_box(input_lulc_uri), hb.get_cell_size_from_uri(input_lulc_uri), baseline_resampled_uri, 'nearest')
 
     # Base on teh assumption that full ag is twice as contianing of calroies as mosaic, allocate the
     # caloric presence to these two ag locations. Note that these are still not scaled, but they are
@@ -132,11 +127,32 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
     unscaled_calories_input_lulc = np.where(input_lulc_array == 12, calories_resampled_array, 0)
     unscaled_calories_input_lulc = np.where(input_lulc_array == 14, 0.5 * calories_resampled_array, unscaled_calories_input_lulc)
 
+    note = """In ilm 
+        for both ghana and honduras,
+        
+        55% from most intensive
+        35% from mosaic
+        10% agro
+        
+        honduras FOOD PRODUCTION grew by 16%
+        ghana 45%
+        
+        
+        IDEA Use monfreda, subset out perrenial trees, to get yield of agroforestry
+        """
+
+
+
     if 'Honduras' in ui.root_app.project_folder or 'Ghana' in ui.root_app.project_folder:
+
+        unscaled_calories_input_lulc = np.where(input_lulc_array == 12, calories_resampled_array, 0)
+        unscaled_calories_input_lulc = np.where(input_lulc_array == 14, 0.35 * calories_resampled_array, unscaled_calories_input_lulc)
+
         # CUSTOM calc in agroforestry  value following Johan's suggested %
         unscaled_calories_input_lulc = np.where(input_lulc_array == 17, 0.6 * calories_resampled_array, unscaled_calories_input_lulc)
         if 'ilm' in scenario_dir.lower():
             avg_palm_cal_per_reg_cal = (8516/1295) * (3000/1800) # oil palm cal per kg/ avg crop calkg * (ilm ratio improvement over trend, which is assumed to be same as in earthstat.
+            avg_palm_cal_per_reg_cal = 0.1
             unscaled_calories_input_lulc = np.where(input_lulc_array == 18, avg_palm_cal_per_reg_cal * calories_resampled_array, unscaled_calories_input_lulc)
 
     # Multiply the unscaled calories by this adjustment factor, which is the ratio between the actual calories present
@@ -183,8 +199,8 @@ def create_data():
     lulc_uri = input_folder + 'lulc_2012.tif'
     lulc_1km_uri = input_folder + 'lulc_1km_2012.tif'
 
-    bounding_box_pop = pg.get_bounding_box(lulc_uri)
-    pg.resize_and_resample_dataset_uri(lulc_uri, bounding_box_pop, 847.704968, lulc_1km_uri, 'bilinear')
+    bounding_box_pop = hb.get_bounding_box(lulc_uri)
+    hb.resize_and_resample_dataset_uri(lulc_uri, bounding_box_pop, 847.704968, lulc_1km_uri, 'bilinear')
 
     lulc = utilities.as_array(lulc_uri)
 
@@ -207,7 +223,7 @@ def execute(kw, ui):
     ui.update_run_log('Loading input maps. Bounding box set to: ' + str(bounding_box))
 
     # TODO Unimplemented switch here.
-    run_full_nutritional_model = True # OTW just cal calories
+    run_full_nutritional_model = False # OTW just cal calories
     if run_full_nutritional_model:
         try:
             os.remove(os.path.join(kw['output_folder'], 'crop_proportion_baseline_500m.tif'))
@@ -257,7 +273,7 @@ def execute(kw, ui):
 
         population_bounding_box = utilities.get_bounding_box(kw['population_uri'])
         cell_size = utilities.get_cell_size_from_uri(kw['population_uri'])
-        pg.resize_and_resample_dataset_uri(crop_proportion_baseline_500m_uri, population_bounding_box, cell_size, crop_proportion_baseline_1km_uri, 'bilinear')
+        hb.resize_and_resample_dataset_uri(crop_proportion_baseline_500m_uri, population_bounding_box, cell_size, crop_proportion_baseline_1km_uri, 'bilinear')
 
         if kw['lulc_uri'] != baseline_lulc_uri:
             lulc_scenario = utilities.as_array(kw['lulc_uri'])
@@ -268,7 +284,7 @@ def execute(kw, ui):
             utilities.save_array_as_geotiff(crop_proportion, crop_proportion_500m_uri, kw['lulc_uri'])
             crop_proportion_1km_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_1km.tif')
             # original_dataset_uri, bounding_box, out_pixel_size, output_uri, resample_method
-            pg.resize_and_resample_dataset_uri(crop_proportion_500m_uri, population_bounding_box, cell_size, crop_proportion_1km_uri, 'bilinear')
+            hb.resize_and_resample_dataset_uri(crop_proportion_500m_uri, population_bounding_box, cell_size, crop_proportion_1km_uri, 'bilinear')
 
             crop_proportion_baseline_1km = utilities.as_array(crop_proportion_baseline_1km_uri)
             crop_proportion_1km = utilities.as_array(crop_proportion_1km_uri)
@@ -292,7 +308,7 @@ def execute(kw, ui):
 
         ui.update_run_log('Calculating crop-specific production')
         lulc_array = utilities.as_array(kw['lulc_uri'])
-        lulc_wkt = pg.get_dataset_projection_wkt_uri(kw['lulc_uri'])
+        lulc_wkt = hb.get_dataset_projection_wkt_uri(kw['lulc_uri'])
         harvested_area_ha_filenames = []
         harvested_area_fraction_filenames = []
         yield_tons_per_ha_filenames = []
@@ -301,14 +317,16 @@ def execute(kw, ui):
         yield_per_ha_array = 0
 
         # Calculate ha per cell
-        cell_size = pg.get_cell_size_from_uri(kw['lulc_uri'])
+        cell_size = hb.get_cell_size_from_uri(kw['lulc_uri'])
         ha_per_cell = np.ones(lulc_array.shape) * (cell_size ** 2 / 10000)
         ha_per_cell_uri = os.path.join(kw['output_folder'], 'ha_per_cell.tif')
         utilities.save_array_as_geotiff(ha_per_cell, ha_per_cell_uri, kw['lulc_uri'])
 
+        force_recalculation = False
         for folder_name in os.listdir(crop_maps_folder):
             current_folder = os.path.join(crop_maps_folder, folder_name)
             if os.path.isdir(current_folder):
+                print('current_folder', current_folder)
                 current_crop_name = folder_name.split('_', 1)[0]
                 input_harvested_area_fraction_uri = os.path.join(current_folder, current_crop_name + '_HarvestedAreaFraction.tif')
                 clipped_harvested_area_fraction_uri = os.path.join(clipped_dir, current_crop_name + '_HarvestedAreaFraction.tif')
@@ -316,11 +334,13 @@ def execute(kw, ui):
                 clipped_yield_tons_per_ha_uri = os.path.join(clipped_dir, current_crop_name + '_YieldPerHectare.tif')
                 yield_tons_per_cell_uri = os.path.join(clipped_dir, current_crop_name + '_YieldTonsPerCell.tif')
 
-                if not os.path.exists(clipped_harvested_area_fraction_uri) or not os.path.exists(clipped_yield_tons_per_ha_uri) or not os.path.exists(yield_tons_per_cell_uri):
+
+                if not os.path.exists(clipped_harvested_area_fraction_uri) or not os.path.exists(clipped_yield_tons_per_ha_uri) or not os.path.exists(yield_tons_per_cell_uri) or force_recalculation:
+                    # hb.clip_dataset_uri(input_harvested_area_fraction_uri, kw['aoi_uri'], clipped_harvested_area_fraction_uri)
                     utilities.clip_by_shape_with_buffered_intermediate_uri(input_harvested_area_fraction_uri, kw['aoi_uri'], clipped_harvested_area_fraction_uri, match_uri, resampling_method='bilinear')
                     harvested_area_fraction_array = utilities.as_array(clipped_harvested_area_fraction_uri)
 
-                    # TODO START HERE, I mixed up using global and locally clipped. Replace all this code with a version that doesn't require resamping the whole thing.
+                    # hb.clip_dataset_uri(input_yield_tons_per_ha_uri, kw['aoi_uri'], clipped_yield_tons_per_ha_uri)
                     utilities.clip_by_shape_with_buffered_intermediate_uri(input_yield_tons_per_ha_uri, kw['aoi_uri'], clipped_yield_tons_per_ha_uri, match_uri, resampling_method='bilinear')
                     yield_tons_per_ha_array = utilities.as_array(clipped_yield_tons_per_ha_uri)
 
@@ -333,160 +353,183 @@ def execute(kw, ui):
 
                     yield_tons_per_cell_array[nan_mask] == nan1
 
-                    utilities.save_array_as_geotiff(yield_tons_per_cell_array, yield_tons_per_cell_uri, kw['lulc_uri'], data_type_override=7, no_data_value_override=nan1)
+                    # NOTE forcing ndv to zero for calcualtions
+                    utilities.save_array_as_geotiff(yield_tons_per_cell_array, yield_tons_per_cell_uri, kw['lulc_uri'], data_type_override=7, no_data_value_override=0)
 
                 harvested_area_fraction_filenames.append(clipped_harvested_area_fraction_uri)
                 yield_tons_per_ha_filenames.append(clipped_yield_tons_per_ha_uri)
                 yield_tons_per_cell_filenames.append(yield_tons_per_cell_uri)
 
-            ui.update_run_log('Creating yield (tons) map for ' + folder_name)
+                ui.update_run_log('Creating yield (tons) map for ' + folder_name)
 
         match_5min_uri = os.path.join(kw['output_folder'], 'crop_production_and_harvested_area', 'maize_HarvestedAreaFraction.tif')
         # match_5min_uri = os.path.join(ui.root_app.base_data_folder, 'models/crop_production/global_dataset/observed_yield/rice_yield_map.tif')
         match_array = utilities.as_array(match_5min_uri)
 
         # TODO Figure out if nans all right
-        nan3 = utilities.get_nodata_from_uri(input_harvested_area_fraction_uri)
-        array = utilities.as_array(input_harvested_area_fraction_uri)
-        print(nan3)
+        nan3 = utilities.get_nodata_from_uri(clipped_harvested_area_fraction_uri)
+        array = utilities.as_array(clipped_harvested_area_fraction_uri)
         nan_mask = np.where(array == nan3, True, False).astype(np.bool)
 
         # TODO Why default to run always?
-        if not all([os.path.exists(i) for i in yield_tons_per_cell_filenames]) or True:
-        #if not os.path.exists(os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif') or True):
-            Energy = np.zeros(match_array.shape).astype(np.float64)
-            Energy[nan_mask] = nan3
-            # Fat = np.zeros(match_array.shape).astype(np.float64)
-            #[Fatnan_mask] = nan3
-            Protein = np.zeros(match_array.shape).astype(np.float64)
-            Protein[nan_mask] = nan3
-            VitA = np.zeros(match_array.shape).astype(np.float64)
-            VitA[nan_mask] = nan3
-            VitC = np.zeros(match_array.shape).astype(np.float64)
-            VitC[nan_mask] = nan3
-            VitE = np.zeros(match_array.shape).astype(np.float64)
-            VitE[nan_mask] = nan3
-            Thiamin = np.zeros(match_array.shape).astype(np.float64)
-            Thiamin[nan_mask] = nan3
-            Riboflavin = np.zeros(match_array.shape).astype(np.float64)
-            Riboflavin[nan_mask] = nan3
-            Niacin = np.zeros(match_array.shape).astype(np.float64)
-            Niacin[nan_mask] = nan3
-            VitB6 = np.zeros(match_array.shape).astype(np.float64)
-            VitB6[nan_mask] = nan3
-            Folate = np.zeros(match_array.shape).astype(np.float64)
-            Folate[nan_mask] = nan3
-            VitB12 = np.zeros(match_array.shape).astype(np.float64)
-            VitB12[nan_mask] = nan3
-            Ca = np.zeros(match_array.shape).astype(np.float64)
-            Ca[nan_mask] = nan3
-            Ph = np.zeros(match_array.shape).astype(np.float64)
-            Ph[nan_mask] = nan3
-            Mg = np.zeros(match_array.shape).astype(np.float64)
-            Mg[nan_mask] = nan3
-            K = np.zeros(match_array.shape).astype(np.float64)
-            K[nan_mask] = nan3
-            Na = np.zeros(match_array.shape).astype(np.float64)
-            Na[nan_mask] = nan3
-            Fe = np.zeros(match_array.shape).astype(np.float64)
-            Fe[nan_mask] = nan3
-            Zn = np.zeros(match_array.shape).astype(np.float64)
-            Zn[nan_mask] = nan3
-            Cu = np.zeros(match_array.shape).astype(np.float64)
-            Cu[nan_mask] = nan3
-
-            for i in range(len(yield_tons_per_cell_filenames)):
-                current_crop_name = os.path.splitext(os.path.split(harvested_area_fraction_filenames[i])[1])[0].split('_', 1)[0]
-                ui.update_run_log('Calculating nutritional contribution of ' + current_crop_name)
-                if current_crop_name in nutritional_content_odict.keys():
-                    print('adding Nutritional content of ' + current_crop_name)
-                    Energy += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
-                    # Fat += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Fat'])
-                    Protein += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Protein'])
-                    VitA += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitA'])
-                    VitC += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitC'])
-                    VitE += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitE'])
-                    Thiamin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Thiamin'])
-                    Riboflavin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Riboflavin'])
-                    Niacin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Niacin'])
-                    VitB6 += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitB6'])
-                    Folate += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Folate'])
-                    VitB12 += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitB12'])
-                    Ca += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Ca'])
-                    Ph += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Ph'])
-                    Mg += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
-                    K += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Mg'])
-                    Na += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['K'])
-                    Fe += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Fe'])
-                    Zn += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
-                    Cu += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Zn'])
+        # Fat = np.zeros(match_array.shape).astype(np.float64)
+        #[Fatnan_mask] = nan3
+        Energy = np.zeros(match_array.shape).astype(np.float64)
+        Energy[nan_mask] = nan3
+        Protein = np.zeros(match_array.shape).astype(np.float64)
+        Protein[nan_mask] = nan3
+        VitA = np.zeros(match_array.shape).astype(np.float64)
+        VitA[nan_mask] = nan3
+        VitC = np.zeros(match_array.shape).astype(np.float64)
+        VitC[nan_mask] = nan3
+        VitE = np.zeros(match_array.shape).astype(np.float64)
+        VitE[nan_mask] = nan3
+        Thiamin = np.zeros(match_array.shape).astype(np.float64)
+        Thiamin[nan_mask] = nan3
+        Riboflavin = np.zeros(match_array.shape).astype(np.float64)
+        Riboflavin[nan_mask] = nan3
+        Niacin = np.zeros(match_array.shape).astype(np.float64)
+        Niacin[nan_mask] = nan3
+        VitB6 = np.zeros(match_array.shape).astype(np.float64)
+        VitB6[nan_mask] = nan3
+        Folate = np.zeros(match_array.shape).astype(np.float64)
+        Folate[nan_mask] = nan3
+        VitB12 = np.zeros(match_array.shape).astype(np.float64)
+        VitB12[nan_mask] = nan3
+        Ca = np.zeros(match_array.shape).astype(np.float64)
+        Ca[nan_mask] = nan3
+        Ph = np.zeros(match_array.shape).astype(np.float64)
+        Ph[nan_mask] = nan3
+        Mg = np.zeros(match_array.shape).astype(np.float64)
+        Mg[nan_mask] = nan3
+        K = np.zeros(match_array.shape).astype(np.float64)
+        K[nan_mask] = nan3
+        Na = np.zeros(match_array.shape).astype(np.float64)
+        Na[nan_mask] = nan3
+        Fe = np.zeros(match_array.shape).astype(np.float64)
+        Fe[nan_mask] = nan3
+        Zn = np.zeros(match_array.shape).astype(np.float64)
+        Zn[nan_mask] = nan3
+        Cu = np.zeros(match_array.shape).astype(np.float64)
+        Cu[nan_mask] = nan3
 
 
+        for i in range(len(yield_tons_per_cell_filenames)):
+            current_crop_name = os.path.splitext(os.path.split(harvested_area_fraction_filenames[i])[1])[0].split('_', 1)[0]
+            ui.update_run_log('Calculating nutritional contribution of ' + current_crop_name)
+            if current_crop_name in nutritional_content_odict.keys():
+                print('adding Nutritional content of ' + current_crop_name)
+                # Fat += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Fat'])
+                Energy += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
+                Protein += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Protein'])
+                VitA += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitA'])
+                VitC += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitC'])
+                VitE += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitE'])
+                Thiamin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Thiamin'])
+                Riboflavin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Riboflavin'])
+                Niacin += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Niacin'])
+                VitB6 += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitB6'])
+                Folate += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Folate'])
+                VitB12 += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['VitB12'])
+                Ca += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Ca'])
+                Ph += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Ph'])
+                Mg += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
+                K += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Mg'])
+                Na += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['K'])
+                Fe += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Fe'])
+                Zn += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Energy'])
+                Cu += utilities.as_array(yield_tons_per_cell_filenames[i]) * 1000.0 * float(nutritional_content_odict[current_crop_name]['Zn'])
 
-            # TODO make this happen earlier in calcs
-            Energy *= change_ratio_mean
-            # Fat *= change_ratio_mean
-            Protein *= change_ratio_mean
-            VitA *= change_ratio_mean
-            VitC *= change_ratio_mean
-            VitE *= change_ratio_mean
-            Thiamin *= change_ratio_mean
-            Riboflavin *= change_ratio_mean
-            Niacin *= change_ratio_mean
-            VitB6 *= change_ratio_mean
-            Folate *= change_ratio_mean
-            VitB12 *= change_ratio_mean
-            Ca *= change_ratio_mean
-            Ph *= change_ratio_mean
-            Mg *= change_ratio_mean
-            K *= change_ratio_mean
-            Na *= change_ratio_mean
-            Fe *= change_ratio_mean
-            Zn *= change_ratio_mean
-            Cu *= change_ratio_mean
 
-            match_1km_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_baseline_1km.tif')
 
-            utilities.save_array_as_geotiff(Energy, os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif'), match_5min_uri, data_type_override=7, no_data_value_override=nan3)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_1km.tif'), match_1km_uri)
-            # utilities.save_array_as_geotiff(Fat, os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_5min.tif'), match_5min_uri)
-            # utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Protein, os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(VitA, os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(VitC, os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(VitE, os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Thiamin, os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Riboflavin, os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Niacin, os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(VitB6, os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Folate, os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(VitB12, os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Ca, os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Ph, os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Mg, os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(K, os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Na, os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Fe, os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Zn, os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_1km.tif'), match_1km_uri)
-            utilities.save_array_as_geotiff(Cu, os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_5min.tif'), match_5min_uri)
-            utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_1km.tif'), match_1km_uri)
+        # TODO make this happen earlier in calcs
+        # Fat *= change_ratio_mean
+        Energy *= change_ratio_mean
+        Protein *= change_ratio_mean
+        VitA *= change_ratio_mean
+        VitC *= change_ratio_mean
+        VitE *= change_ratio_mean
+        Thiamin *= change_ratio_mean
+        Riboflavin *= change_ratio_mean
+        Niacin *= change_ratio_mean
+        VitB6 *= change_ratio_mean
+        Folate *= change_ratio_mean
+        VitB12 *= change_ratio_mean
+        Ca *= change_ratio_mean
+        Ph *= change_ratio_mean
+        Mg *= change_ratio_mean
+        K *= change_ratio_mean
+        Na *= change_ratio_mean
+        Fe *= change_ratio_mean
+        Zn *= change_ratio_mean
+        Cu *= change_ratio_mean
+
+        # Fat *= change_ratio_mean
+        Energy[nan_mask] = 0
+        Protein[nan_mask] = 0
+        VitA[nan_mask] = 0
+        VitC[nan_mask] = 0
+        VitE[nan_mask] = 0
+        Thiamin[nan_mask] = 0
+        Riboflavin[nan_mask] = 0
+        Niacin[nan_mask] = 0
+        VitB6[nan_mask] = 0
+        Folate[nan_mask] = 0
+        VitB12[nan_mask] = 0
+        Ca[nan_mask] = 0
+        Ph[nan_mask] = 0
+        Mg[nan_mask] = 0
+        K[nan_mask] = 0
+        Na[nan_mask] = 0
+        Fe[nan_mask] = 0
+        Zn[nan_mask] = 0
+        Cu[nan_mask] = 0
+
+
+
+
+        match_1km_uri = os.path.join(kw['output_folder'], 'YieldTonsPerCell', 'crop_proportion_baseline_1km.tif')
+
+        utilities.save_array_as_geotiff(Energy, os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif'), match_5min_uri, data_type_override=7, no_data_value_override=nan3)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Energy_per_cell_1km.tif'), match_1km_uri)
+        # utilities.save_array_as_geotiff(Fat, os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_5min.tif'), match_5min_uri)
+        # utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Fat_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Protein, os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_5min.tif'), match_5min_uri, no_data_value_override=nan3)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Protein_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(VitA, os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitA_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(VitC, os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitC_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(VitE, os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitE_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Thiamin, os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Thiamin_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Riboflavin, os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Riboflavin_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Niacin, os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Niacin_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(VitB6, os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitB6_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Folate, os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Folate_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(VitB12, os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'VitB12_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Ca, os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Ca_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Ph, os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Ph_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Mg, os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Mg_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(K, os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'K_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Na, os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Na_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Fe, os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Fe_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Zn, os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Zn_per_cell_1km.tif'), match_1km_uri)
+        utilities.save_array_as_geotiff(Cu, os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_5min.tif'), match_5min_uri)
+        utilities.resample_preserve_sum(os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_5min.tif'), os.path.join(kw['output_folder'], 'nutrient_production', 'Cu_per_cell_1km.tif'), match_1km_uri)
 
 
         # calculate demand
@@ -511,17 +554,6 @@ def execute(kw, ui):
                                                     nutrient_array / nutrient_requirement_array,
                                                     0)
 
-                # nutrient_provision_ratio[nan_mask] = np.nan
-
-                print(22, nutrient_provision_ratio)
-                print(np.nansum(nutrient_provision_ratio))
-
-                print(33, nutrient_array)
-                print(np.nansum(nutrient_array))
-
-                print(44, nutrient_requirement_array)
-                print(np.nansum(nutrient_requirement_array))
-
                 overall_ratio_array += nutrient_provision_ratio
                 nutrient_sum = np.nansum(nutrient_array)
                 overall_nutrient_sum += nutrient_sum
@@ -540,7 +572,8 @@ def execute(kw, ui):
             overall_ratio_uri = os.path.join(kw['output_folder'], 'overall_adequacy_ratio.tif')
             utilities.save_array_as_geotiff(overall_ratio_array, overall_ratio_uri, nutrient_uri)
 
-    else:
+    run_calories_only_model = True
+    if run_calories_only_model:
         calc_caloric_production_from_lulc_uri(kw['lulc_uri'], ui=ui, **kw)
 
     return

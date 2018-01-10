@@ -1,8 +1,10 @@
-WARNING = 'DEPRECATED. Use script in project folder root'
+WARNING = "DEPRECATED. Usefilein project dir."
 
 import os, sys, math, random
 from collections import OrderedDict
 import numpy as np
+
+
 
 sys.path.insert(0, 'c:/onedrive/projects')
 import numdal as nd
@@ -118,6 +120,7 @@ def create_percent_difference_from_baseline_bar_chart(csv_uri, output_uri):
         "Baseline",
         "Trend",
         "ILM",
+        "TAR",
     ]
 
     outcome_labels = [
@@ -137,7 +140,7 @@ def create_percent_difference_from_baseline_bar_chart(csv_uri, output_uri):
     difference_from_baseline_df = df[difference_from_baseline_cols]
 
     # TODO Generalize
-    num_scenarios = 3
+    num_scenarios = 4
     difference_from_baseline_df = difference_from_baseline_df.iloc[list(range(1, num_scenarios))] # Select the desired rows (scenarios)
 
     plt.rcParams['figure.figsize'] = (14, 9)
@@ -193,6 +196,7 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
         "Baseline",
         "Trend",
         "ILM",
+        "TAR"
     ]
 
 
@@ -214,7 +218,7 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
     difference_from_bau_df = df[difference_from_bau_cols]
 
     # TODO Generalize
-    num_scenarios = 3
+    num_scenarios = 4
     difference_from_bau_df = difference_from_bau_df.iloc[list(range(2, num_scenarios))] # Select the desired rows (scenarios)
 
 
@@ -254,7 +258,7 @@ def create_percent_difference_from_bau_bar_chart(csv_uri, output_uri):
 
 
 
-project_dir = '../projects/Honduras06'
+project_dir = '../projects/Ghana01'
 input_dir = os.path.join(project_dir, 'input')
 output_dir = os.path.join(project_dir, 'output')
 runs_folder = os.path.join(output_dir, 'runs')
@@ -262,11 +266,12 @@ runs_folder = os.path.join(output_dir, 'runs')
 
 results_names = ['carbon', 'wy', 'n_export', 'p_export', 'sed_retention', 'calories']
 
-run_name = 'r10'
+run_name = 'r3'
 
 scenarios = [    "Baseline",
                  "Trend",
                  "ILM",
+                 "TAR",
                  ]
 
 overall_results_dir = os.path.join(runs_folder, run_name)
