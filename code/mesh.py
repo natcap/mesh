@@ -4901,10 +4901,16 @@ class CreateBaselineDataDialog(MeshAbstractObject, QDialog):
 
                 self.input_mapping_uri = os.path.join('../settings/default_setup_files',
                                                       model.name + '_input_mapping.csv')
+
+                print('elf.input_mapping_uri', self.input_mapping_uri)
                 input_mapping = utilities.file_to_python_object(self.input_mapping_uri)
+                print('input_mapping', input_mapping)
 
                 # NOTE NYI Only will trigger for carbon and hydropower.
-                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield', 'nutritional_adequacy']:
+                print('model.name', model.name)
+
+                # TODO CREITICAL before next releaase finish these so that i can take out thi last conditional
+                if type(input_mapping) in [dict, OrderedDict] and len(input_mapping) > 0 and model.name in ['carbon', 'hydropower_water_yield', 'nutritional_adequacy', 'ndr', 'sdr']:
                     for key, value in input_mapping.items():
                         if utilities.convert_to_bool(value['enabled']):
                             if utilities.convert_to_bool(value['required']):

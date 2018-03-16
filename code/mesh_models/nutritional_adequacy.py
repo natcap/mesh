@@ -107,7 +107,7 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
 
     # Load both baseline lulc and scenario lulc. Even if only 1 scenario is being included, still must have the baseline calculated
     # to calibrate how the baseline data extrapolates to the scenario.
-    baseline_lulc_uri = os.path.join(baseline_dir, 'lulc.tif')
+    baseline_lulc_uri = os.path.join(baseline_dir, 'lulc2016.tif') # TODO NOTE manual  edit used for Tanzania
     # baseline_resampled_uri = baseline_lulc_uri.replace('.tif', '_resampled.tif')
     baseline_resampled_uri = os.path.join(output_dir, 'lulc_resampled.tif')
     hb.resize_and_resample_dataset_uri(baseline_lulc_uri, hb.get_bounding_box(input_lulc_uri), hb.get_cell_size_from_uri(input_lulc_uri), baseline_resampled_uri, 'nearest')
@@ -144,6 +144,18 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
 
 
     if 'Honduras' in ui.root_app.project_folder or 'Ghana' in ui.root_app.project_folder:
+
+        unscaled_calories_input_lulc = np.where(input_lulc_array == 12, calories_resampled_array, 0)
+        unscaled_calories_input_lulc = np.where(input_lulc_array == 14, 0.35 * calories_resampled_array, unscaled_calories_input_lulc)
+
+        # CUSTOM calc in agroforestry  value following Johan's suggested %
+        unscaled_calories_input_lulc = np.where(input_lulc_array == 17, 0.6 * calories_resampled_array, unscaled_calories_input_lulc)
+        if 'ilm' in scenario_dir.lower():
+            avg_palm_cal_per_reg_cal = (8516/1295) * (3000/1800) # oil palm cal per kg/ avg crop calkg * (ilm ratio improvement over trend, which is assumed to be same as in earthstat.
+            avg_palm_cal_per_reg_cal = 0.1
+            unscaled_calories_input_lulc = np.where(input_lulc_array == 18, avg_palm_cal_per_reg_cal * calories_resampled_array, unscaled_calories_input_lulc)
+
+    if 'Tanzania' in ui.root_app.project_folder or 'Ghana' in ui.root_app.project_folder:
 
         unscaled_calories_input_lulc = np.where(input_lulc_array == 12, calories_resampled_array, 0)
         unscaled_calories_input_lulc = np.where(input_lulc_array == 14, 0.35 * calories_resampled_array, unscaled_calories_input_lulc)
