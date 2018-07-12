@@ -107,7 +107,7 @@ def calc_caloric_production_from_lulc_uri(input_lulc_uri, ui=None, **kw):
 
     # Load both baseline lulc and scenario lulc. Even if only 1 scenario is being included, still must have the baseline calculated
     # to calibrate how the baseline data extrapolates to the scenario.
-    baseline_lulc_uri = os.path.join(baseline_dir, 'lulc2016.tif') # TODO NOTE manual  edit used for Tanzania
+    baseline_lulc_uri = os.path.join(baseline_dir, 'lulc.tif') # TODO NOTE manual  edit used for Tanzania
     # baseline_resampled_uri = baseline_lulc_uri.replace('.tif', '_resampled.tif')
     baseline_resampled_uri = os.path.join(output_dir, 'lulc_resampled.tif')
     hb.resize_and_resample_dataset_uri(baseline_lulc_uri, hb.get_bounding_box(input_lulc_uri), hb.get_cell_size_from_uri(input_lulc_uri), baseline_resampled_uri, 'nearest')

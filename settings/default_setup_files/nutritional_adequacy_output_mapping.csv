@@ -1,0 +1,2 @@
+name,model_name,long_name,result_type,result_method,input_file_uri_relative_to_model_root
+caloric_production_change_sum,nutritional_adequacy,Total change in caloric production,primary_positive_objective_sum,raster_sum,caloric_production.tif

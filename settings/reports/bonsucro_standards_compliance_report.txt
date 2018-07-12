@@ -1,0 +1,14 @@
+##<^report_type^> 
+###Run <^run_name^> in project <^project_name^>
+The degree of standards compliance for <^models_string^> was calculated for <^project_name^> under several scenarios. Comparing these indicates which sceanrio(s) provides greater or smaller impacts on human wellbeing. Prioritizing conservation to the high value areas will result in more effective conservation of ecosystem service. Conversely, directing agricultural expansion (or other drivers of land-use change) towards the areas of low value will minimize the tradeoffs between conservation and development. This report provides a summary of the key results from each ecosystem service model run.
+###Fig 1. Absolute model outputs
+<^model_results_table^>
+###Fig 2. Proportion difference from baseline scenario
+<^proportion_differences_from_baseline_table^>
+###Fig 3. Proportion difference from BAU scenario
+<^proportion_differences_from_bau_table^>
+###Fig 4. Proportion difference from baseline scenario chart
+<^proportion_differences_from_baseline_bar_chart^>
+###Fig 5. Proportion difference from BAU scenario chart
+<^proportion_differences_from_bau_bar_chart^>
+###Appendix: Custom-created images in project
